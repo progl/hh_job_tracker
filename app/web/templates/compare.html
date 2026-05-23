@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Сравнение вакансий{% endblock %}
+{% block content %}
+<style>
+  .compare-row { border-bottom: 1px solid #f5f5f5; }
+  .diff { background: #fef9c3; }
+  .col-card { border-right: 1px solid #e5e5e5; }
+</style>
+
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-lg font-semibold">Сравнение вакансий ({{ rows|length }})</h2>
+  <a href="/" class="text-sm text-blue-600 hover:underline">← к списку</a>
+</div>
+
+{% if rows|length == 0 %}
+  <div class="bg-white border border-neutral-200 rounded-lg p-6 text-neutral-600">Не выбраны вакансии для сравнения.</div>
+{% else %}
+<div class="bg-white border border-neutral-200 rounded-lg overflow-x-auto">
+  <table class="w-full text-sm">
+    <tbody>
+      {% for field in fields %}
+        {% set vals = field.vals %}
+        {% set distinct = [] %}
+        {% for v in vals %}{% if v not in distinct %}{% set _ = distinct.append(v) %}{% endif %}{% endfor %}
+        {% set has_diff = distinct|length > 1 %}
+        <tr class="compare-row">
+          <th class="px-3 py-2 text-left align-top w-44 bg-neutral-50 border-r border-neutral-200 text-neutral-600 text-xs uppercase tracking-wide">{{ field.label }}</th>
+          {% for v in vals %}
+            <td class="px-3 py-2 align-top {{ 'diff' if has_diff }}">
+              {% if field.html %}{{ v|safe }}{% else %}{{ v if v is not none else '—' }}{% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

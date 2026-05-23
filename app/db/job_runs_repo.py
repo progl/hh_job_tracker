@@ -1,0 +1,91 @@
+import json
+import logging
+import time
+from typing import Any
+
+from app.db.db import get_db
+
+log = logging.getLogger(__name__)
+
+
+async def start(job_id: str, trigger: str = "cron") -> int:
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "INSERT INTO job_runs(job_id, status, trigger) VALUES (?, 'running', ?)",
+            (job_id, trigger),
+        )
+        await db.commit()
+        return cur.lastrowid
+    finally:
+        await db.close()
+
+
+async def finish(run_id: int, status: str, result: Any = None, error: str | None = None, started_mono: float | None = None) -> None:
+    duration_ms = None
+    if started_mono is not None:
+        duration_ms = int((time.monotonic() - started_mono) * 1000)
+    db = await get_db()
+    try:
+        await db.execute(
+            """
+            UPDATE job_runs
+               SET finished_at = CURRENT_TIMESTAMP,
+                   duration_ms = COALESCE(?, duration_ms),
+                   status = ?,
+                   result = ?,
+                   error = ?
+             WHERE id = ?
+            """,
+            (
+                duration_ms,
+                status,
+                json.dumps(result, ensure_ascii=False, default=str) if result is not None else None,
+                error,
+                run_id,
+            ),
+        )
+        await db.commit()
+    except Exception as e:
+        log.warning("job_runs finish failed: %s", e)
+    finally:
+        await db.close()
+
+
+async def list_runs(job_id: str | None = None, limit: int = 100) -> list[dict]:
+    db = await get_db()
+    try:
+        if job_id:
+            cur = await db.execute(
+                "SELECT * FROM job_runs WHERE job_id = ? ORDER BY id DESC LIMIT ?",
+                (job_id, limit),
+            )
+        else:
+            cur = await db.execute(
+                "SELECT * FROM job_runs ORDER BY id DESC LIMIT ?", (limit,),
+            )
+        return [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+
+
+async def last_per_job() -> dict[str, dict]:
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            """
+            SELECT job_id, MAX(id) AS max_id FROM job_runs GROUP BY job_id
+            """
+        )
+        latest_ids = [r[1] for r in await cur.fetchall()]
+        if not latest_ids:
+            return {}
+        ph = ",".join("?" * len(latest_ids))
+        cur = await db.execute(f"SELECT * FROM job_runs WHERE id IN ({ph})", latest_ids)
+        out = {}
+        for r in await cur.fetchall():
+            d = dict(r)
+            out[d["job_id"]] = d
+        return out
+    finally:
+        await db.close()

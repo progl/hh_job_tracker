@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Логи запросов{% endblock %}
+{% block content %}
+<style>
+  .row-ok td { }
+  .row-3xx td { background: rgba(245, 158, 11, 0.06); }
+  .row-4xx td { background: rgba(220, 38, 38, 0.08); }
+  .row-5xx td { background: rgba(220, 38, 38, 0.15); }
+  .row-err td { background: rgba(220, 38, 38, 0.10); }
+  .row-skipped td { opacity: 0.5; }
+  details.row-details { background: #fafafa; border-left: 2px solid #d4d4d4; padding: 6px 10px; font-size: 12px; }
+  .dark details.row-details { background: #171717; border-color: #404040; }
+</style>
+
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-lg font-semibold">Логи запросов к HH</h2>
+  <a href="/" class="text-sm text-blue-600 hover:underline">← к списку</a>
+</div>
+
+<!-- Карточки статистики (за 24 часа) -->
+<div class="grid grid-cols-2 sm:grid-cols-7 gap-2 mb-4">
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" title="Всего запросов за 24 часа">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">Всего за 24ч</div>
+    <div class="text-xl font-semibold tabular-nums">{{ stats.total or 0 }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">2xx OK</div>
+    <div class="text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{{ stats.ok_2xx or 0 }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">3xx redirect</div>
+    <div class="text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-400">{{ stats.redir_3xx or 0 }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" title="403/429 — антибот HH">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">Anti-bot</div>
+    <div class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-400">{{ stats.antibot or 0 }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">Ошибки</div>
+    <div class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-400">{{ stats.errors or 0 }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">avg ms</div>
+    <div class="text-xl font-semibold tabular-nums">{{ (stats.avg_ms or 0) | round(0) | int }}</div>
+  </div>
+  <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <div class="text-[11px] uppercase tracking-wide text-neutral-500">max ms</div>
+    <div class="text-xl font-semibold tabular-nums">{{ stats.max_ms or 0 }}</div>
+  </div>
+</div>
+
+<!-- Фильтры -->
+<form method="GET" class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-3 mb-4 flex flex-wrap gap-3 items-end text-sm">
+  <div>
+    <label class="block text-[11px] text-neutral-500">Path содержит</label>
+    <input name="path" value="{{ cur_path or '' }}" placeholder="/vacancy/ или /applicant" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 w-56">
+  </div>
+  <div>
+    <label class="block text-[11px] text-neutral-500">Статус</label>
+    <select name="status" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5">
+      <option value="">все</option>
+      <option value="2xx" {% if cur_status == '2xx' %}selected{% endif %}>2xx OK</option>
+      <option value="3xx" {% if cur_status == '3xx' %}selected{% endif %}>3xx редиректы</option>
+      <option value="4xx" {% if cur_status == '4xx' %}selected{% endif %}>4xx (включая 403)</option>
+      <option value="5xx" {% if cur_status == '5xx' %}selected{% endif %}>5xx</option>
+    </select>
+  </div>
+  <div>
+    <label class="block text-[11px] text-neutral-500">Лимит</label>
+    <select name="limit" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5">
+      {% for n in [50, 100, 200, 500, 1000] %}<option value="{{n}}" {% if cur_limit == n %}selected{% endif %}>{{n}}</option>{% endfor %}
+    </select>
+  </div>
+  <label class="flex items-center gap-2 pb-2">
+    <input type="checkbox" name="only_errors" value="true" {% if cur_only_errors %}checked{% endif %} class="rounded"> только ошибки/403
+  </label>
+  <button class="px-3 py-1.5 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Применить</button>
+  <a href="/logs" class="px-3 py-1.5 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800">Сбросить</a>
+  <button type="button" onclick="window.cleanupLogs()" class="ml-auto px-3 py-1.5 rounded border border-red-300 text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30" title="Удалить старые записи, оставить последние 5000">🗑 Очистить старые</button>
+</form>
+
+<!-- Таблица -->
+<div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+  <table class="w-full compact">
+    <thead class="bg-neutral-50 dark:bg-neutral-800 text-left text-neutral-600 dark:text-neutral-400 uppercase tracking-wide text-[11px] border-b border-neutral-200 dark:border-neutral-700">
+      <tr>
+        <th class="px-3 py-2">Время</th>
+        <th class="px-3 py-2">Статус</th>
+        <th class="px-3 py-2">Метод</th>
+        <th class="px-3 py-2">Путь</th>
+        <th class="px-3 py-2">Параметры</th>
+        <th class="px-3 py-2 text-right">мс</th>
+        <th class="px-3 py-2 text-right">KB</th>
+        <th class="px-3 py-2">Referer / Кратко</th>
+        <th class="px-3 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        {% set cls = 'row-ok' %}
+        {% if r.error %}{% set cls = 'row-err' %}
+        {% elif r.kind == 'skipped_paused' %}{% set cls = 'row-skipped' %}
+        {% elif r.status and r.status >= 500 %}{% set cls = 'row-5xx' %}
+        {% elif r.status and r.status >= 400 %}{% set cls = 'row-4xx' %}
+        {% elif r.status and r.status >= 300 %}{% set cls = 'row-3xx' %}
+        {% endif %}
+        <tr class="border-b border-neutral-100 dark:border-neutral-800 align-top {{ cls }}">
+          <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">{{ r.ts[5:19] }}</td>
+          <td class="px-3 py-1.5 tabular-nums">
+            {% if r.status %}
+              <span class="font-mono">{{ r.status }}</span>
+            {% else %}
+              <span class="text-red-600">ERR</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-1.5 text-neutral-600">{{ r.method }}</td>
+          <td class="px-3 py-1.5 font-mono text-[12px] max-w-[280px] truncate" title="{{ r.path }}">{{ r.path }}</td>
+          <td class="px-3 py-1.5 font-mono text-[11px] text-neutral-500 max-w-[200px] truncate" title="{{ r.params or '' }}">{{ r.params or '—' }}</td>
+          <td class="px-3 py-1.5 text-right tabular-nums">{{ r.duration_ms or '—' }}</td>
+          <td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">{{ (r.size_bytes // 1024) if r.size_bytes else '—' }}</td>
+          <td class="px-3 py-1.5 text-[11px] text-neutral-500 max-w-[280px] truncate">
+            {% if r.error %}<span class="text-red-700">{{ r.error }}</span>
+            {% elif r.redirect_to %}↪ {{ r.redirect_to[:40] }}
+            {% elif r.referer %}{{ r.referer[-40:] }}
+            {% endif %}
+          </td>
+          <td class="px-3 py-1.5">
+            <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" class="text-xs text-blue-600 hover:underline">▾</button>
+          </td>
+        </tr>
+        <tr class="hidden">
+          <td colspan="9" class="px-3 py-2">
+            <div class="text-[12px] space-y-1 bg-neutral-50 dark:bg-neutral-800 rounded p-2 font-mono">
+              <div><b>ID:</b> {{ r.id }} <b>kind:</b> {{ r.kind or '—' }}</div>
+              <div><b>path:</b> {{ r.path }}</div>
+              <div><b>params:</b> {{ r.params or '—' }}</div>
+              <div><b>referer:</b> {{ r.referer or '—' }}</div>
+              {% if r.redirect_to %}<div><b>redirect_to:</b> {{ r.redirect_to }}</div>{% endif %}
+              {% if r.error %}<div class="text-red-700"><b>error:</b> {{ r.error }}</div>{% endif %}
+              <div><b>status:</b> {{ r.status }} · <b>duration:</b> {{ r.duration_ms }}ms · <b>size:</b> {{ r.size_bytes or 0 }}b</div>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="px-4 py-6 text-center text-neutral-500">Пусто — сделай несколько запросов к HH</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  window.cleanupLogs = async () => {
+    if (!confirm('Оставить последние 5000 записей, остальные удалить?')) return;
+    const fd = new URLSearchParams(); fd.append('keep', '5000');
+    const r = await fetch('/api/logs/cleanup', {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast('ok', `Удалено ${d.deleted}, оставлено ${d.kept}`);
+    setTimeout(() => location.reload(), 600);
+  };
+</script>
+{% endblock %}

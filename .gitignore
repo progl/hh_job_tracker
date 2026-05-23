@@ -1,0 +1,57 @@
+# Локальные секреты
+.env
+.env.local
+.env.*.local
+
+# Данные (БД, dataset, ML-модель, HTML-снапшоты)
+data/
+logs/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pkl
+*.joblib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# uv
+.uv-lock-*
+
+# Локальные логи
+*.log
+
+# Бэкап с реальной БД — никогда не публиковать
+data_2/
+
+# Отчёты coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Рабочие заметки (личный трекер, не для публичного репо)
+TODO.md
+DONE.md
+
+# Служебные файлы Claude Code / агентов
+CLAUDE.md
+AGENTS.md
+.claude/

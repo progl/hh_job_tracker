@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}HH Job Tracker{% endblock %}</title>
+  <script>
+    // theme bootstrap до загрузки tailwind
+    (function() {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+  <script>tailwind = { config: { darkMode: 'class' } }</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+    table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
+    .dark body { background: #0a0a0a; color: #e5e5e5; }
+    .dark .bg-white { background-color: #171717; }
+    .dark .bg-neutral-50 { background-color: #0a0a0a; }
+    .dark .border-neutral-200, .dark .border-neutral-100 { border-color: #262626; }
+    .dark .text-neutral-900 { color: #f5f5f5; }
+    .dark .text-neutral-800 { color: #e5e5e5; }
+    .dark .text-neutral-700, .dark .text-neutral-600 { color: #d4d4d4; }
+    .dark .text-neutral-500 { color: #a3a3a3; }
+    .dark .text-neutral-400 { color: #737373; }
+    .dark input, .dark textarea { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark select { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark thead.sticky-h th, .dark thead { background-color: #171717 !important; }
+    .dark tbody tr:hover { background-color: #262626 !important; }
+    .dark .hover\:bg-neutral-50:hover, .dark .hover\:bg-neutral-100:hover { background-color: #262626 !important; }
+    .dark .bg-neutral-100 { background-color: #262626; color: #d4d4d4; }
+    .dark .bg-blue-100 { background-color: #1e3a5f; color: #93c5fd; }
+    .dark .bg-emerald-100 { background-color: #14532d; color: #6ee7b7; }
+    .dark .bg-violet-100 { background-color: #4c1d95; color: #c4b5fd; }
+    .dark .bg-amber-100 { background-color: #78350f; color: #fcd34d; }
+    .dark .bg-red-100 { background-color: #7f1d1d; color: #fca5a5; }
+    .dark .bg-emerald-50 { background-color: #064e3b; color: #6ee7b7; }
+    .dark .bg-neutral-900 { background-color: #171717; }
+    .dark a { color: inherit; }
+    .dark a.text-blue-600 { color: #60a5fa; }
+  </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
+  <header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+    <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <h1 class="text-base font-semibold">HH Job Tracker</h1>
+        <nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+          <a href="/" class="hover:text-neutral-900 dark:hover:text-white">Список</a>
+          <a href="/funnel" class="hover:text-neutral-900 dark:hover:text-white">Воронка</a>
+          <a href="/profile" class="hover:text-neutral-900 dark:hover:text-white">Профиль</a>
+          <a href="/logs" class="hover:text-neutral-900 dark:hover:text-white">Логи</a>
+          <a href="/api/health" class="hover:text-neutral-900 dark:hover:text-white" target="_blank">Статус</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        {% block headerright %}{% endblock %}
+        <button onclick="window.toggleTheme()" title="Переключить тему"
+                class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+          <span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-[1600px] mx-auto px-4 py-5">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Status panel -->
+  <div id="status-panel" class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" style="display:none">
+    <div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+      <div class="flex items-center gap-2">
+        <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span class="font-medium">Статус</span>
+        <span id="status-summary" class="text-neutral-500"></span>
+      </div>
+      <span class="text-neutral-400" id="status-arrow">▾</span>
+    </div>
+    <div id="status-body" class="overflow-y-auto p-3 space-y-3">
+      <div>
+        <div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
+        <div id="client-info" class="text-neutral-700 dark:text-neutral-200"></div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
+        <div id="scheduler-info" class="space-y-1 text-neutral-700 dark:text-neutral-200"></div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
+        <div id="tasks-info" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed top-16 right-3 z-50 space-y-2"></div>
+
+  <script>
+    window.statusToggle = () => {
+      const b = document.getElementById('status-body');
+      const a = document.getElementById('status-arrow');
+      const hidden = b.style.display === 'none';
+      b.style.display = hidden ? 'block' : 'none';
+      a.textContent = hidden ? '▾' : '▸';
+      try { localStorage.setItem('statusCollapsed', hidden ? '0' : '1'); } catch(e){}
+    };
+    (function() {
+      try {
+        if (localStorage.getItem('statusCollapsed') === '1') {
+          document.getElementById('status-body').style.display = 'none';
+          document.getElementById('status-arrow').textContent = '▸';
+        }
+      } catch(e){}
+    })();
+
+    window.runAction = async (event, url, label, extraParams) => {
+      if (event && event.preventDefault) event.preventDefault();
+      const form = event && event.target;
+      let body = new URLSearchParams();
+      if (form && form.tagName === 'FORM') {
+        new FormData(form).forEach((v, k) => body.append(k, v));
+      }
+      if (extraParams) Object.entries(extraParams).forEach(([k,v]) => body.append(k, v));
+      window.showToast('info', `▶ ${label}: запускаю…`);
+      try {
+        const r = await fetch(url, {method: 'POST', body});
+        const d = await r.json();
+        if (d.ok) window.showToast('ok', `▶ ${label}: задача поставлена`);
+        else if (d.reason === 'already_running') window.showToast('info', `${label}: уже запущена`);
+        else if (d.reason === 'client_paused') window.showToast('err', `${label}: ${d.message || 'клиент на паузе'}`);
+        else window.showToast('err', `${label}: ${d.reason || 'ошибка'}`);
+      } catch(e) {
+        window.showToast('err', `${label}: ${e.message}`);
+      }
+    };
+
+    window.runJobNow = async (jobId, label) => {
+      window.showToast('info', `▶ ${label}: запускаю…`);
+      try {
+        const r = await fetch(`/api/scheduler/${jobId}/run-now`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `▶ ${label}: запущено`);
+        } else if (d.reason === 'client_paused') {
+          window.showToast('err', `${label}: ${d.message || 'клиент HH на паузе'}`);
+        } else if (d.reason === 'already_running') {
+          window.showToast('info', `${label}: уже запущена`);
+        } else {
+          window.showToast('err', `${label}: ${d.reason || 'ошибка'}`);
+        }
+      } catch(e) {
+        window.showToast('err', `${label}: ${e.message}`);
+      }
+    };
+
+    window.showToast = (kind, text) => {
+      const cls = {ok: 'bg-emerald-600', err: 'bg-red-600', info: 'bg-neutral-800'}[kind] || 'bg-neutral-800';
+      const el = document.createElement('div');
+      el.className = `${cls} text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-[360px]`;
+      el.textContent = text;
+      document.getElementById('toasts').appendChild(el);
+      setTimeout(() => el.remove(), 5000);
+    };
+
+    window.fmtRelative = (ts) => {
+      if (!ts) return '—';
+      const dt = new Date(ts.replace(' ', 'T'));
+      const diff = (Date.now() - dt.getTime()) / 1000;
+      if (Math.abs(diff) < 60) return `${Math.round(-diff)}с`;
+      if (Math.abs(diff) < 3600) return `${Math.round(-diff/60)}м`;
+      if (Math.abs(diff) < 86400) return `${Math.round(-diff/3600)}ч`;
+      return dt.toLocaleString('ru-RU');
+    };
+
+    window.renderClient = (c) => {
+      if (!c) return;
+      const paused = c.paused_now;
+      const dot = document.getElementById('status-dot');
+      dot.className = `inline-block w-2 h-2 rounded-full ${paused ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`;
+      document.getElementById('client-info').innerHTML = `
+        <div class="flex items-center gap-2 flex-wrap">
+          <span>Состояние: <b class="${paused ? 'text-red-600' : 'text-emerald-600'}">${paused ? 'на паузе (anti-bot)' : 'активен'}</b></span>
+          ${paused ? `<button onclick="window.unpauseClient()" class="text-[11px] px-2 py-0.5 rounded border border-red-300 text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30" title="Снять anti-bot паузу немедленно. Используй осторожно — может снова получить 403.">✕ снять паузу</button>` : ''}
+        </div>
+        <div class="text-neutral-500 text-[11px]">cookies: ${c.cookie_count} · challenges: ${c.challenge_count} · ${c.base_url}</div>
+      `;
+    };
+    window.unpauseClient = async () => {
+      if (!confirm('Снять anti-bot паузу? Следующий запрос может опять получить 403 и поставить новую паузу.')) return;
+      const r = await fetch('/api/client/unpause', {method: 'POST'});
+      const d = await r.json();
+      window.showToast(d.ok ? 'ok' : 'err', d.ok ? '✓ Пауза снята' : 'Ошибка');
+    };
+    window.renderScheduler = (s) => {
+      if (!s || !s.jobs) return;
+      const labels = {
+        personal_refresh: 'Обновлять отклики (инкрем.)',
+        personal_full_refresh: 'Полный sync откликов',
+        fx_refresh: 'Курсы ЦБ',
+        ml_retrain: 'Обучение ML',
+        backfill_pending: 'Дотягивать вакансии',
+        sync_searches: 'Синк сохранённых поисков',
+      };
+      document.getElementById('scheduler-info').innerHTML = s.jobs.map(j => {
+        const label = labels[j.id] || j.id;
+        const next = j.next_run ? window.fmtRelative(j.next_run.slice(0,19).replace(' ','T')) : '—';
+        const last = j.last_result ? `<span class="text-[11px] text-neutral-500">· последний: ${JSON.stringify(j.last_result).slice(0,70)}</span>` : '';
+        return `<div class="flex justify-between gap-2 items-center">
+          <div class="flex items-center gap-2">
+            <button title="Запустить сейчас" onclick="window.runJobNow('${j.id}','${label}')"
+                    class="text-[11px] px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700">▶</button>
+            <div>${label}</div>
+          </div>
+          <div class="text-neutral-500 text-[11px]">через ${next}</div>
+        </div>${last ? '<div>'+last+'</div>' : ''}`;
+      }).join('');
+    };
+    window.renderTask = (t) => {
+      const colors = { running: 'bg-blue-500', done: 'bg-emerald-500', error: 'bg-red-500', cancelled: 'bg-neutral-500', queued: 'bg-amber-500' };
+      const pct = t.progress || 0;
+      return `<div data-tid="${t.id}" class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-medium truncate">${t.label}</div>
+          <div class="text-[11px] text-neutral-500">${t.status}</div>
+        </div>
+        <div class="mt-1 h-1.5 rounded bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+          <div class="h-full ${colors[t.status] || 'bg-neutral-400'}" style="width:${pct}%"></div>
+        </div>
+        <div class="mt-1 flex justify-between text-[11px] text-neutral-500">
+          <div class="truncate">${t.message || ''}</div>
+          <div>${t.total ? t.current + '/' + t.total : ''}</div>
+        </div>
+        ${t.status === 'running' ? `<button class="mt-1 text-[11px] text-red-600 hover:underline" onclick="fetch('/api/tasks/${t.kind}/cancel', {method:'POST'})">отменить</button>` : ''}
+      </div>`;
+    };
+    window.tasksState = {};
+    window.renderTasks = () => {
+      const all = Object.values(window.tasksState).sort((a,b)=>((b.started_at||0)-(a.started_at||0)));
+      const active = all.filter(t => t.status === 'running' || t.status === 'queued');
+      const recent = all.filter(t => t.status !== 'running' && t.status !== 'queued').slice(0,3);
+      const html = active.concat(recent).map(window.renderTask).join('');
+      document.getElementById('tasks-info').innerHTML = html || '<div class="text-neutral-500 text-[11px]">нет активных задач</div>';
+      const sum = active.length ? `${active.length} активн.` : '';
+      document.getElementById('status-summary').textContent = sum;
+    };
+    window.applyTaskEvent = (ev) => {
+      if (ev.snapshot) {
+        window.tasksState = {};
+        ev.snapshot.forEach(t => window.tasksState[t.id] = t);
+      } else if (ev.id) {
+        const prev = window.tasksState[ev.id];
+        window.tasksState[ev.id] = ev;
+        if (prev && prev.status === 'running' && ev.status === 'done') {
+          window.showToast('ok', `✓ ${ev.label}: ${ev.message || 'готово'}`);
+        } else if (prev && prev.status === 'running' && ev.status === 'error') {
+          window.showToast('err', `✗ ${ev.label}: ${ev.error || ev.message}`);
+        } else if (prev && prev.status === 'running' && ev.status === 'cancelled') {
+          window.showToast('info', `⏵ ${ev.label} отменено`);
+        }
+      }
+      window.renderTasks();
+    };
+
+    // === Init ===
+    fetch('/api/status').then(r => r.json()).then(d => {
+      window.renderClient(d.client);
+      window.renderScheduler(d.scheduler);
+      document.getElementById('status-panel').style.display = 'flex';
+    });
+    setInterval(() => {
+      fetch('/api/status').then(r => r.json()).then(d => {
+        window.renderClient(d.client);
+        window.renderScheduler(d.scheduler);
+      }).catch(()=>{});
+    }, 10000);
+
+    // SSE tasks
+    if (typeof EventSource !== 'undefined') {
+      const es = new EventSource('/api/tasks/stream');
+      es.onmessage = (e) => { try { window.applyTaskEvent(JSON.parse(e.data)); } catch(_) {} };
+      es.onerror = () => { /* let browser reconnect */ };
+    }
+  </script>
+  <script>
+    window.toggleTheme = () => {
+      const cur = document.documentElement.classList.contains('dark');
+      if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
+      else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<tr id="results-count-row" data-count="{{ rows | length }}" class="hidden"></tr>
+{% for v in rows %}
+  {% include "_row.html" %}
+{% else %}
+<tr><td colspan="15" class="px-4 py-6 text-center text-neutral-500 text-sm">Ничего не найдено — нажми «Собрать сейчас» или ▶ на сохранённом поиске</td></tr>
+{% endfor %}

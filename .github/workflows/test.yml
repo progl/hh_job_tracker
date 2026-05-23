@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      HH_USER_AGENT: pytest
+      HH_SEC_CH_UA: pytest
+      HH_SEC_CH_UA_PLATFORM: macOS
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests with coverage
+        run: uv run pytest tests/ --cov=app --cov-report=term --cov-report=xml
+
+      - name: Write coverage summary
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then
+            rate=$(python -c "import xml.etree.ElementTree as ET; print(round(float(ET.parse('coverage.xml').getroot().get('line-rate')) * 100))")
+            echo "Coverage: ${rate}%" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Coverage: n/a" >> "$GITHUB_STEP_SUMMARY"
+          fi
