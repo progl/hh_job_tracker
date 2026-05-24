@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Python Senior Developer (search/elasticsearch) — Маркетплейс ШОП</title>
+<script>
+    // theme bootstrap до загрузки tailwind
+    (function() {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+<script>tailwind = { config: { darkMode: 'class' } }</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+    table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
+    .dark body { background: #0a0a0a; color: #e5e5e5; }
+    .dark .bg-white { background-color: #171717; }
+    .dark .bg-neutral-50 { background-color: #0a0a0a; }
+    .dark .border-neutral-200, .dark .border-neutral-100 { border-color: #262626; }
+    .dark .text-neutral-900 { color: #f5f5f5; }
+    .dark .text-neutral-800 { color: #e5e5e5; }
+    .dark .text-neutral-700, .dark .text-neutral-600 { color: #d4d4d4; }
+    .dark .text-neutral-500 { color: #a3a3a3; }
+    .dark .text-neutral-400 { color: #737373; }
+    .dark input, .dark textarea { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark select { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark thead.sticky-h th, .dark thead { background-color: #171717 !important; }
+    .dark tbody tr:hover { background-color: #262626 !important; }
+    .dark .hover\:bg-neutral-50:hover, .dark .hover\:bg-neutral-100:hover { background-color: #262626 !important; }
+    .dark .bg-neutral-100 { background-color: #262626; color: #d4d4d4; }
+    .dark .bg-blue-100 { background-color: #1e3a5f; color: #93c5fd; }
+    .dark .bg-emerald-100 { background-color: #14532d; color: #6ee7b7; }
+    .dark .bg-violet-100 { background-color: #4c1d95; color: #c4b5fd; }
+    .dark .bg-amber-100 { background-color: #78350f; color: #fcd34d; }
+    .dark .bg-red-100 { background-color: #7f1d1d; color: #fca5a5; }
+    .dark .bg-emerald-50 { background-color: #064e3b; color: #6ee7b7; }
+    .dark .bg-neutral-900 { background-color: #171717; }
+    .dark a { color: inherit; }
+    .dark a.text-blue-600 { color: #60a5fa; }
+  </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
+<header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<h1 class="text-base font-semibold">HH Job Tracker</h1>
+<nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+<a class="hover:text-neutral-900 dark:hover:text-white" href="../index.html">Список</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="../funnel.html">Воронка</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="../profile.html">Профиль</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="../logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleTheme()" title="Переключить тему">
+<span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1600px] mx-auto px-4 py-5">
+<article class="bg-white rounded-lg border border-neutral-200 p-6 max-w-5xl">
+<div class="flex items-start justify-between gap-4">
+<div>
+<a class="text-xs text-neutral-500 hover:underline" href="../index.html">← Список</a>
+<div class="flex flex-wrap items-center gap-2 mt-2">
+<h2 class="text-xl font-semibold">Python Senior Developer (search/elasticsearch)</h2>
+</div>
+<div class="text-sm text-neutral-700 mt-1">Маркетплейс ШОП · Удалённо</div>
+</div>
+<div class="flex items-center gap-3">
+<form class="inline" onsubmit="return false;">
+<select class="text-sm px-2 py-1 rounded border border-neutral-300" name="status" onchange="this.form.requestSubmit(); setTimeout(()=&gt;location.reload(),100);">
+<option selected="" value="new">Новое</option>
+<option value="viewed">Просмотрел</option>
+<option value="applied">Откликнулся</option>
+<option value="interview">Собес</option>
+<option value="rejected">Отказ</option>
+<option value="offer">Оффер</option>
+<option value="skipped">Скип</option>
+</select>
+</form>
+<a class="text-sm text-blue-600 hover:underline" href="https://hh.ru/vacancy/90000018" rel="noopener" target="_blank">HH ↗</a>
+</div>
+</div>
+<!-- Match score breakdown -->
+<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-1 bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+<div class="text-[11px] uppercase text-neutral-500">Match score</div>
+<div class="text-3xl font-semibold mt-1 tabular-nums">73<span class="text-base text-neutral-400">/100</span></div>
+<div class="mt-3 h-1.5 rounded bg-neutral-200 overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: 73%"></div>
+</div>
+<div class="mt-4 space-y-1.5 text-sm">
+<div class="flex items-baseline justify-between gap-2" title="35 если все скиллы профиля совпали с распознанным стеком вакансии; ratio = |intersection| / |union|, score = ratio×35">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">стек</span>
+<span class="tabular-nums">11<span class="text-neutral-400">/35</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">3 совпадений из 9</div>
+<div class="flex items-baseline justify-between gap-2" title="salary_rub / salary_expected_from: ≥100% → 20, ≥85% → 15, ≥70% → 10, ≥50% → 5, иначе 0. Если ЗП не указана — 4. Если ожидания не заданы — 12">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">ЗП</span>
+<span class="tabular-nums">20<span class="text-neutral-400">/20</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">360 000 vs ожидание 200 000</div>
+<div class="flex items-baseline justify-between gap-2" title="15 если удалёнка (schedule=remote или эвристика по тексту), 0 иначе">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">формат</span>
+<span class="tabular-nums">15<span class="text-neutral-400">/15</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">удалёнка</div>
+<div class="flex items-baseline justify-between gap-2" title="сопоставление detected level (junior/middle/senior/lead) и years_experience из профиля. Сеньор+4 года → 15; мидл 2-6 лет → 13; и т.д.">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">опыт</span>
+<span class="tabular-nums">15<span class="text-neutral-400">/15</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">senior vs 7.0 лет</div>
+<div class="flex items-baseline justify-between gap-2" title="комбо read_topic_percent (≥90→7, ≥70→5, ≥50→3, ≥30→1) + reply_working_days (≤3→+3, ≤7→+1). Cap 10. Если нет данных — 4">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">вежливость</span>
+<span class="tabular-nums">8<span class="text-neutral-400">/10</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">читает 75%, ответ за 2.0д</div>
+<div class="flex items-baseline justify-between gap-2" title="по total_responses_count: &lt;30 → 5, &lt;100 → 4, &lt;250 → 2, &lt;500 → 1, ≥500 → 0. Меньше откликов = выше шанс заметить">
+<span class="text-neutral-600 cursor-help underline decoration-dotted decoration-neutral-400">конкуренция</span>
+<span class="tabular-nums">4<span class="text-neutral-400">/5</span></span>
+</div>
+<div class="text-[11px] text-neutral-500 -mt-1">откликов 68</div>
+</div>
+<div class="mt-3 text-[11px] text-neutral-500">наведи на название фактора — увидишь шкалу</div>
+</div>
+<div class="md:col-span-2">
+<dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+<div><dt class="text-neutral-500">ЗП, ₽</dt><dd class="tabular-nums" title="360 000 ₽">360К</dd></div>
+<div><dt class="text-neutral-500">Формат</dt><dd>удалёнка (remote)</dd></div>
+<div><dt class="text-neutral-500">Опыт (HH)</dt><dd>—</dd></div>
+<div><dt class="text-neutral-500">Уровень</dt><dd>senior</dd></div>
+<div><dt class="text-neutral-500">Откликов</dt><dd>28 / всего 68</dd></div>
+<div><dt class="text-neutral-500">Сейчас смотрят</dt><dd>2</dd></div>
+</dl>
+<div class="mt-4 p-3 rounded-lg border border-neutral-200 bg-white">
+<div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Индекс вежливости работодателя (Pro)</div>
+<div class="text-sm">
+          Читает 75% откликов · отвечает за 2.0 раб.дн. · всего откликов на работодателя 800
+        </div>
+</div>
+<div class="mt-3 p-3 rounded-lg border border-neutral-200 bg-white">
+<div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Мой отклик</div>
+<div class="text-sm">Состояние: <b>собес</b> · HR смотрел</div>
+</div>
+<div class="mt-4">
+<div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Распознанный стек</div>
+<div class="flex flex-wrap gap-1">
+<span class="text-xs px-2 py-0.5 rounded bg-neutral-100 text-neutral-800">python</span>
+<span class="text-xs px-2 py-0.5 rounded bg-neutral-100 text-neutral-800">elasticsearch</span>
+<span class="text-xs px-2 py-0.5 rounded bg-neutral-100 text-neutral-800">postgresql</span>
+<span class="text-xs px-2 py-0.5 rounded bg-neutral-100 text-neutral-800">redis</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Описание</div>
+<div class="prose prose-sm max-w-none">Описание вакансии. Стек: python, elasticsearch, postgresql, redis</div>
+</div>
+</article>
+</main>
+<!-- Status panel -->
+<div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
+<div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="status-dot"></span>
+<span class="font-medium">Статус</span>
+<span class="text-neutral-500" id="status-summary"></span>
+</div>
+<span class="text-neutral-400" id="status-arrow">▾</span>
+</div>
+<div class="overflow-y-auto p-3 space-y-3" id="status-body">
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
+<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
+<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
+<div class="space-y-2" id="tasks-info"></div>
+</div>
+</div>
+</div>
+<!-- Toasts -->
+<div class="fixed top-16 right-3 z-50 space-y-2" id="toasts"></div>
+
+<script>
+    window.toggleTheme = () => {
+      const cur = document.documentElement.classList.contains('dark');
+      if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
+      else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Воронка откликов</title>
+<script>
+    // theme bootstrap до загрузки tailwind
+    (function() {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+<script>tailwind = { config: { darkMode: 'class' } }</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+    table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
+    .dark body { background: #0a0a0a; color: #e5e5e5; }
+    .dark .bg-white { background-color: #171717; }
+    .dark .bg-neutral-50 { background-color: #0a0a0a; }
+    .dark .border-neutral-200, .dark .border-neutral-100 { border-color: #262626; }
+    .dark .text-neutral-900 { color: #f5f5f5; }
+    .dark .text-neutral-800 { color: #e5e5e5; }
+    .dark .text-neutral-700, .dark .text-neutral-600 { color: #d4d4d4; }
+    .dark .text-neutral-500 { color: #a3a3a3; }
+    .dark .text-neutral-400 { color: #737373; }
+    .dark input, .dark textarea { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark select { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark thead.sticky-h th, .dark thead { background-color: #171717 !important; }
+    .dark tbody tr:hover { background-color: #262626 !important; }
+    .dark .hover\:bg-neutral-50:hover, .dark .hover\:bg-neutral-100:hover { background-color: #262626 !important; }
+    .dark .bg-neutral-100 { background-color: #262626; color: #d4d4d4; }
+    .dark .bg-blue-100 { background-color: #1e3a5f; color: #93c5fd; }
+    .dark .bg-emerald-100 { background-color: #14532d; color: #6ee7b7; }
+    .dark .bg-violet-100 { background-color: #4c1d95; color: #c4b5fd; }
+    .dark .bg-amber-100 { background-color: #78350f; color: #fcd34d; }
+    .dark .bg-red-100 { background-color: #7f1d1d; color: #fca5a5; }
+    .dark .bg-emerald-50 { background-color: #064e3b; color: #6ee7b7; }
+    .dark .bg-neutral-900 { background-color: #171717; }
+    .dark a { color: inherit; }
+    .dark a.text-blue-600 { color: #60a5fa; }
+  </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
+<header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<h1 class="text-base font-semibold">HH Job Tracker</h1>
+<nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+<a class="hover:text-neutral-900 dark:hover:text-white" href="index.html">Список</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleTheme()" title="Переключить тему">
+<span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1600px] mx-auto px-4 py-5">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-semibold">Воронка откликов</h2>
+<a class="text-sm text-blue-600 hover:underline" href="index.html">← к списку</a>
+</div>
+<section class="space-y-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">Всего</div>
+<div class="text-2xl font-semibold tabular-nums">15</div>
+</div>
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">Ждут</div>
+<div class="text-2xl font-semibold tabular-nums text-amber-700">6</div>
+<div class="text-[11px] text-neutral-500">40%</div>
+</div>
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">HR смотрел</div>
+<div class="text-2xl font-semibold tabular-nums text-blue-700">12</div>
+<div class="text-[11px] text-neutral-500">80%</div>
+</div>
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">Собес/Приглашения</div>
+<div class="text-2xl font-semibold tabular-nums text-violet-700">5</div>
+<div class="text-[11px] text-neutral-500">33%</div>
+</div>
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">Отказов</div>
+<div class="text-2xl font-semibold tabular-nums text-red-700">3</div>
+<div class="text-[11px] text-neutral-500">20%</div>
+</div>
+<div class="px-3 py-2 rounded-lg border border-neutral-200 bg-white">
+<div class="text-[11px] uppercase tracking-wide text-neutral-500">Архив</div>
+<div class="text-2xl font-semibold tabular-nums text-neutral-500">2</div>
+<div class="text-[11px] text-neutral-500">13%</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- По работодателям -->
+<div class="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+<div class="px-4 py-3 border-b border-neutral-200 text-sm font-medium">Работодатели по откликам</div>
+<table class="w-full text-sm">
+<thead class="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
+<tr><th class="px-3 py-2 text-left">Работодатель</th><th class="px-3 py-2 text-right">Откл.</th><th class="px-3 py-2 text-right">Собес</th><th class="px-3 py-2 text-right">Отказ</th><th class="px-3 py-2 text-right">Ждёт</th><th class="px-3 py-2 text-right">Вежливость</th></tr>
+</thead>
+<tbody>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1004">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1004" rel="noopener" target="_blank">Маркетплейс ШОП</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">75%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1002">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1002" rel="noopener" target="_blank">Технополис</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">92%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1001">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1001" rel="noopener" target="_blank">ООО Ромашка</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">85%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1008">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1008" rel="noopener" target="_blank">ЕдТех Платформа</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">70%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1003">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1003" rel="noopener" target="_blank">АйТи Лаб</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">60%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1006">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1006" rel="noopener" target="_blank">Облачные Решения</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">2</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">95%</td>
+</tr>
+<tr class="border-b border-neutral-100">
+<td class="px-3 py-1.5" title="employer_id: 1005">
+<a class="text-blue-600 hover:underline" href="https://hh.ru/employer/1005" rel="noopener" target="_blank">Финтех Плюс</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-violet-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-red-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-amber-700">0</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">50%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- По неделям -->
+<div class="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+<div class="px-4 py-3 border-b border-neutral-200 text-sm font-medium">По неделям</div>
+<div class="p-4">
+<div class="space-y-1.5">
+<div class="flex items-center gap-2 text-xs">
+<div class="w-20 text-neutral-500 tabular-nums">2026-W20</div>
+<div class="flex-1 h-5 bg-neutral-50 rounded relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-amber-400" style="width: 100.0%"></div>
+<div class="absolute inset-0 flex items-center justify-end pr-2 tabular-nums text-neutral-700">5</div>
+</div>
+<div class="w-32 text-right tabular-nums text-neutral-600">
+<span class="text-violet-700">1</span> /
+                  <span class="text-red-700">1</span> /
+                  <span class="text-amber-700">3</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="w-20 text-neutral-500 tabular-nums">2026-W19</div>
+<div class="flex-1 h-5 bg-neutral-50 rounded relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-amber-400" style="width: 20.0%"></div>
+<div class="absolute inset-0 flex items-center justify-end pr-2 tabular-nums text-neutral-700">1</div>
+</div>
+<div class="w-32 text-right tabular-nums text-neutral-600">
+<span class="text-violet-700">1</span> /
+                  <span class="text-red-700">0</span> /
+                  <span class="text-amber-700">0</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="w-20 text-neutral-500 tabular-nums">2026-W17</div>
+<div class="flex-1 h-5 bg-neutral-50 rounded relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-amber-400" style="width: 100.0%"></div>
+<div class="absolute inset-0 flex items-center justify-end pr-2 tabular-nums text-neutral-700">5</div>
+</div>
+<div class="w-32 text-right tabular-nums text-neutral-600">
+<span class="text-violet-700">2</span> /
+                  <span class="text-red-700">1</span> /
+                  <span class="text-amber-700">1</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="w-20 text-neutral-500 tabular-nums">2026-W16</div>
+<div class="flex-1 h-5 bg-neutral-50 rounded relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full bg-amber-400" style="width: 80.0%"></div>
+<div class="absolute inset-0 flex items-center justify-end pr-2 tabular-nums text-neutral-700">4</div>
+</div>
+<div class="w-32 text-right tabular-nums text-neutral-600">
+<span class="text-violet-700">1</span> /
+                  <span class="text-red-700">1</span> /
+                  <span class="text-amber-700">2</span>
+</div>
+</div>
+</div>
+<div class="mt-3 text-[11px] text-neutral-500">справа: собес / отказ / ждёт</div>
+</div>
+</div>
+</div>
+<div class="bg-white border border-neutral-200 rounded-lg p-4">
+<div class="text-sm font-medium mb-2">Среднее время до ответа HR</div>
+<div class="text-3xl font-semibold tabular-nums">
+      
+        552.0 ч
+      
+    </div>
+<div class="text-xs text-neutral-500 mt-1">по тем откликам, где HR посмотрел</div>
+</div>
+</section>
+</main>
+<!-- Status panel -->
+<div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
+<div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="status-dot"></span>
+<span class="font-medium">Статус</span>
+<span class="text-neutral-500" id="status-summary"></span>
+</div>
+<span class="text-neutral-400" id="status-arrow">▾</span>
+</div>
+<div class="overflow-y-auto p-3 space-y-3" id="status-body">
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
+<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
+<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
+<div class="space-y-2" id="tasks-info"></div>
+</div>
+</div>
+</div>
+<!-- Toasts -->
+<div class="fixed top-16 right-3 z-50 space-y-2" id="toasts"></div>
+
+<script>
+    window.toggleTheme = () => {
+      const cur = document.documentElement.classList.contains('dark');
+      if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
+      else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+  </script>
+</body>
+</html>
