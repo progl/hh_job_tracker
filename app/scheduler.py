@@ -18,7 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.clients.cbr import refresh_salary_module
-from app.db import job_runs_repo
+from app.db import job_runs_repo, vacancies_repo
 from app.clients.cookies import save_jar
 from app.collector import personal as personal_collector
 from app.db.db import get_db
@@ -105,7 +105,22 @@ async def _job_sync_searches(hh_client) -> dict:
                 results.append({"id": s["id"], "error": str(e)})
                 break
         await save_jar(db, hh_client.client)
+        try:
+            dd = await vacancies_repo.mark_duplicates_as_skipped(db)
+            if dd.get("marked"):
+                log.info("dedup after sync_searches: groups=%s marked=%s", dd["groups"], dd["marked"])
+        except Exception as e:
+            log.warning("dedup after sync_searches failed: %s", e)
         return {"ran": len(results), "results": results}
+    finally:
+        await db.close()
+
+
+@_record("dedup_vacancies")
+async def _job_dedup_vacancies() -> dict:
+    db = await get_db()
+    try:
+        return await vacancies_repo.mark_duplicates_as_skipped(db)
     finally:
         await db.close()
 
@@ -178,6 +193,10 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
         _job_personal_full_refresh, CronTrigger(hour=2, minute=0),
         args=[hh_client], id="personal_full_refresh", replace_existing=True,
     )
+    _scheduler.add_job(
+        _job_dedup_vacancies, CronTrigger(hour=3, minute=45),
+        id="dedup_vacancies", replace_existing=True,
+    )
     _scheduler.start()
     import time as _t
     _state["started_at"] = _t.time()
@@ -212,6 +231,7 @@ _JOB_LABELS = {
     "ml_retrain": "Обучение ML",
     "backfill_pending": "Дотянуть вакансии",
     "sync_searches": "Синк сохранённых поисков",
+    "dedup_vacancies": "Дедуп вакансий",
 }
 
 
