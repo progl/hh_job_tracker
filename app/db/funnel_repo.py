@@ -3,9 +3,26 @@ from datetime import datetime
 import aiosqlite
 
 
-async def top_employers(db: aiosqlite.Connection, limit: int = 20) -> list[dict]:
+async def top_employers(
+    db: aiosqlite.Connection,
+    limit: int = 20,
+    only: str | None = None,  # discard | interview | waiting | None=все
+) -> list[dict]:
+    """only:
+      'discard'   — только работодатели с хотя бы одним отказом (DISCARD*)
+      'interview' — только с INVITATION/INTERVIEW
+      'waiting'   — только с активным RESPONSE
+      None        — все
+    """
+    having = ""
+    if only == "discard":
+        having = "HAVING discard > 0"
+    elif only == "interview":
+        having = "HAVING interview > 0"
+    elif only == "waiting":
+        having = "HAVING waiting > 0"
     cur = await db.execute(
-        """
+        f"""
         SELECT n.employer_id,
                COALESCE(
                  e.name,
@@ -22,6 +39,7 @@ async def top_employers(db: aiosqlite.Connection, limit: int = 20) -> list[dict]
      LEFT JOIN employers e ON e.id = n.employer_id
          WHERE n.employer_id IS NOT NULL
       GROUP BY n.employer_id
+      {having}
       ORDER BY n DESC, interview DESC
          LIMIT ?
         """,

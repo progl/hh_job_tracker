@@ -1705,12 +1705,16 @@ async def compare(request: Request, ids: list[int] = Query(None)):
 
 
 @app.get("/funnel", response_class=HTMLResponse)
-async def funnel_page(request: Request):
+async def funnel_page(
+    request: Request,
+    only: str | None = Query(None),  # discard | interview | waiting | None
+    top: int = Query(50),
+):
     db = await get_db()
     try:
         await funnel_repo.backfill_employer_names(db)
         c = await negotiations_repo.counters(db)
-        top = await funnel_repo.top_employers(db, limit=20)
+        top_list = await funnel_repo.top_employers(db, limit=max(1, min(top, 500)), only=only)
         weeks = await funnel_repo.by_week(db)
         avg_h = await funnel_repo.avg_hr_response_hours(db)
     finally:
@@ -1753,9 +1757,11 @@ async def funnel_page(request: Request):
         "funnel.html",
         request=request,
         cards=cards,
-        top_employers=top,
+        top_employers=top_list,
         weeks=weeks,
         avg_hr_response_hours=avg_h,
+        only_filter=only or "",
+        top_limit=top,
     )
 
 
