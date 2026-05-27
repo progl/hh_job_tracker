@@ -82,9 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
-<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
-<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
-<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="jobs.html">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="llm_logs.html">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="analytics.html">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
@@ -104,10 +104,10 @@
 <div class="bg-white border border-neutral-200 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Из HH</div>
 <dl class="grid grid-cols-2 gap-y-1.5 text-sm">
-<dt class="text-neutral-500">HHID</dt><dd class="font-mono">00000001</dd>
-<dt class="text-neutral-500">Имя</dt><dd>Иван Петров</dd>
-<dt class="text-neutral-500">Резюме ID</dt><dd class="font-mono">demo_resume_1</dd>
-<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-23 14:55:26</dd>
+<dt class="text-neutral-500">HHID</dt><dd class="font-mono">15919662</dd>
+<dt class="text-neutral-500">Имя</dt><dd>Михаил Матвеев</dd>
+<dt class="text-neutral-500">Резюме ID</dt><dd class="font-mono">7fbb135bff010af1f00039ed1f687571546863</dd>
+<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-27 12:07:44</dd>
 </dl>
 <form class="mt-3" onsubmit="return false;">
 <button class="px-3 py-1.5 text-sm rounded bg-violet-700 text-white hover:bg-violet-600">Обновить из HH</button>
@@ -123,23 +123,23 @@
 <div class="grid grid-cols-2 gap-3">
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Опыт, лет</label>
-<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="years_experience" step="0.5" type="number" value="7.0"/>
+<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="years_experience" step="0.5" type="number" value="16.7"/>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Ожидание ЗП от</label>
 <div class="flex gap-2">
-<input class="grow border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_expected_from" step="10000" type="number" value="200000"/>
+<input class="grow border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_expected_from" step="10000" type="number" value="350000"/>
 <input class="w-20 border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_currency" value="RUR"/>
 </div>
 </div>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Навыки (через запятую)</label>
-<textarea class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm font-mono" name="skills_csv" rows="3">python, django, fastapi, postgresql, docker, kubernetes, redis, asyncio</textarea>
+<textarea class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm font-mono" name="skills_csv" rows="3">REST API, Microservices, Celery, Redis, RabbitMQ, Async processing, Docker, Kubernetes, Helm, CI/CD (GitLab, Jenkins), Grafana, ELK, Sentry, Python, SQL, Oracle Pl/SQL, Bash, Pytest, Оптимизация кода, Agile, PostgreSQL, Clickhouse, SQLAlchemy, FastAPI, NoSQL, Flask, Django Framework, API, Linux, Git</textarea>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Форматы (через запятую: REMOTE, HYBRID, OFFICE)</label>
-<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="formats_csv" value="REMOTE, HYBRID"/>
+<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="formats_csv" value="REMOTE"/>
 </div>
 <div class="flex items-center gap-3">
 <button class="px-3 py-1.5 text-sm rounded bg-neutral-900 text-white hover:bg-neutral-700">Сохранить</button>
@@ -153,7 +153,7 @@
       На карточке вакансии и в крон-джобе используется эта.
     </div>
 <div class="flex items-center gap-2">
-<label class="text-sm">Модель:</label>
+<label class="text-sm w-32">Тяжёлая (slow):</label>
 <select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 text-sm font-mono" id="llm-default-model">
 <option selected="" value="qwen3:14b">qwen3:14b</option>
 <option value="qwen2.5:14b">qwen2.5:14b</option>
@@ -162,9 +162,24 @@
 <button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setLLMModel()">Сохранить</button>
 <span class="text-xs text-emerald-700" id="llm-save-result"></span>
 </div>
-<div class="text-[11px] text-neutral-500 mt-2">
-      Дефолт из .env: <span class="font-mono">qwen3:14b</span>.
-      <a class="text-blue-600 hover:underline" href="/llm-logs">→ посмотреть логи прогонов</a>
+<div class="text-[11px] text-neutral-500 mt-1">
+      Для requirements / match_essay / interview_prep. Дефолт: <span class="font-mono">qwen3:14b</span>.
+    </div>
+<div class="flex items-center gap-2 mt-3">
+<label class="text-sm w-32">Быстрая (fast):</label>
+<select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 text-sm font-mono" id="llm-fast-model">
+<option selected="" value="llama3.1:8b">llama3.1:8b</option>
+<option value="llama3.2:latest">llama3.2:latest</option>
+<option value="qwen2.5:14b">qwen2.5:14b</option>
+<option value="qwen3:14b">qwen3:14b</option>
+</select>
+<button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setLLMModelFast()">Сохранить</button>
+<span class="text-xs text-emerald-700" id="llm-fast-save-result"></span>
+</div>
+<div class="text-[11px] text-neutral-500 mt-1">
+      Для summary / salary / company_kind / soft_skills_employer. Дефолт: <span class="font-mono">llama3.1:8b</span>.
+      На M1 Max llama3.1:8b ≈ 30 tok/s — компромисс скорости и качества JSON.
+      <a class="text-blue-600 hover:underline ml-2" href="llm_logs.html">→ логи прогонов</a>
 </div>
 <div class="mt-4 pt-3 border-t border-fuchsia-200/50 dark:border-fuchsia-900/30">
 <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">Анализаторы</div>
@@ -183,21 +198,21 @@
 <label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Если HH не отдал salary в полях, ищем в описании">
 <input class="profile-analyzer-cb" type="checkbox" value="salary"/>
 <span>
-<span>Зарплата из текста</span>
+<span>Зарплата из текста <span class="text-amber-600" title="лёгкая задача — использует fast-модель">⚡</span></span>
 <span class="block text-[10px] text-neutral-500">salary</span>
 </span>
 </label>
 <label class="flex items-start gap-1.5 text-sm cursor-pointer" title="product / outsource / bank / ecommerce / gamedev / startup / enterprise / gov / edu / other">
 <input class="profile-analyzer-cb" type="checkbox" value="company_kind"/>
 <span>
-<span>Тип компании</span>
+<span>Тип компании <span class="text-amber-600" title="лёгкая задача — использует fast-модель">⚡</span></span>
 <span class="block text-[10px] text-neutral-500">company_kind</span>
 </span>
 </label>
 <label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Очень короткое описание для быстрого скана таблицы">
 <input class="profile-analyzer-cb" type="checkbox" value="summary"/>
 <span>
-<span>Резюме 1-2 предл.</span>
+<span>Резюме 1-2 предл. <span class="text-amber-600" title="лёгкая задача — использует fast-модель">⚡</span></span>
 <span class="block text-[10px] text-neutral-500">summary</span>
 </span>
 </label>
@@ -215,10 +230,32 @@
 <span class="block text-[10px] text-neutral-500">interview_prep</span>
 </span>
 </label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Тон описания, WLB, культура, red/green flags — оценка работодателя как стороны">
+<input class="profile-analyzer-cb" type="checkbox" value="soft_skills_employer"/>
+<span>
+<span>Soft-skills работодателя <span class="text-amber-600" title="лёгкая задача — использует fast-модель">⚡</span></span>
+<span class="block text-[10px] text-neutral-500">soft_skills_employer</span>
+</span>
+</label>
 </div>
 <div class="mt-2 flex items-center gap-2">
 <button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setEnabledAnalyzers()">Сохранить</button>
 <span class="text-xs text-emerald-700" id="llm-analyzers-save"></span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-fuchsia-200/50 dark:border-fuchsia-900/30">
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">🔔 Уведомления (macOS)</div>
+<div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+        Локальные macOS-уведомления при появлении новых вакансий с высоким match-score (≥75)
+        и новых приглашений/собесов в откликах. Не требует Telegram-бота, не уходит наружу.
+      </div>
+<label class="flex items-center gap-2 text-sm cursor-pointer">
+<input id="notifications-enabled" type="checkbox"/>
+        Включить macOS-уведомления
+      </label>
+<div class="mt-2 flex items-center gap-2">
+<button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setNotifications()">Сохранить</button>
+<span class="text-xs text-emerald-700" id="notify-save-result"></span>
 </div>
 </div>
 </div>
@@ -242,6 +279,26 @@ window.setEnabledAnalyzers = async () => {
   const d = await r.json();
   const out = document.getElementById('llm-analyzers-save');
   out.textContent = d.ok ? `✓ ${d.enabled.join(', ') || '(пусто)'}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+window.setLLMModelFast = async () => {
+  const sel = document.getElementById('llm-fast-model');
+  const fd = new FormData();
+  fd.append('model', sel.value);
+  const r = await fetch('/api/settings/llm-model-fast', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('llm-fast-save-result');
+  out.textContent = d.ok ? `✓ ${d.model}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+window.setNotifications = async () => {
+  const cb = document.getElementById('notifications-enabled');
+  const fd = new FormData();
+  fd.append('enabled', cb.checked ? 'true' : 'false');
+  const r = await fetch('/api/settings/notifications', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('notify-save-result');
+  out.textContent = d.ok ? (d.enabled ? '✓ включены' : '✓ выключены') : 'ошибка';
   setTimeout(() => out.textContent = '', 2000);
 };
 </script>

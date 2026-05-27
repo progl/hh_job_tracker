@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Журнал джобов</title>
+<script>
+    // theme bootstrap до загрузки tailwind
+    (function() {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+<script>tailwind = { config: { darkMode: 'class' } }</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+    table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
+    .dark body { background: #0a0a0a; color: #e5e5e5; }
+    .dark .bg-white { background-color: #171717; }
+    .dark .bg-neutral-50 { background-color: #0a0a0a; }
+    .dark .border-neutral-200, .dark .border-neutral-100 { border-color: #262626; }
+    .dark .text-neutral-900 { color: #f5f5f5; }
+    .dark .text-neutral-800 { color: #e5e5e5; }
+    .dark .text-neutral-700, .dark .text-neutral-600 { color: #d4d4d4; }
+    .dark .text-neutral-500 { color: #a3a3a3; }
+    .dark .text-neutral-400 { color: #737373; }
+    .dark input, .dark textarea { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark select { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark thead.sticky-h th, .dark thead { background-color: #171717 !important; }
+    .dark tbody tr:hover { background-color: #262626 !important; }
+    .dark .hover\:bg-neutral-50:hover, .dark .hover\:bg-neutral-100:hover { background-color: #262626 !important; }
+    .dark .bg-neutral-100 { background-color: #262626; color: #d4d4d4; }
+    .dark .bg-blue-100 { background-color: #1e3a5f; color: #93c5fd; }
+    .dark .bg-emerald-100 { background-color: #14532d; color: #6ee7b7; }
+    .dark .bg-violet-100 { background-color: #4c1d95; color: #c4b5fd; }
+    .dark .bg-amber-100 { background-color: #78350f; color: #fcd34d; }
+    .dark .bg-red-100 { background-color: #7f1d1d; color: #fca5a5; }
+    .dark .bg-emerald-50 { background-color: #064e3b; color: #6ee7b7; }
+    .dark .bg-neutral-900 { background-color: #171717; }
+    .dark a { color: inherit; }
+    .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
+  </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
+<header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<h1 class="text-base font-semibold">HH Job Tracker</h1>
+<nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+<a class="hover:text-neutral-900 dark:hover:text-white" href="index.html">Список</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="jobs.html">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="llm_logs.html">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="analytics.html">📊 Аналитика</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleTheme()" title="Переключить тему">
+<span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1600px] mx-auto px-4 py-5">
+<div class="max-w-[1400px] mx-auto">
+<div class="flex items-baseline justify-between mb-3">
+<h2 class="text-lg font-semibold">⚙️ Журнал джобов</h2>
+<a class="text-xs text-neutral-500 hover:underline" href="index.html">← Список</a>
+</div>
+<form class="flex flex-wrap gap-2 mb-4 text-xs items-end" method="get" onsubmit="return false;">
+<div>
+<label class="block text-[10px] uppercase text-neutral-500">Джоб</label>
+<select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1" name="job_id">
+<option value="">все</option>
+<option value="backfill_pending">Дотянуть вакансии (backfill_pending)</option>
+<option value="dedup_vacancies">Дедуп вакансий (dedup_vacancies)</option>
+<option value="fx_refresh">Курсы ЦБ (fx_refresh)</option>
+<option value="llm_parse_requirements">LLM: разбор требований (llm_parse_requirements)</option>
+<option value="ml_retrain">Обучение ML (ml_retrain)</option>
+<option value="personal_full_refresh">Полный sync откликов (personal_full_refresh)</option>
+<option value="personal_refresh">Обновлять отклики (инкрем.) (personal_refresh)</option>
+<option value="sync_searches">Синк сохранённых поисков (sync_searches)</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] uppercase text-neutral-500">Статус</label>
+<select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1" name="status">
+<option value="">все</option>
+<option value="ok">ok</option>
+<option value="error">error</option>
+<option value="running">running</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] uppercase text-neutral-500">Лимит</label>
+<input class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20" max="1000" min="10" name="limit" type="number" value="100"/>
+</div>
+<button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
+<a class="px-2 py-1 text-neutral-500 hover:underline" href="jobs.html">сброс</a>
+</form>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+<tr>
+<th class="px-3 py-2 w-16">id</th>
+<th class="px-3 py-2">джоб</th>
+<th class="px-3 py-2">старт</th>
+<th class="px-3 py-2">финиш</th>
+<th class="px-3 py-2 text-right">мс</th>
+<th class="px-3 py-2 text-center">статус</th>
+<th class="px-3 py-2">триггер</th>
+<th class="px-3 py-2">результат / ошибка</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">475</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 15:19:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 15:19:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">474</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:59:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:59:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">473</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">5</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">472</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">18</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">471</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:19:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:19:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">5</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">470</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:59:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:59:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">8</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">469</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">6</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">468</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">74</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">467</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:19:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:19:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">8</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">466</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:59:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:59:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">30</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">465</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:40:45</td>
+<td class="px-3 py-1.5 text-right tabular-nums">94434</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 1, "ok": 1, "per_kind": {"requirements": 1}, "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 1, "ok": 1, "per_kind": {"requirements": 1}, "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">464</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">8</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">463</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дедуп вакансий</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">dedup_vacancies</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:28:45</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:28:45</td>
+<td class="px-3 py-1.5 text-right tabular-nums">15</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"groups": 87, "marked": 149}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"groups": 87, "marked": 149}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">462</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:19:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:19:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">7</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">461</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дедуп вакансий</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">dedup_vacancies</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:08:39</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:08:39</td>
+<td class="px-3 py-1.5 text-right tabular-nums">19</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"groups": 86, "marked": 148}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"groups": 86, "marked": 148}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">460</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:07:43</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:07:44</td>
+<td class="px-3 py-1.5 text-right tabular-nums">917</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 245, "viewed": 148, "invited": 11, "rejected": 65, "archived": 0, "waiting": 169}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">459</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:05:27</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:05:28</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1002</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 244, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 168}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">458</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:03:09</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:03:10</td>
+<td class="px-3 py-1.5 text-right tabular-nums">940</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 243, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 167}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">457</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:02:08</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:02:09</td>
+<td class="px-3 py-1.5 text-right tabular-nums">821</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 243, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 167}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">456</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:01:00</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:01:01</td>
+<td class="px-3 py-1.5 text-right tabular-nums">861</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 2, "stopped_early": true, "mode": "incremental", "counters": {"total": 242, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">455</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:59:10</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:59:12</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1520</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"requested": 1, "saved": 1, "failed": 0, "paused": false, "pause_reason": null, "remaining": 0, "hi…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"requested": 1, "saved": 1, "failed": 0, "paused": false, "pause_reason": null, "remaining": 0, "hint": null}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">454</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:56:22</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:56:24</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1327</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 241, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 165}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">453</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Полный sync откликов</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_full_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:53:54</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:55:09</td>
+<td class="px-3 py-1.5 text-right tabular-nums">75870</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 225, "saved_employers": 207, "pages": 12, "resume_id": 17494512, "synced_loca…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 225, "saved_employers": 207, "pages": 12, "resume_id": 17494512, "synced_local_statuses": 5, "stopped_early": false, "mode": "full", "counters": {"total": 241, "viewed": 147, "invited": 11, "rejected": 65, "archived": 0, "waiting": 165}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">452</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Синк сохранённых поисков</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">sync_searches</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:53:43</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:54:28</td>
+<td class="px-3 py-1.5 text-right tabular-nums">44799</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"ran": 3, "results": [{"id": 3, "name": "✨ Рекомендации", "saved": 72, "pages": 4, "total_results":…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"ran": 3, "results": [{"id": 3, "name": "✨ Рекомендации", "saved": 72, "pages": 4, "total_results": 1444, "disappeared": 0, "search_id": 3, "partial": true}, {"id": 2, "name": "Python Lead Remote", "saved": 3, "pages": 1, "total_results": 933, "disappeared": 0, "search_id": 2, "partial": true}, {"id": 1, "name": "Python Django Senior Remote", "saved": 6, "pages": 1, "total_results": 116, "disappeared": 0, "search_id": 1, "partial": true}]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">451</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:53:39</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:53:39</td>
+<td class="px-3 py-1.5 text-right tabular-nums">7</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">450</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:43:21</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:43:21</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">449</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:32:39</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:32:40</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1098</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 240, "viewed": 136, "invited": 11, "rejected": 60, "archived": 0, "waiting": 169}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">448</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:28:06</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:28:07</td>
+<td class="px-3 py-1.5 text-right tabular-nums">655</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 240, "viewed": 136, "invited": 11, "rejected": 60, "archived": 0, "waiting": 169}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">447</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:28:00</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:28:02</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1363</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 3, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 3, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 3, "stopped_early": true, "mode": "incremental", "counters": {"total": 240, "viewed": 136, "invited": 11, "rejected": 60, "archived": 0, "waiting": 169}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">446</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:23:21</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:23:21</td>
+<td class="px-3 py-1.5 text-right tabular-nums">7</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">445</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:17:58</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:17:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">830</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 2, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 2, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 2, "stopped_early": true, "mode": "incremental", "counters": {"total": 238, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 168}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">444</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:15:08</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:15:09</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1094</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">443</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:14:04</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:14:05</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1400</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">442</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:12:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:13:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">841</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">441</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:09:40</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:09:41</td>
+<td class="px-3 py-1.5 text-right tabular-nums">975</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">440</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:09:17</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:09:17</td>
+<td class="px-3 py-1.5 text-right tabular-nums">763</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">439</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:07:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:08:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1020</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 236, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 166}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">438</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:06:45</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:06:46</td>
+<td class="px-3 py-1.5 text-right tabular-nums">789</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 235, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 165}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">437</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:05:08</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:05:09</td>
+<td class="px-3 py-1.5 text-right tabular-nums">880</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 234, "viewed": 134, "invited": 11, "rejected": 59, "archived": 0, "waiting": 164}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">436</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:02:39</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:02:40</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1224</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 233, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 163}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">435</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:01:16</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:01:17</td>
+<td class="px-3 py-1.5 text-right tabular-nums">704</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 233, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 163}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">434</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:00:15</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 06:00:16</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1065</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 19, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 233, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 163}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">433</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:58:53</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:58:53</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">432</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:56:46</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:56:47</td>
+<td class="px-3 py-1.5 text-right tabular-nums">732</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 19, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 233, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 163}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">431</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:53:25</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:53:26</td>
+<td class="px-3 py-1.5 text-right tabular-nums">871</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 232, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 162}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">430</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:51:34</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:51:35</td>
+<td class="px-3 py-1.5 text-right tabular-nums">886</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 232, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 162}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">429</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:50:02</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:50:03</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1050</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 231, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 161}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">428</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:48:45</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:48:45</td>
+<td class="px-3 py-1.5 text-right tabular-nums">853</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 230, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 160}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">427</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:30:18</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:30:18</td>
+<td class="px-3 py-1.5 text-right tabular-nums">31</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">426</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:17:56</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:17:57</td>
+<td class="px-3 py-1.5 text-right tabular-nums">856</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 2, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 2, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 230, "viewed": 133, "invited": 11, "rejected": 59, "archived": 0, "waiting": 160}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">425</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:13:16</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:13:17</td>
+<td class="px-3 py-1.5 text-right tabular-nums">763</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 229, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 159}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">424</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:12:13</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:12:13</td>
+<td class="px-3 py-1.5 text-right tabular-nums">782</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 229, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 159}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">423</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:05:25</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:05:26</td>
+<td class="px-3 py-1.5 text-right tabular-nums">802</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">422</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:04:01</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:04:01</td>
+<td class="px-3 py-1.5 text-right tabular-nums">800</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">421</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:03:02</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:03:03</td>
+<td class="px-3 py-1.5 text-right tabular-nums">771</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">420</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">419</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">418</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:01:58</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 05:02:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1253</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">417</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 04:56:22</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 04:56:23</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1094</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">416</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 04:54:21</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 04:54:22</td>
+<td class="px-3 py-1.5 text-right tabular-nums">950</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">415</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:42:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:42:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">9</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">414</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">7</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">413</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 03:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">15</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">412</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">11</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">411</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:03:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">73</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">410</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">409</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:03:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">891</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 132, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">408</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Синк сохранённых поисков</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">sync_searches</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 02:03:20</td>
+<td class="px-3 py-1.5 text-right tabular-nums">20950</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"ran": 3, "results": [{"id": 3, "name": "✨ Рекомендации", "saved": 7, "pages": 1, "total_results": …</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"ran": 3, "results": [{"id": 3, "name": "✨ Рекомендации", "saved": 7, "pages": 1, "total_results": 1358, "disappeared": 0, "search_id": 3, "partial": true}, {"id": 2, "name": "Python Lead Remote", "saved": 3, "pages": 1, "total_results": 929, "disappeared": 0, "search_id": 2, "partial": true}, {"id": 1, "name": "Python Django Senior Remote", "saved": 3, "pages": 1, "total_results": 112, "disappeared": 0, "search_id": 1, "partial": true}]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">407</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 01:42:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 01:42:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">9</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">406</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 01:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 01:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">405</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 21:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 21:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">38</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">404</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">8</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">403</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">85</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">402</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 19:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">401</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 18:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 18:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">39</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">400</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:46:34</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:46:35</td>
+<td class="px-3 py-1.5 text-right tabular-nums">688</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 131, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">399</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:45:22</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:45:23</td>
+<td class="px-3 py-1.5 text-right tabular-nums">786</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 228, "viewed": 131, "invited": 11, "rejected": 59, "archived": 0, "waiting": 158}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">398</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:43:17</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:43:18</td>
+<td class="px-3 py-1.5 text-right tabular-nums">988</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 227, "viewed": 131, "invited": 11, "rejected": 59, "archived": 0, "waiting": 157}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">397</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:42:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:42:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">396</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">30</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">395</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">20</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">394</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 16:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">8</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">393</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:42:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:42:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">392</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">5</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">391</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">92</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">390</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:02:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 15:02:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">39</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">389</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 14:42:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 14:42:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">388</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 14:22:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 14:22:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">38</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">387</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:47:42</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:47:42</td>
+<td class="px-3 py-1.5 text-right tabular-nums">28</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">386</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:38:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:39:00</td>
+<td class="px-3 py-1.5 text-right tabular-nums">979</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 227, "viewed": 131, "invited": 11, "rejected": 59, "archived": 0, "waiting": 157}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">385</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:34:59</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:34:59</td>
+<td class="px-3 py-1.5 text-right tabular-nums">885</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 226, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 156}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">384</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:33:40</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:33:41</td>
+<td class="px-3 py-1.5 text-right tabular-nums">992</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 226, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 156}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">383</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:32:34</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:32:35</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1197</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 226, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 156}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">382</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:31:17</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:31:18</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1079</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_status…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 0, "saved_employers": 20, "pages": 1, "resume_id": null, "synced_local_statuses": 0, "stopped_early": true, "mode": "incremental", "counters": {"total": 226, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 156}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">381</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:29:21</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:29:22</td>
+<td class="px-3 py-1.5 text-right tabular-nums">900</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 226, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 156}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">380</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:28:05</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:28:06</td>
+<td class="px-3 py-1.5 text-right tabular-nums">978</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 4, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 4, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 4, "stopped_early": true, "mode": "incremental", "counters": {"total": 225, "viewed": 130, "invited": 11, "rejected": 59, "archived": 0, "waiting": 155}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">379</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">LLM: разбор требований</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">llm_parse_requirements</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:54</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:54</td>
+<td class="px-3 py-1.5 text-right tabular-nums">94</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"processed": 0, "skipped": "no_unparsed", "enabled": ["requirements"]}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">378</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Дотянуть вакансии</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:54</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:54</td>
+<td class="px-3 py-1.5 text-right tabular-nums">28</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">377</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:54</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:07:55</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1024</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 222, "viewed": 127, "invited": 11, "rejected": 58, "archived": 0, "waiting": 153}}</pre>
+</details>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums text-neutral-500">376</td>
+<td class="px-3 py-1.5">
+<span class="font-medium">Обновлять отклики (инкрем.)</span>
+<span class="text-[10px] text-neutral-500 ml-1 font-mono">personal_refresh</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:06:44</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-26 13:06:45</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1042</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
+</td>
+<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
+<td class="px-3 py-1.5 max-w-[500px]">
+<details>
+<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_st…</summary>
+<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"saved_negotiations": 1, "saved_employers": 20, "pages": 1, "resume_id": 17494512, "synced_local_statuses": 1, "stopped_early": true, "mode": "incremental", "counters": {"total": 221, "viewed": 127, "invited": 11, "rejected": 58, "archived": 0, "waiting": 152}}</pre>
+</details>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<!-- Status panel -->
+<div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
+<div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="status-dot"></span>
+<span class="font-medium">Статус</span>
+<span class="text-neutral-500" id="status-summary"></span>
+</div>
+<span class="text-neutral-400" id="status-arrow">▾</span>
+</div>
+<div class="overflow-y-auto p-3 space-y-3" id="status-body">
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
+<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
+<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
+<div class="space-y-2" id="tasks-info"></div>
+</div>
+</div>
+</div>
+<!-- Toasts -->
+<div class="fixed top-16 right-3 z-50 space-y-2" id="toasts"></div>
+
+<script>
+    window.toggleTheme = () => {
+      const cur = document.documentElement.classList.contains('dark');
+      if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
+      else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+  </script>
+</body>
+</html>
