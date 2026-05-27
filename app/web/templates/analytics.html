@@ -150,6 +150,102 @@
     </div>
   {% endif %}
 
+  {# LLM-затраты #}
+  <div class="mt-6 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+    <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-3">
+      🤖 LLM-затраты
+    </div>
+    {% if llm_total and llm_total.cnt %}
+      {# Общая сводка #}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+        <div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+          <div class="text-[10px] uppercase text-neutral-500">Вызовов</div>
+          <div class="font-mono font-semibold tabular-nums">{{ llm_total.cnt }}</div>
+        </div>
+        <div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+          <div class="text-[10px] uppercase text-neutral-500">Σ prompt токенов</div>
+          <div class="font-mono font-semibold tabular-nums">{{ llm_total.prompt_tokens }}</div>
+        </div>
+        <div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+          <div class="text-[10px] uppercase text-neutral-500">Σ response токенов</div>
+          <div class="font-mono font-semibold tabular-nums">{{ llm_total.response_tokens }}</div>
+        </div>
+        <div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+          <div class="text-[10px] uppercase text-neutral-500">Avg latency, ms</div>
+          <div class="font-mono font-semibold tabular-nums">{{ llm_total.avg_latency_ms | round(1) }}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {# По моделям #}
+        <div>
+          <div class="text-[10px] uppercase text-neutral-500 mb-1">По моделям</div>
+          <div class="overflow-x-auto border border-neutral-200 dark:border-neutral-700 rounded">
+            <table class="w-full text-xs">
+              <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+                <tr>
+                  <th class="px-2 py-1">model</th>
+                  <th class="px-2 py-1 text-right">cnt</th>
+                  <th class="px-2 py-1 text-right">Σ prompt</th>
+                  <th class="px-2 py-1 text-right">Σ resp</th>
+                  <th class="px-2 py-1 text-right">avg ms</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in llm_by_model %}
+                  <tr class="border-t border-neutral-100 dark:border-neutral-800">
+                    <td class="px-2 py-1 font-mono">{{ r.model }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums">{{ r.cnt }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums">{{ r.prompt_tokens }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums">{{ r.response_tokens }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums">{{ r.avg_latency_ms | round(1) }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="5" class="px-2 py-2 text-center text-neutral-500">—</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# По task_kind #}
+        <div>
+          <div class="text-[10px] uppercase text-neutral-500 mb-1">По анализаторам</div>
+          <div class="overflow-x-auto border border-neutral-200 dark:border-neutral-700 rounded">
+            <table class="w-full text-xs">
+              <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+                <tr>
+                  <th class="px-2 py-1">task_kind</th>
+                  <th class="px-2 py-1 text-right">cnt</th>
+                  <th class="px-2 py-1 text-right">
+                    <span class="text-emerald-600 dark:text-emerald-400">ok</span>
+                  </th>
+                  <th class="px-2 py-1 text-right">
+                    <span class="text-rose-600 dark:text-rose-400">fail</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in llm_by_task %}
+                  <tr class="border-t border-neutral-100 dark:border-neutral-800">
+                    <td class="px-2 py-1 font-mono">{{ r.task_kind }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums">{{ r.cnt }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ r.ok_count }}</td>
+                    <td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">{{ r.fail_count }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="4" class="px-2 py-2 text-center text-neutral-500">—</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="text-neutral-500 text-sm">Нет данных. Запусти LLM-анализаторы — записи появятся в llm_runs.</div>
+    {% endif %}
+  </div>
+
   {# полная таблица top_requirements с фильтрами #}
   <div class="mt-6 border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
     <div class="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 bg-neutral-50 dark:bg-neutral-800">

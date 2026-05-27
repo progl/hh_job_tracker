@@ -1436,6 +1436,48 @@ async def analytics_page(
         parsed_count = (await cur.fetchone())[0]
         cur = await db.execute("SELECT COUNT(*) FROM vacancies")
         total_vacancies = (await cur.fetchone())[0]
+
+        # LLM-затраты: общая сводка, разбивка по моделям и task_kind
+        cur = await db.execute(
+            """
+            SELECT COUNT(*)                       AS cnt,
+                   COALESCE(SUM(prompt_tokens), 0)   AS prompt_tokens,
+                   COALESCE(SUM(response_tokens), 0) AS response_tokens,
+                   COALESCE(AVG(latency_ms), 0)      AS avg_latency_ms
+              FROM llm_runs
+            """
+        )
+        row = await cur.fetchone()
+        llm_total = dict(row) if row else {
+            "cnt": 0, "prompt_tokens": 0, "response_tokens": 0, "avg_latency_ms": 0,
+        }
+
+        cur = await db.execute(
+            """
+            SELECT model,
+                   COUNT(*)                          AS cnt,
+                   COALESCE(SUM(prompt_tokens), 0)   AS prompt_tokens,
+                   COALESCE(SUM(response_tokens), 0) AS response_tokens,
+                   COALESCE(AVG(latency_ms), 0)      AS avg_latency_ms
+              FROM llm_runs
+          GROUP BY model
+          ORDER BY cnt DESC, model
+            """
+        )
+        llm_by_model = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute(
+            """
+            SELECT task_kind,
+                   COUNT(*)                                       AS cnt,
+                   SUM(CASE WHEN ok = 1 THEN 1 ELSE 0 END)        AS ok_count,
+                   SUM(CASE WHEN ok = 0 THEN 1 ELSE 0 END)        AS fail_count
+              FROM llm_runs
+          GROUP BY task_kind
+          ORDER BY cnt DESC, task_kind
+            """
+        )
+        llm_by_task = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
 
@@ -1452,6 +1494,9 @@ async def analytics_page(
         interview_prep_count=interview_prep_count,
         parsed_count=parsed_count,
         total_vacancies=total_vacancies,
+        llm_total=llm_total,
+        llm_by_model=llm_by_model,
+        llm_by_task=llm_by_task,
         filters={"kind": kind or "", "category": category or "", "top": top},
     )
 
@@ -1761,6 +1806,7 @@ async def logs_cleanup(keep: int = Form(5000)):
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
+    from app import notify
     from app.llm import settings as llm_settings
     from app.llm.registry import ANALYZERS, get_enabled_analyzers
 
@@ -1768,9 +1814,17 @@ async def profile_page(request: Request):
     try:
         p = await profile_repo.get_profile(db) or {"skills": [], "formats": []}
         llm_model = await llm_settings.get_requirements_model(db)
+        llm_model_fast = await llm_settings.get_fast_model(db)
+        notifications_enabled = await notify.is_enabled(db)
         enabled = await get_enabled_analyzers(db)
         analyzers_list = [
-            {"kind": a.kind, "label": a.label, "description": a.description, "enabled": a.kind in enabled}
+            {
+                "kind": a.kind,
+                "label": a.label,
+                "description": a.description,
+                "enabled": a.kind in enabled,
+                "fast": a.fast,
+            }
             for a in ANALYZERS.values()
         ]
     finally:
@@ -1780,7 +1834,10 @@ async def profile_page(request: Request):
         request=request,
         p=p,
         llm_model=llm_model,
+        llm_model_fast=llm_model_fast,
         llm_default=settings.LLM_MODEL_REQUIREMENTS,
+        llm_default_fast=settings.LLM_MODEL_FAST,
+        notifications_enabled=notifications_enabled,
         analyzers=analyzers_list,
     )
 
@@ -1793,6 +1850,32 @@ async def settings_set_llm_model(model: str = Form(...)):
     try:
         await llm_settings.set_requirements_model(db, model)
         return {"ok": True, "model": model}
+    finally:
+        await db.close()
+
+
+@app.post("/api/settings/llm-model-fast")
+async def settings_set_llm_model_fast(model: str = Form(...)):
+    """Быстрая модель для лёгких задач (summary/salary/company_kind/soft_skills)."""
+    from app.llm import settings as llm_settings
+
+    db = await get_db()
+    try:
+        await llm_settings.set_fast_model(db, model)
+        return {"ok": True, "model": model}
+    finally:
+        await db.close()
+
+
+@app.post("/api/settings/notifications")
+async def settings_set_notifications(enabled: bool = Form(...)):
+    """Включить/выключить macOS-уведомления о новых вакансиях и приглашениях."""
+    from app import notify
+
+    db = await get_db()
+    try:
+        await notify.set_enabled(db, enabled)
+        return {"ok": True, "enabled": enabled}
     finally:
         await db.close()
 

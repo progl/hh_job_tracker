@@ -357,6 +357,46 @@ async def _analyzer_interview_prep(db, vacancy_id, model) -> AnalysisResult:
     )
 
 
+async def _analyzer_soft_skills_employer(db, vacancy_id, model) -> AnalysisResult:
+    """Soft-skills работодателя: оценка тона, культуры, WLB, red/green flags
+    по описанию вакансии. Анализируем сам бизнес/HR-стиль, а не требования к кандидату."""
+    loaded = await _load_vacancy_for_analysis(db, vacancy_id, "soft_skills_employer", model)
+    if isinstance(loaded, AnalysisResult):
+        return loaded
+    v, desc = loaded
+    name = v.get("name") or ""
+    company = v.get("company_name") or ""
+    system = (
+        "Ты HR-консультант, анализируешь работодателя по описанию вакансии. "
+        "Возвращай ТОЛЬКО валидный JSON без пояснений."
+    )
+    user = (
+        "По тону и формулировкам описания дай оценку РАБОТОДАТЕЛЯ (не кандидата): "
+        "как они общаются, ценят ли work-life balance, какая корпоративная культура, "
+        "есть ли тревожные сигналы или, наоборот, позитивные маркеры.\n\n"
+        "Формат:\n"
+        "{\n"
+        '  "tone": "warm" | "neutral" | "demanding" | "aggressive",\n'
+        '  "wlb_score": 0..10,\n'
+        '  "team_culture": "modern" | "traditional" | "bureaucratic" | "startup",\n'
+        '  "growth_opportunities": 0..10,\n'
+        '  "red_flags": ["конкретные тревожные сигналы из описания"],\n'
+        '  "green_flags": ["конкретные позитивные сигналы"],\n'
+        '  "summary": "1-2 предложения общая характеристика как работодателя"\n'
+        "}\n\n"
+        f"Компания: {company}\nВакансия: {name}\n\nОписание:\n---\n{desc}\n---"
+    )
+    return await _run_simple_analysis(
+        db,
+        vacancy_id,
+        kind="soft_skills_employer",
+        model=model,
+        prompt_version="soft_skills_employer_v1",
+        system_prompt=system,
+        user_prompt=user,
+    )
+
+
 @dataclass
 class Analyzer:
     kind: str
@@ -364,6 +404,9 @@ class Analyzer:
     description: str
     default_enabled: bool
     fn: Callable[[aiosqlite.Connection, int, str], Awaitable[AnalysisResult]]
+    # fast=True → при model=None используется LLM_MODEL_FAST (легче/быстрее).
+    # Тяжёлые задачи (требования, match_essay, interview_prep) лучше на REQUIREMENTS.
+    fast: bool = False
 
 
 ANALYZERS: dict[str, Analyzer] = {
@@ -373,6 +416,7 @@ ANALYZERS: dict[str, Analyzer] = {
         description="must / nice / plus × stack / exp / soft / edu / other",
         default_enabled=True,
         fn=_analyzer_requirements,
+        fast=False,  # тяжёлая задача — много данных, нужен нормальный JSON
     ),
     "salary": Analyzer(
         kind="salary",
@@ -380,6 +424,7 @@ ANALYZERS: dict[str, Analyzer] = {
         description="Если HH не отдал salary в полях, ищем в описании",
         default_enabled=False,
         fn=_analyzer_salary,
+        fast=True,
     ),
     "company_kind": Analyzer(
         kind="company_kind",
@@ -387,6 +432,7 @@ ANALYZERS: dict[str, Analyzer] = {
         description="product / outsource / bank / ecommerce / gamedev / startup / enterprise / gov / edu / other",
         default_enabled=False,
         fn=_analyzer_company_kind,
+        fast=True,
     ),
     "summary": Analyzer(
         kind="summary",
@@ -394,6 +440,7 @@ ANALYZERS: dict[str, Analyzer] = {
         description="Очень короткое описание для быстрого скана таблицы",
         default_enabled=False,
         fn=_analyzer_summary,
+        fast=True,
     ),
     "match_essay": Analyzer(
         kind="match_essay",
@@ -401,6 +448,7 @@ ANALYZERS: dict[str, Analyzer] = {
         description="Подходит ли вакансия мне (score + matches/gaps + verdict) на основе profile.skills",
         default_enabled=False,
         fn=_analyzer_match_essay,
+        fast=False,  # тяжёлая — нужно сравнить профиль с вакансией
     ),
     "interview_prep": Analyzer(
         kind="interview_prep",
@@ -408,6 +456,15 @@ ANALYZERS: dict[str, Analyzer] = {
         description="Вероятные вопросы и темы к интервью + история откликов в эту компанию",
         default_enabled=False,
         fn=_analyzer_interview_prep,
+        fast=False,  # тяжёлая — длинный prompt, много текста
+    ),
+    "soft_skills_employer": Analyzer(
+        kind="soft_skills_employer",
+        label="Soft-skills работодателя",
+        description="Тон описания, WLB, культура, red/green flags — оценка работодателя как стороны",
+        default_enabled=False,
+        fn=_analyzer_soft_skills_employer,
+        fast=True,
     ),
 }
 
@@ -418,9 +475,12 @@ async def analyze_one(
     kinds: list[str],
     model: str | None = None,
 ) -> list[AnalysisResult]:
-    """Прогоняет выбранные анализаторы по одной вакансии. Каждый — независимо."""
-    if model is None:
-        model = await llm_settings.get_requirements_model(db)
+    """Прогоняет выбранные анализаторы по одной вакансии. Каждый — независимо.
+    Если model=None — для каждого анализатора выбирается модель: fast=True → LLM_MODEL_FAST,
+    иначе LLM_MODEL_REQUIREMENTS. Если model передан явно — используется для всех (override)."""
+    explicit_model = model
+    fast_model = None
+    slow_model = None
     out: list[AnalysisResult] = []
     for kind in kinds:
         a = ANALYZERS.get(kind)
@@ -431,14 +491,25 @@ async def analyze_one(
                     kind=kind,
                     data=None,
                     llm_run_id=None,
-                    model=model,
+                    model=explicit_model or "",
                     latency_ms=None,
                     error="unknown_analyzer",
                 )
             )
             continue
+        # Если model передан явно — используем его для всех. Иначе fast/slow по anlazer.fast.
+        if explicit_model is not None:
+            chosen = explicit_model
+        elif a.fast:
+            if fast_model is None:
+                fast_model = await llm_settings.get_fast_model(db)
+            chosen = fast_model
+        else:
+            if slow_model is None:
+                slow_model = await llm_settings.get_requirements_model(db)
+            chosen = slow_model
         try:
-            res = await a.fn(db, vacancy_id, model)
+            res = await a.fn(db, vacancy_id, chosen)
         except Exception as e:
             log.warning("analyzer %s vid=%s failed: %s", kind, vacancy_id, e)
             res = AnalysisResult(
@@ -446,7 +517,7 @@ async def analyze_one(
                 kind=kind,
                 data=None,
                 llm_run_id=None,
-                model=model,
+                model=chosen,
                 latency_ms=None,
                 error=str(e),
             )

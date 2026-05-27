@@ -60,6 +60,35 @@ async def _job_personal_refresh(hh_client, full: bool = False) -> dict:
     try:
         res = await personal_collector.collect_negotiations(hh_client, db, max_pages=5, full=full)
         await save_jar(db, hh_client.client)
+
+        # Уведомление о новых INVITATION/INTERVIEW за последний час
+        try:
+            from app import notify
+
+            if await notify.is_enabled(db):
+                cur = await db.execute(
+                    """
+                    SELECT n.last_state, v.name, v.company_name
+                      FROM negotiations n
+                      LEFT JOIN vacancies v ON v.id = n.vacancy_id
+                     WHERE n.last_state IN ('INVITATION', 'INTERVIEW')
+                       AND datetime(n.last_modified) >= datetime('now', '-1 hour')
+                    """
+                )
+                fresh = await cur.fetchall()
+                if fresh:
+                    msg_lines = []
+                    for r in fresh[:3]:
+                        st = "📩 " if r["last_state"] == "INVITATION" else "🎤 "
+                        msg_lines.append(f"{st}{(r['name'] or '?')[:50]} — {(r['company_name'] or '?')[:30]}")
+                    more = f" (+{len(fresh) - 3})" if len(fresh) > 3 else ""
+                    await notify.send(
+                        title=f"HH: {len(fresh)} приглашений/собесов{more}",
+                        message="\n".join(msg_lines),
+                    )
+        except Exception as e:
+            log.warning("personal_refresh: notification failed: %s", e)
+
         return res
     finally:
         await db.close()
@@ -136,6 +165,55 @@ async def _job_sync_searches(hh_client) -> dict:
                 log.info("dedup after sync_searches: groups=%s marked=%s", dd["groups"], dd["marked"])
         except Exception as e:
             log.warning("dedup after sync_searches failed: %s", e)
+
+        # Уведомления о новых вакансиях с высоким match-score (≥75)
+        # Берём те что появились за последний час с подсчитанным локально score.
+        try:
+            from app import notify
+            from app.db import employers_repo, profile_repo
+            from app.scoring.match import score_vacancy
+
+            if await notify.is_enabled(db):
+                cur = await db.execute(
+                    """
+                    SELECT v.* FROM vacancies v
+                    LEFT JOIN vacancy_status s ON s.vacancy_id = v.id
+                    WHERE datetime(v.seen_at) >= datetime('now', '-1 hour')
+                      AND COALESCE(s.status, 'new') = 'new'
+                      AND v.disappeared_at IS NULL
+                    """
+                )
+                rows = await cur.fetchall()
+                if rows:
+                    profile = await profile_repo.get_profile(db)
+                    emp_map = await employers_repo.get_map(db)
+                    new_high = []
+                    for r in rows:
+                        rd = dict(r)
+                        import json as _json
+
+                        for f in ("parsed_stack", "work_formats", "key_skills"):
+                            if isinstance(rd.get(f), str):
+                                try:
+                                    rd[f] = _json.loads(rd[f])
+                                except Exception:
+                                    rd[f] = []
+                        emp_pol = emp_map.get(rd.get("company_id")) if rd.get("company_id") else None
+                        sc = score_vacancy(rd, profile, emp_pol)
+                        if sc["score"] >= 75:
+                            new_high.append((sc["score"], rd["name"], rd.get("company_name") or "?"))
+                    if new_high:
+                        new_high.sort(reverse=True)
+                        top = new_high[:3]
+                        msg_lines = [f"{s}% · {n[:50]} — {c[:30]}" for s, n, c in top]
+                        more = f" (+{len(new_high) - len(top)})" if len(new_high) > len(top) else ""
+                        await notify.send(
+                            title=f"HH: {len(new_high)} новых вакансий с match ≥75{more}",
+                            message="\n".join(msg_lines),
+                        )
+        except Exception as e:
+            log.warning("sync_searches: notification failed: %s", e)
+
         return {"ran": len(results), "results": results}
     finally:
         await db.close()

@@ -25,6 +25,9 @@ STATIC_ROUTES: dict[str, str] = {
     "/profile": "profile.html",
     "/logs": "logs.html",
     "/compare": "compare.html",
+    "/llm-logs": "llm_logs.html",
+    "/analytics": "analytics.html",
+    "/jobs": "jobs.html",
 }
 
 # HTMX-атрибуты, которые надо вычистить

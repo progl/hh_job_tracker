@@ -188,3 +188,63 @@ async def test_analytics_parsed_count(app_client):
     r = await client.get("/analytics")
     # 3 вакансии всего, у всех 3 есть requirements → parsed_count=3
     assert "3 / 3" in r.text or "Разобрано LLM" in r.text
+
+
+async def _seed_llm_runs():
+    """Подсадим llm_runs c разными model/task_kind и ok/fail."""
+    async with aiosqlite.connect(_db_path()) as db:
+        rows = [
+            # (task_kind, model, prompt_version, ok, latency_ms, prompt_tokens, response_tokens)
+            ("requirements", "qwen3:14b", "requirements_v1", 1, 1200, 500, 200),
+            ("requirements", "qwen3:14b", "requirements_v1", 1, 800, 450, 180),
+            ("requirements", "qwen3:14b", "requirements_v1", 0, 1500, 480, 0),
+            ("salary",       "qwen3:14b", "salary_v1",       1, 600, 200, 50),
+            ("company_kind", "llama3:8b", "company_kind_v1", 1, 400, 150, 30),
+            ("company_kind", "llama3:8b", "company_kind_v1", 0, 700, 160, 0),
+            ("interview_prep", "llama3:8b", "interview_prep_v1", 1, 2000, 800, 400),
+        ]
+        for tk, model, pv, ok, lat, pt, rt in rows:
+            await db.execute(
+                """
+                INSERT INTO llm_runs(task_kind, target_kind, target_id, model, prompt_version,
+                                     ok, latency_ms, prompt_tokens, response_tokens)
+                VALUES (?, 'vacancy', '1', ?, ?, ?, ?, ?, ?)
+                """,
+                (tk, model, pv, ok, lat, pt, rt),
+            )
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_analytics_llm_stats_empty(app_client):
+    """Пустая llm_runs → страница рендерится без ошибок, секция показывает «нет данных»."""
+    client, _ = app_client
+    r = await client.get("/analytics")
+    assert r.status_code == 200
+    body = r.text
+    assert "LLM-затраты" in body
+    # При пустой таблице — заглушка с «Нет данных»
+    assert "Нет данных" in body or "llm_runs" in body
+
+
+@pytest.mark.asyncio
+async def test_analytics_llm_stats_aggregated(app_client):
+    """После INSERT нескольких прогонов: видны count'ы, модели и task_kind."""
+    client, _ = app_client
+    await _seed_llm_runs()
+    r = await client.get("/analytics")
+    assert r.status_code == 200
+    body = r.text
+    # Заголовок секции
+    assert "LLM-затраты" in body
+    # Модели и task_kind отрендерены в таблицах
+    assert "qwen3:14b" in body
+    assert "llama3:8b" in body
+    assert "requirements" in body
+    assert "salary" in body
+    assert "company_kind" in body
+    assert "interview_prep" in body
+    # Σ prompt токенов = 500+450+480+200+150+160+800 = 2740
+    assert "2740" in body
+    # Σ response токенов = 200+180+0+50+30+0+400 = 860
+    assert "860" in body

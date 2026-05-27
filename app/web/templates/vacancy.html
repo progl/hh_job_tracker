@@ -282,6 +282,39 @@
       </div>
     {% endif %}
 
+    {% if analyses.soft_skills_employer %}
+      <div class="mb-3">
+        <div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1">
+          Soft-skills работодателя
+          {% if analyses.soft_skills_employer.llm_run_id %}
+            <a href="/llm-logs?run={{ analyses.soft_skills_employer.llm_run_id }}" class="text-blue-600 hover:underline normal-case font-normal">→</a>
+          {% endif %}
+        </div>
+        {% set se = analyses.soft_skills_employer.data %}
+        {% set tone_colors = {'warm': 'emerald', 'neutral': 'neutral', 'demanding': 'amber', 'aggressive': 'red'} %}
+        {% set tc = tone_colors.get(se.tone, 'neutral') %}
+        <div class="text-sm">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="text-[11px] px-1.5 py-0.5 rounded bg-{{ tc }}-100 text-{{ tc }}-700 dark:bg-{{ tc }}-900/30 dark:text-{{ tc }}-300" title="тон описания">тон: {{ se.tone }}</span>
+            {% if se.team_culture %}<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800" title="корпоративная культура">культура: {{ se.team_culture }}</span>{% endif %}
+            {% if se.wlb_score is not none %}<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800" title="work-life balance">WLB: {{ se.wlb_score }}/10</span>{% endif %}
+            {% if se.growth_opportunities is not none %}<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800" title="возможности роста">рост: {{ se.growth_opportunities }}/10</span>{% endif %}
+          </div>
+          {% if se.green_flags %}
+            <div class="mb-1"><span class="text-[11px] uppercase text-emerald-700 dark:text-emerald-400">плюсы:</span>
+              <ul class="text-xs ml-3 list-disc">{% for x in se.green_flags %}<li>{{ x }}</li>{% endfor %}</ul>
+            </div>
+          {% endif %}
+          {% if se.red_flags %}
+            <div class="mb-1"><span class="text-[11px] uppercase text-red-700 dark:text-red-400">тревожные сигналы:</span>
+              <ul class="text-xs ml-3 list-disc">{% for x in se.red_flags %}<li>{{ x }}</li>{% endfor %}</ul>
+            </div>
+          {% endif %}
+          {% if se.summary %}<div class="text-[11px] text-neutral-500 italic mt-1">{{ se.summary }}</div>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
     {% if not requirements and not analyses %}
       <div class="text-sm text-neutral-500">
         Пока ничего не анализировали. Отметь нужное и жми «Анализировать выбранное».

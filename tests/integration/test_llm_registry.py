@@ -50,10 +50,12 @@ async def test_registry_has_expected_analyzers():
     assert "summary" in reg.ANALYZERS
     assert "match_essay" in reg.ANALYZERS
     assert "interview_prep" in reg.ANALYZERS
+    assert "soft_skills_employer" in reg.ANALYZERS
     assert reg.ANALYZERS["requirements"].default_enabled is True
     assert reg.ANALYZERS["salary"].default_enabled is False
     assert reg.ANALYZERS["match_essay"].default_enabled is False
     assert reg.ANALYZERS["interview_prep"].default_enabled is False
+    assert reg.ANALYZERS["soft_skills_employer"].default_enabled is False
 
 
 @pytest.mark.asyncio
@@ -233,12 +235,41 @@ async def test_analyze_requirements_delegates_to_existing(tmp_db, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_analyze_one_uses_runtime_model(tmp_db, monkeypatch):
-    """analyze_one с model=None берёт runtime-настройку."""
+async def test_analyze_one_uses_runtime_model_for_slow(tmp_db, monkeypatch):
+    """analyze_one с model=None для НЕ-fast анализатора (requirements) берёт requirements_model."""
     from app.llm import settings as llm_settings
 
-    await llm_settings.set_requirements_model(tmp_db, "custom:7b")
+    await llm_settings.set_requirements_model(tmp_db, "slow-custom:7b")
+    await llm_settings.set_fast_model(tmp_db, "fast-custom:3b")
     await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (7, 'v', 'desc')")
+    await tmp_db.commit()
+
+    captured: dict = {}
+    from app.llm import client as llm_client
+
+    async def _fake(**kwargs):
+        captured["model"] = kwargs["model"]
+        return _FakeResp(
+            parsed={"requirements": [{"kind": "must", "category": "stack", "text": "X"}]},
+            model=kwargs["model"],
+        )
+
+    monkeypatch.setattr(llm_client, "generate", _fake)
+    monkeypatch.setattr(reg.llm_client, "generate", _fake)
+
+    # requirements — fast=False → должен взять slow модель
+    await reg.analyze_one(tmp_db, 7, ["requirements"], model=None)
+    assert captured["model"] == "slow-custom:7b"
+
+
+@pytest.mark.asyncio
+async def test_analyze_one_uses_fast_model_for_fast(tmp_db, monkeypatch):
+    """analyze_one с model=None для fast анализатора (summary) берёт fast_model."""
+    from app.llm import settings as llm_settings
+
+    await llm_settings.set_requirements_model(tmp_db, "slow-custom:7b")
+    await llm_settings.set_fast_model(tmp_db, "fast-custom:3b")
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (8, 'v', 'desc')")
     await tmp_db.commit()
 
     captured: dict = {}
@@ -251,8 +282,32 @@ async def test_analyze_one_uses_runtime_model(tmp_db, monkeypatch):
     monkeypatch.setattr(llm_client, "generate", _fake)
     monkeypatch.setattr(reg.llm_client, "generate", _fake)
 
-    await reg.analyze_one(tmp_db, 7, ["summary"], model=None)
-    assert captured["model"] == "custom:7b"
+    # summary — fast=True → должен взять fast модель
+    await reg.analyze_one(tmp_db, 8, ["summary"], model=None)
+    assert captured["model"] == "fast-custom:3b"
+
+
+@pytest.mark.asyncio
+async def test_analyze_one_explicit_model_overrides_fast(tmp_db, monkeypatch):
+    """Если model передан явно — используется для всех, fast не применяется."""
+    from app.llm import settings as llm_settings
+
+    await llm_settings.set_fast_model(tmp_db, "fast-custom:3b")
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (9, 'v', 'desc')")
+    await tmp_db.commit()
+
+    captured: dict = {}
+    from app.llm import client as llm_client
+
+    async def _fake(**kwargs):
+        captured["model"] = kwargs["model"]
+        return _FakeResp(parsed={"summary": "x"}, model=kwargs["model"])
+
+    monkeypatch.setattr(llm_client, "generate", _fake)
+    monkeypatch.setattr(reg.llm_client, "generate", _fake)
+
+    await reg.analyze_one(tmp_db, 9, ["summary"], model="explicit:5b")
+    assert captured["model"] == "explicit:5b"
 
 
 @pytest.mark.asyncio
@@ -375,6 +430,44 @@ async def test_analyze_interview_prep_no_history(tmp_db, monkeypatch):
     assert res[0].ok is True
     user = captured["prompt"]
     assert "МОИ ПРОШЛЫЕ ОТКЛИКИ" not in user  # секция не появляется
+
+
+@pytest.mark.asyncio
+async def test_analyze_soft_skills_employer(tmp_db, monkeypatch):
+    """soft_skills_employer оценивает работодателя по тону описания."""
+    await tmp_db.execute(
+        "INSERT INTO vacancies(id, name, description, company_name) "
+        "VALUES (50, 'Senior Py', 'Дружная команда, гибкий график, забота о сотрудниках', 'Cozy Co')"
+    )
+    await tmp_db.commit()
+    _patch_generate(
+        monkeypatch,
+        response_map={
+            "HR-консультант": _FakeResp(
+                parsed={
+                    "tone": "warm",
+                    "wlb_score": 8,
+                    "team_culture": "modern",
+                    "growth_opportunities": 7,
+                    "red_flags": [],
+                    "green_flags": ["гибкий график", "забота о сотрудниках"],
+                    "summary": "Тёплый тон, ценят WLB и команду.",
+                }
+            ),
+        },
+    )
+    res = await reg.analyze_one(tmp_db, 50, ["soft_skills_employer"])
+    assert len(res) == 1
+    assert res[0].ok is True
+    assert res[0].kind == "soft_skills_employer"
+    assert res[0].data["tone"] == "warm"
+    assert res[0].data["wlb_score"] == 8
+    from app.db import llm_repo
+
+    a = await llm_repo.get_analysis(tmp_db, 50, "soft_skills_employer")
+    assert a is not None
+    assert a["data"]["team_culture"] == "modern"
+    assert a["data"]["green_flags"] == ["гибкий график", "забота о сотрудниках"]
 
 
 @pytest.mark.asyncio

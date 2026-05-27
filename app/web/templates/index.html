@@ -866,6 +866,36 @@
     }
   };
 
+  // === Быстрый LLM-разбор требований из строки таблицы ===
+  window.llmParseVacancy = async (btn) => {
+    if (!btn || btn.dataset.busy === '1') return;
+    const vid = btn.dataset.vid;
+    const orig = btn.textContent;
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`/api/vacancy/${vid}/llm-parse`, {method: 'POST'});
+      const d = await r.json().catch(() => ({}));
+      const sec = Math.round((performance.now() - t0) / 1000);
+      if (r.ok && d.ok) {
+        const n = (d.items && d.items.length) || d.inserted || 0;
+        const model = d.model ? ` · ${d.model}` : '';
+        window.showToast('ok', `✓ ${n} требований за ${sec}с${model}`);
+      } else {
+        const reason = d.reason || d.error || `HTTP ${r.status}`;
+        window.showToast('err', `LLM-разбор: ${reason}`);
+      }
+    } catch(e) {
+      window.showToast('err', `LLM-разбор: ${e.message}`);
+    } finally {
+      btn.textContent = orig;
+      btn.disabled = false;
+      delete btn.dataset.busy;
+    }
+  };
+
   // === Снятые с HH ===
   window.cycleDisappeared = () => {
     const inp = document.getElementById('disappeared-mode');

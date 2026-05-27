@@ -37,6 +37,9 @@
     {% if archived %}<span class="text-[10px] text-neutral-500 dark:text-neutral-400 mr-1" title="Вакансия в архиве на HH — работодатель больше не принимает отклики ({{ archived[:16] }})">📦 архив</span>{% endif %}
     <a href="{{ v.url }}" target="_blank" rel="noopener" class="text-neutral-900 dark:text-neutral-100 hover:underline {{ 'line-through' if inactive }}" title="Открыть вакансию на hh.ru в новой вкладке">{{ v.name }}</a>
     <a href="/vacancy/{{ v.id }}" class="ml-1 text-[10px] text-blue-600 hover:underline" title="Открыть детальную карточку с разбивкой match-score">детали</a>
+    <button type="button" data-vid="{{ v.id }}" onclick="window.llmParseVacancy(this)"
+            class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle"
+            title="LLM разбор требований этой вакансии">✨</button>
     {% if v.online_users_count and v.online_users_count > 5 %}
       <span class="ml-1 text-[10px] text-amber-700" title="Pro: пользователи сейчас смотрят эту вакансию">сейчас смотрит {{ v.online_users_count }}</span>
     {% endif %}
