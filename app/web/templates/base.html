@@ -48,6 +48,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
@@ -60,6 +81,9 @@
           <a href="/funnel" class="hover:text-neutral-900 dark:hover:text-white">Воронка</a>
           <a href="/profile" class="hover:text-neutral-900 dark:hover:text-white">Профиль</a>
           <a href="/logs" class="hover:text-neutral-900 dark:hover:text-white">Логи</a>
+          <a href="/jobs" class="hover:text-neutral-900 dark:hover:text-white">⚙️ Джобы</a>
+          <a href="/llm-logs" class="hover:text-neutral-900 dark:hover:text-white">✨ LLM</a>
+          <a href="/analytics" class="hover:text-neutral-900 dark:hover:text-white">📊 Аналитика</a>
           <a href="/api/health" class="hover:text-neutral-900 dark:hover:text-white" target="_blank">Статус</a>
         </nav>
       </div>
@@ -229,10 +253,26 @@
     window.renderTask = (t) => {
       const colors = { running: 'bg-blue-500', done: 'bg-emerald-500', error: 'bg-red-500', cancelled: 'bg-neutral-500', queued: 'bg-amber-500' };
       const pct = t.progress || 0;
+      const isFinal = t.status === 'done' || t.status === 'error' || t.status === 'cancelled';
+      const willAutoHide = t.status === 'done' || t.status === 'cancelled';  // error НЕ скрываем
+      const closeBtn = isFinal
+        ? `<button class="text-neutral-400 hover:text-red-600 text-[14px] leading-none px-1" title="Скрыть из панели" onclick="window.hideTask('${t.id}')">×</button>`
+        : '';
+      const autoHideBar = willAutoHide
+        ? `<div class="mt-1.5 h-0.5 bg-neutral-100 dark:bg-neutral-800 rounded overflow-hidden"
+              title="Авто-скрытие через ${Math.round(window.AUTO_HIDE_MS/1000)}с — полная история на /jobs">
+             <div class="auto-hide-bar ${t.status === 'cancelled' ? 'cancelled' : ''}"
+                  data-pending="1"
+                  style="--auto-hide-ms: ${window.AUTO_HIDE_MS}ms"></div>
+           </div>`
+        : '';
       return `<div data-tid="${t.id}" class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
         <div class="flex items-center justify-between gap-2">
           <div class="font-medium truncate">${t.label}</div>
-          <div class="text-[11px] text-neutral-500">${t.status}</div>
+          <div class="flex items-center gap-1">
+            <div class="text-[11px] text-neutral-500">${t.status}</div>
+            ${closeBtn}
+          </div>
         </div>
         <div class="mt-1 h-1.5 rounded bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
           <div class="h-full ${colors[t.status] || 'bg-neutral-400'}" style="width:${pct}%"></div>
@@ -242,48 +282,105 @@
           <div>${t.total ? t.current + '/' + t.total : ''}</div>
         </div>
         ${t.status === 'running' ? `<button class="mt-1 text-[11px] text-red-600 hover:underline" onclick="fetch('/api/tasks/${t.kind}/cancel', {method:'POST'})">отменить</button>` : ''}
+        ${autoHideBar}
       </div>`;
     };
     window.tasksState = {};
+    window.hiddenTasks = new Set();
+    window.hideTask = (id) => {
+      window.hiddenTasks.add(id);
+      window.renderTasks();
+    };
     window.renderTasks = () => {
-      const all = Object.values(window.tasksState).sort((a,b)=>((b.started_at||0)-(a.started_at||0)));
+      const all = Object.values(window.tasksState)
+        .filter(t => !window.hiddenTasks.has(t.id))
+        .sort((a,b)=>((b.started_at||0)-(a.started_at||0)));
       const active = all.filter(t => t.status === 'running' || t.status === 'queued');
       const recent = all.filter(t => t.status !== 'running' && t.status !== 'queued').slice(0,3);
       const html = active.concat(recent).map(window.renderTask).join('');
       document.getElementById('tasks-info').innerHTML = html || '<div class="text-neutral-500 text-[11px]">нет активных задач</div>';
       const sum = active.length ? `${active.length} активн.` : '';
       document.getElementById('status-summary').textContent = sum;
+      window.animateAutoHideBars();
+    };
+    window.TABLE_REFRESH_KINDS = new Set([
+      'sync_searches', 'backfill_pending', 'dedup_vacancies',
+      'personal_refresh', 'personal_full_refresh',
+    ]);
+    window.maybeRefreshTable = (kind) => {
+      if (!window.TABLE_REFRESH_KINDS.has(kind)) return;
+      const form = document.getElementById('filters');
+      if (!form || typeof htmx === 'undefined') return;
+      htmx.trigger(form, 'refresh');
+    };
+    window.AUTO_HIDE_MS = 5000;  // done/cancelled — скрываем через 5с (полная история всё равно на /jobs)
+    window._autoHideTimers = {};
+    window.scheduleAutoHide = (taskId, status) => {
+      // ошибки оставляем висеть — пользователь должен заметить и сам закрыть крестиком
+      if (status === 'error') return;
+      if (status !== 'done' && status !== 'cancelled') return;
+      // сбросим предыдущий таймер для этого id (если был — на reuse id)
+      if (window._autoHideTimers[taskId]) clearTimeout(window._autoHideTimers[taskId]);
+      window._autoHideTimers[taskId] = setTimeout(() => {
+        window.hideTask(taskId);
+        delete window._autoHideTimers[taskId];
+      }, window.AUTO_HIDE_MS);
+    };
+    // Анимируем полоску внутри карточки: на следующий tick после render ставим width=0,
+    // CSS transition её плавно «съедает» за AUTO_HIDE_MS.
+    window.animateAutoHideBars = () => {
+      document.querySelectorAll('.auto-hide-bar[data-pending="1"]').forEach((el) => {
+        el.dataset.pending = '0';
+        // requestAnimationFrame даёт браузеру отрисовать width=100% перед сменой на 0%
+        requestAnimationFrame(() => requestAnimationFrame(() => { el.style.width = '0%'; }));
+      });
     };
     window.applyTaskEvent = (ev) => {
       if (ev.snapshot) {
         window.tasksState = {};
         ev.snapshot.forEach(t => window.tasksState[t.id] = t);
+        // на свежем снапшоте — для уже завершённых тоже взведём авто-скрытие
+        ev.snapshot.forEach(t => window.scheduleAutoHide(t.id, t.status));
       } else if (ev.id) {
         const prev = window.tasksState[ev.id];
+        if (prev && prev.status !== ev.status && window.hiddenTasks) {
+          window.hiddenTasks.delete(ev.id);
+        }
         window.tasksState[ev.id] = ev;
         if (prev && prev.status === 'running' && ev.status === 'done') {
           window.showToast('ok', `✓ ${ev.label}: ${ev.message || 'готово'}`);
+          window.maybeRefreshTable(ev.kind);
         } else if (prev && prev.status === 'running' && ev.status === 'error') {
           window.showToast('err', `✗ ${ev.label}: ${ev.error || ev.message}`);
         } else if (prev && prev.status === 'running' && ev.status === 'cancelled') {
           window.showToast('info', `⏵ ${ev.label} отменено`);
         }
+        window.scheduleAutoHide(ev.id, ev.status);
       }
       window.renderTasks();
     };
 
     // === Init ===
-    fetch('/api/status').then(r => r.json()).then(d => {
-      window.renderClient(d.client);
-      window.renderScheduler(d.scheduler);
-      document.getElementById('status-panel').style.display = 'flex';
-    });
-    setInterval(() => {
+    // SSE: client + scheduler (заменяет polling /api/status)
+    if (typeof EventSource !== 'undefined') {
+      const esStatus = new EventSource('/api/status/stream');
+      esStatus.onmessage = (e) => {
+        try {
+          const d = JSON.parse(e.data);
+          window.renderClient(d.client);
+          window.renderScheduler(d.scheduler);
+          document.getElementById('status-panel').style.display = 'flex';
+        } catch(_) {}
+      };
+      esStatus.onerror = () => { /* let browser reconnect */ };
+    } else {
+      // Фоллбэк для древних браузеров
       fetch('/api/status').then(r => r.json()).then(d => {
         window.renderClient(d.client);
         window.renderScheduler(d.scheduler);
-      }).catch(()=>{});
-    }, 10000);
+        document.getElementById('status-panel').style.display = 'flex';
+      });
+    }
 
     // SSE tasks
     if (typeof EventSource !== 'undefined') {
@@ -291,6 +388,78 @@
       es.onmessage = (e) => { try { window.applyTaskEvent(JSON.parse(e.data)); } catch(_) {} };
       es.onerror = () => { /* let browser reconnect */ };
     }
+
+    // === Подсветка строки, на которую возвращаешься после клика по внешней ссылке ===
+    // Плюс throttled-инкремент откликов: если ходишь между внешними вкладками,
+    // фоновый sync_personal_refresh подтянет новые отклики и UI сам перерисуется.
+    const SEEN_KEY = 'seen_external_rows';
+    const SEEN_TTL_MS = 30 * 60 * 1000;
+    const ACTIVITY_WINDOW_MS = 5 * 60 * 1000;
+    const PERSONAL_REFRESH_THROTTLE_MS = 60 * 1000;
+    window.lastExternalClickAt = 0;
+    window.lastPersonalSyncAt = 0;
+    const readSeen = () => {
+      try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}'); } catch(_) { return {}; }
+    };
+    const writeSeen = (m) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(m)); } catch(_) {} };
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest && e.target.closest('a[target="_blank"]');
+      if (!a) return;
+      const tr = a.closest('tr[id^="row-"]');
+      if (!tr) return;
+      const id = tr.id.slice(4);
+      const nameA = tr.querySelector('td a[target="_blank"]');
+      const name = nameA ? nameA.textContent.trim() : '';
+      const m = readSeen();
+      m[id] = { ts: Date.now(), name };
+      writeSeen(m);
+      window.lastExternalClickAt = Date.now();
+    }, true);
+    window.applySeenHighlight = () => {
+      const m = readSeen();
+      const now = Date.now();
+      const keep = {};
+      let changed = false;
+      Object.entries(m).forEach(([id, rec]) => {
+        // обратная совместимость со старым форматом (timestamp вместо объекта)
+        const ts = typeof rec === 'number' ? rec : (rec && rec.ts) || 0;
+        const name = typeof rec === 'object' && rec ? rec.name : '';
+        if (now - ts > SEEN_TTL_MS) { changed = true; return; }
+        const row = document.getElementById('row-' + id);
+        if (row) {
+          row.classList.add('seen-external', 'seen-external-shake');
+          setTimeout(() => row.classList.remove('seen-external-shake'), 500);
+          changed = true;
+        } else if (window.lastTableSwapAt && ts < window.lastTableSwapAt && name) {
+          // строка не найдена после рефреша таблицы → отклик подтянулся и фильтр её скрыл
+          window.showToast('ok', `✓ ${name} — отклик подтянут`);
+          changed = true;
+        } else {
+          keep[id] = rec;
+        }
+      });
+      if (changed) writeSeen(keep);
+    };
+    window.maybeRefreshNegotiations = () => {
+      const now = Date.now();
+      if (now - window.lastExternalClickAt > ACTIVITY_WINDOW_MS) return;
+      if (now - window.lastPersonalSyncAt < PERSONAL_REFRESH_THROTTLE_MS) return;
+      window.lastPersonalSyncAt = now;
+      fetch('/api/scheduler/personal_refresh/run-now', {method: 'POST'}).catch(()=>{});
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        window.applySeenHighlight();
+        window.maybeRefreshNegotiations();
+      }
+    });
+    window.addEventListener('pageshow', () => window.applySeenHighlight());
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+      if (e.target && e.target.id === 'table-body') {
+        window.lastTableSwapAt = Date.now();
+        window.applySeenHighlight();
+      }
+    });
   </script>
   <script>
     window.toggleTheme = () => {

@@ -28,4 +28,48 @@ dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
+    "ruff>=0.8.0",
 ]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["data", "data_2", "htmlcov", "docs"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "B",      # bugbear (общие баги)
+    "UP",     # pyupgrade
+    "SIM",    # simplify
+    "C4",     # flake8-comprehensions
+    "PIE",    # flake8-pie
+    "RUF",    # ruff-specific
+]
+ignore = [
+    "E501",   # длина строки — line-length и так есть, но не всё ужмёшь
+    "B008",   # FastAPI Depends(...) в дефолтах — это паттерн
+    "SIM105", # try/except/pass — иногда читаемее, чем contextlib.suppress
+    "SIM108", # тернарник вместо if/else — иногда читаемее наоборот
+    "RUF001", # «двусмысленный» юникод — у нас русский нормальный
+    "RUF002",
+    "RUF003",
+    "RUF006", # asyncio.create_task без сохранения ссылки — fire-and-forget паттерн в логировании
+    "RUF012", # mutable class attrs (dataclass и т.п. — слишком шумно)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "B011",   # assert False/True в тестах ок
+    "SIM117", # nested with — иногда читаемее без объединения
+]
+"scripts/**" = ["UP"]  # CLI-скрипты — нестрого
+"app/db/schema.sql" = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

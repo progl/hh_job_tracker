@@ -26,12 +26,14 @@ def apply_cookies_to_client(client: httpx.AsyncClient, cookies: list[dict[str, s
 def dump_jar(client: httpx.AsyncClient) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     for cookie in client.cookies.jar:
-        items.append({
-            "name": cookie.name,
-            "value": cookie.value or "",
-            "domain": cookie.domain or "",
-            "path": cookie.path or "/",
-        })
+        items.append(
+            {
+                "name": cookie.name,
+                "value": cookie.value or "",
+                "domain": cookie.domain or "",
+                "path": cookie.path or "/",
+            }
+        )
     return items
 
 
@@ -59,7 +61,9 @@ def _cookie_value(items: list[dict[str, str]], name: str) -> str | None:
     return None
 
 
-async def load_jar(db: aiosqlite.Connection, env_cookie_header: str | None = None) -> list[dict[str, str]] | None:
+async def load_jar(
+    db: aiosqlite.Connection, env_cookie_header: str | None = None
+) -> list[dict[str, str]] | None:
     """Загружает jar из БД. Если в .env переданы куки и стабильные значения
     (hhtoken/hhuid/_xsrf) отличаются — сбрасывает БД-jar и возвращает .env (пользователь обновил)."""
     cur = await db.execute("SELECT value FROM cookie_store WHERE key='jar'")
@@ -79,6 +83,7 @@ async def load_jar(db: aiosqlite.Connection, env_cookie_header: str | None = Non
                 await db.execute("DELETE FROM cookie_store WHERE key='jar'")
                 await db.commit()
                 import logging as _log
+
                 _log.getLogger(__name__).info(
                     "cookies: .env differs from db jar on %s — using .env (db jar dropped)", diff
                 )

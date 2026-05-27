@@ -49,18 +49,48 @@
 
 ## Возможности
 
+### Сбор и трекинг
 - **Сбор вакансий**: одноразовый по запросу + сохранённые поиски с автосинком каждые 4 часа
-- **Личные данные**: 100% откликов с состояниями (RESPONSE/INVITATION/INTERVIEW/DISCARD), история смены статусов, индекс вежливости работодателей (HH Pro)
+- **✨ Рекомендации hh.ru** как saved_search: тянет по `resume=<hash>` со страницы «Мои резюме», авто-обновляет хеш если HH его сменил (POST `/api/searches/recommendations`)
+- **Early-stop инкремент**: при синке останавливается на K подряд уже виденных вакансиях (K=5 для рекомендаций, K=3 для обычных) — обычно 1-2 страницы вместо 10-200. Shift+клик на ▶ для полного прогона. Bulk-кнопки «🔧 Глубину всем» и «⚡ Early-stop всем»
+- **Личные данные**: 100% откликов с состояниями (RESPONSE/INVITATION/INTERVIEW/DISCARD), история смены статусов, индекс вежливости работодателей (HH Pro). Smart-stop инкремента откликов — break на первом item старше `last_sync`
+- **Авто-дедуп**: уже подтянутые вакансии исключаются из повторного backfill, удалённые с HH помечаются `disappeared_at`, архивные — `archived_at`. Дополнительно `POST /api/dedup` помечает дубликаты по нормализованной паре (название + компания) как «Скип»
+
+### Скоринг и предсказания
 - **Profile-driven match-score** (0–100): стек × ЗП × формат × опыт × вежливость × конкуренция
-- **Predict %**: вероятность приглашения. Эвристика по умолчанию; sklearn LogisticRegression обучается на реальной истории откликов, когда наберётся ≥10 positive исходов
+- **Predict %**: вероятность приглашения. Эвристика по умолчанию; sklearn LogisticRegression обучается на реальной истории откликов (≥5 positive). В логах: train_auc + cross-val auc±std (StratifiedKFold) + веса фич
 - **Воронка**: 6 счётчиков, топ работодателей, среднее время до ответа HR, гистограмма по неделям
+
+### ✨ LLM-пайплайн (локально через Ollama)
+- Изолированный модуль `app/llm/` — реестр анализаторов, не зависит от HHClient
+- **6 анализаторов** (включаются/отключаются глобально на /profile, можно выбирать на карточке вакансии):
+  - **requirements** — must/nice/plus × stack/exp/soft/edu/other (default on)
+  - **salary** — извлечение зарплаты из текста описания
+  - **company_kind** — product/outsource/bank/ecommerce/gamedev/startup/enterprise/gov/edu
+  - **summary** — резюме вакансии в 1-2 предложения
+  - **match_essay** — подходит мне или нет (score + verdict + matches/gaps) с учётом profile.skills
+  - **interview_prep** — вероятные вопросы к собесу + история моих откликов в эту компанию
+- Модели: переключаемые через UI (qwen3:14b / qwen2.5:14b / llama3.1:8b / custom), авто-`think=False` для reasoning-моделей в JSON-режиме
+- **Полный лог** каждого вызова в `llm_runs`: prompt/response/parsed/tokens/latency → страница `/llm-logs`
+- **Cron-джоб** `llm_parse_requirements` (раз в час, 20 необработанных) + ручной «Прогнать корпус»
+- **CLI** `scripts/llm_parse.py vid [--models a b c]` — сравнение моделей для отладки
+
+### UI и UX
 - **Фильтры**: статус (include/exclude), отклик HH (include/exclude), уровень, стек, ЗП, формат, текст, сортировка по любой колонке. Состояние пишется в URL — sharable
 - **Быстрая разметка**: dropdown статусов + одно-кликовая кнопка 🗑 «Скип»
-- **Архивы**: вакансии помеченные «Скип», «снятые с HH» и **«в архиве на HH»** (работодатель закрыл приём откликов) автоматически прячутся из выдачи. У каждого типа свой бейдж в строке (`⌫ снята` / `📦 архив`) и отдельная кнопка-фильтр (`hide → only → all`)
-- **Авто-дедуп**: уже подтянутые вакансии исключаются из повторного backfill, удалённые с HH помечаются `disappeared_at`, архивные — `archived_at`. Дополнительно `POST /api/dedup` помечает дубликаты по нормализованной паре (название + компания) как «Скип»
+- **Архивы**: вакансии помеченные «Скип», «снятые с HH» и **«в архиве на HH»** автоматически прячутся. Бейджи `⌫ снята` / `📦 архив`, отдельные кнопки-фильтры (`hide → only → all`)
 - **Сравнение**: до 6 вакансий поколоночно с подсветкой различий
+- **Подсветка строки** после возврата с hh.ru + shake-анимация, авто-инкремент откликов в фоне
+- **SSE**: `/api/status/stream` вместо polling, авто-рефреш таблицы после done-джобов
+- **Авто-скрытие** завершённых задач из панели Статус через 5с с визуальной полоской (полная история — `/jobs`)
+- **Тёмная тема**, экспорт CSV/JSON
+
+### Аналитика и логи
+- **`/analytics`** — топ-стек, по строгости/категории, тип компании, топ-вопросов и тем к собесу
+- **`/jobs`** — журнал прогонов всех фоновых джобов с фильтрами и развёрткой JSON-результата
+- **`/llm-logs`** — все LLM-вызовы с фокусом на конкретный run
+- **`/logs`** — лог HTTP-запросов к HH с фильтрами и счётчиками
 - **ЦБ курсы**: ЗП в любой валюте → рубли по актуальному курсу (cbr-xml-daily.ru, кеш 24ч)
-- **Тёмная тема**, экспорт CSV/JSON, страница логов запросов с фильтрами и счётчиками
 
 ## Стек
 
@@ -68,7 +98,9 @@
 - FastAPI, Uvicorn, httpx (HTTP/2, async)
 - SQLite (aiosqlite), Jinja2 + HTMX + Tailwind через CDN
 - apscheduler, scikit-learn, joblib
-- pytest + pytest-asyncio + pytest-cov (237 тестов, 66% покрытие, см. [docs/testing.md](docs/testing.md))
+- **Ollama** локально для LLM-пайплайна (qwen3:14b / qwen2.5:14b / llama3.1:8b)
+- pytest + pytest-asyncio + pytest-cov (**464 тестов**, см. [docs/testing.md](docs/testing.md))
+- **ruff** 0.15 (linter + formatter) — `make lint`, `make format`, `make check`
 - GitHub Actions CI — прогон на каждый push/PR (`.github/workflows/test.yml`)
 
 ---
@@ -93,6 +125,21 @@ make run                                          # http://127.0.0.1:8000/
    - `-H 'user-agent: ...'` → **HH_USER_AGENT**
    - `-H 'sec-ch-ua: ...'` → **HH_SEC_CH_UA**
    - URL вида `https://<region>.hh.ru/...` → **HH_BASE_URL** (например `https://moscow.hh.ru`)
+
+## LLM-пайплайн (опционально)
+
+Без Ollama приложение работает — просто LLM-блоки на /vacancy и /analytics будут пустыми, а cron `llm_parse_requirements` будет тихо падать. Чтобы включить:
+
+```bash
+brew install ollama
+ollama serve &                              # порт 11434 — дефолт
+ollama pull qwen3:14b                       # ~9 GB, рекомендуемая
+# опционально для сравнения:
+ollama pull qwen2.5:14b
+ollama pull llama3.1:8b
+```
+
+Дефолтная модель и набор анализаторов настраиваются на `/profile`. Полный лог каждого вызова — на `/llm-logs`.
 
 ## PyCharm
 
@@ -121,10 +168,17 @@ Run Configuration: Module name `uvicorn`, Parameters `app.web.app:app --reload -
 # Структура
 
 ```
-app/               — FastAPI app: clients, collector, db, parsers, scoring, web
+app/
+  clients/         — httpx-клиент HH с антибот-логикой
+  collector/       — sync вакансий, откликов, рекомендаций (refresh_resume_search_token)
+  db/              — aiosqlite репозитории (включая llm_repo)
+  llm/             — изолированный LLM-пайплайн (client, prompts, registry, tasks, settings)
+  parsers/         — парсеры HH initial state
+  scoring/         — match-score + ML predict (с cross-val AUC)
+  web/             — FastAPI + Jinja2 шаблоны (analytics, jobs, llm_logs, vacancy, ...)
 data/              — SQLite БД + ML model + dataset (gitignored)
-scripts/           — export_dataset.py, seed_demo.py
-tests/             — pytest: unit / integration / e2e (237 тестов, 66% coverage)
+scripts/           — export_dataset.py, seed_demo.py, llm_parse.py
+tests/             — pytest: unit / integration / e2e (464 теста)
 .github/workflows/ — GitHub Actions CI (pytest на каждый push)
 docs/              — внутренняя документация
 docs/images/       — скрины UI на demo-данных
@@ -150,16 +204,19 @@ make demo-clean   # удалить demo-БД
 
 ---
 
-# Тесты
+# Тесты + линтинг
 
 ```bash
-make test       # 237 тестов с -v, ~10 сек
+make test       # 464 теста, ~25 сек
 make coverage   # + HTML отчёт в htmlcov/index.html
+make lint       # ruff check
+make format     # ruff format
+make check      # lint + format check + pytest (для CI/pre-commit)
 ```
 
-Слои: **121 unit** (парсеры, скоринг, детектор архивности, ml, tasks, scheduler, rate-limit, events) + **102 integration** (репозитории, cookies, cbr, дедуп, favorites) + **14 e2e** (FastAPI через `httpx.ASGITransport` с заглушенным lifespan).
+Слои: **unit** (парсеры, скоринг, ML, tasks, scheduler, rate-limit, llm-клиент) + **integration** (репозитории включая llm_repo, cookies, cbr, дедуп, collector, resume-token, реестр анализаторов) + **e2e** (FastAPI через `httpx.ASGITransport` с заглушенным lifespan — /api, /llm-logs, /analytics, /jobs, рекомендации, статус-стрим).
 
-Покрытие — **66% общее**, ключевые модули **88–100%**. CI: GitHub Actions прогоняет всё на каждый push/PR. Подробнее: [docs/testing.md](docs/testing.md).
+LLM-эндпоинты тестируются с моком `httpx.AsyncClient` — реальный Ollama не нужен. CI: GitHub Actions прогоняет всё на каждый push/PR. Подробнее: [docs/testing.md](docs/testing.md).
 
 ---
 

@@ -127,21 +127,33 @@ async def test_avg_hr_response_hours_none_when_empty(tmp_db):
 async def test_avg_hr_response_hours_median(tmp_db):
     # 3 viewed: дельты 1h, 2h, 4h → медиана = 2h
     await _add_neg(
-        tmp_db, 1, viewed=1,
-        creation_time="2026-05-01T10:00:00", last_modified="2026-05-01T11:00:00",
+        tmp_db,
+        1,
+        viewed=1,
+        creation_time="2026-05-01T10:00:00",
+        last_modified="2026-05-01T11:00:00",
     )
     await _add_neg(
-        tmp_db, 2, viewed=1,
-        creation_time="2026-05-01T10:00:00", last_modified="2026-05-01T12:00:00",
+        tmp_db,
+        2,
+        viewed=1,
+        creation_time="2026-05-01T10:00:00",
+        last_modified="2026-05-01T12:00:00",
     )
     await _add_neg(
-        tmp_db, 3, viewed=1,
-        creation_time="2026-05-01T10:00:00", last_modified="2026-05-01T14:00:00",
+        tmp_db,
+        3,
+        viewed=1,
+        creation_time="2026-05-01T10:00:00",
+        last_modified="2026-05-01T14:00:00",
     )
     # не viewed — не учитывается
     await _add_neg(
-        tmp_db, 4, viewed=0,
-        creation_time="2026-05-01T10:00:00", last_modified="2026-05-01T20:00:00",
+        tmp_db,
+        4,
+        viewed=0,
+        creation_time="2026-05-01T10:00:00",
+        last_modified="2026-05-01T20:00:00",
     )
     await tmp_db.commit()
     v = await funnel_repo.avg_hr_response_hours(tmp_db)
@@ -152,13 +164,19 @@ async def test_avg_hr_response_hours_median(tmp_db):
 async def test_avg_hr_response_hours_skips_invalid_and_negative(tmp_db):
     # invalid date — except — пропуск
     await _add_neg(
-        tmp_db, 1, viewed=1,
-        creation_time="garbage", last_modified="also garbage",
+        tmp_db,
+        1,
+        viewed=1,
+        creation_time="garbage",
+        last_modified="also garbage",
     )
     # отрицательная дельта — фильтруется
     await _add_neg(
-        tmp_db, 2, viewed=1,
-        creation_time="2026-05-01T12:00:00", last_modified="2026-05-01T10:00:00",
+        tmp_db,
+        2,
+        viewed=1,
+        creation_time="2026-05-01T12:00:00",
+        last_modified="2026-05-01T10:00:00",
     )
     await tmp_db.commit()
     assert await funnel_repo.avg_hr_response_hours(tmp_db) is None

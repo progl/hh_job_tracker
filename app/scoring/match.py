@@ -37,7 +37,15 @@ def score_vacancy(
         overlap = user_skills & parsed
         ratio = len(overlap) / max(len(user_skills | parsed), 1)
         s = int(ratio * 35)
-        parts.append({"f": "стек", "v": s, "max": 35, "note": f"{len(overlap)} совпадений из {len(user_skills | parsed)}", "ok": s >= 17})
+        parts.append(
+            {
+                "f": "стек",
+                "v": s,
+                "max": 35,
+                "note": f"{len(overlap)} совпадений из {len(user_skills | parsed)}",
+                "ok": s >= 17,
+            }
+        )
     elif parsed and not user_skills:
         s = 20
         parts.append({"f": "стек", "v": s, "max": 35, "note": "профиль не заполнен", "ok": True})
@@ -61,7 +69,15 @@ def score_vacancy(
             s = 5
         else:
             s = 0
-        parts.append({"f": "ЗП", "v": s, "max": 20, "note": f"{sal:,} vs ожидание {expected:,}".replace(',', ' '), "ok": s >= 10})
+        parts.append(
+            {
+                "f": "ЗП",
+                "v": s,
+                "max": 20,
+                "note": f"{sal:,} vs ожидание {expected:,}".replace(",", " "),
+                "ok": s >= 10,
+            }
+        )
     elif sal:
         s = 12
         parts.append({"f": "ЗП", "v": s, "max": 20, "note": "ожидание не задано", "ok": True})
@@ -118,7 +134,9 @@ def score_vacancy(
         elif rwd is not None and rwd <= 7:
             s += 1
         s = min(s, 10)
-        parts.append({"f": "вежливость", "v": s, "max": 10, "note": f"читает {rtp}%, ответ за {rwd}д", "ok": s >= 6})
+        parts.append(
+            {"f": "вежливость", "v": s, "max": 10, "note": f"читает {rtp}%, ответ за {rwd}д", "ok": s >= 6}
+        )
     else:
         s = 4
         parts.append({"f": "вежливость", "v": s, "max": 10, "note": "нет данных", "ok": False})

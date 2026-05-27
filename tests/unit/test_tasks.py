@@ -199,6 +199,7 @@ def test_task_to_dict_shape():
 def test_prune_keeps_max_history():
     # забьём _tasks > MAX_HISTORY завершёнными задачами
     import time as _t
+
     for i in range(task_mod._MAX_HISTORY + 5):
         t = task_mod.Task(id=f"t{i}", kind="x", label="L")
         t.status = "done"

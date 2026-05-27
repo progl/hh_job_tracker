@@ -3,6 +3,7 @@
 Источник: https://www.cbr-xml-daily.ru/daily_json.js (бесплатно, без auth, обновляется ежедневно).
 Сохраняем в cookie_store.value под ключом 'fx_rates' как JSON.
 """
+
 import json
 import logging
 import time
@@ -21,8 +22,10 @@ CACHE_TTL_SEC = 24 * 3600
 
 
 async def _fetch_cbr() -> dict[str, float]:
-    from app.db.logs_repo import log_request
     import time as _t
+
+    from app.db.logs_repo import log_request
+
     t0 = _t.monotonic()
     try:
         async with httpx.AsyncClient(timeout=15.0) as c:

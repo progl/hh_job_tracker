@@ -21,7 +21,9 @@ async def start(job_id: str, trigger: str = "cron") -> int:
         await db.close()
 
 
-async def finish(run_id: int, status: str, result: Any = None, error: str | None = None, started_mono: float | None = None) -> None:
+async def finish(
+    run_id: int, status: str, result: Any = None, error: str | None = None, started_mono: float | None = None
+) -> None:
     duration_ms = None
     if started_mono is not None:
         duration_ms = int((time.monotonic() - started_mono) * 1000)
@@ -62,7 +64,8 @@ async def list_runs(job_id: str | None = None, limit: int = 100) -> list[dict]:
             )
         else:
             cur = await db.execute(
-                "SELECT * FROM job_runs ORDER BY id DESC LIMIT ?", (limit,),
+                "SELECT * FROM job_runs ORDER BY id DESC LIMIT ?",
+                (limit,),
             )
         return [dict(r) for r in await cur.fetchall()]
     finally:

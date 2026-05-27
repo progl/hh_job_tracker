@@ -2,11 +2,11 @@ from app.parsers.state import extract_initial_state
 
 
 def test_extracts_initial_state():
-    html = '''
+    html = """
     <html><body>
       <template id="HH-Lux-InitialState">{"foo": 1, "bar": "test"}</template>
     </body></html>
-    '''
+    """
     out = extract_initial_state(html)
     assert out == {"foo": 1, "bar": "test"}
 

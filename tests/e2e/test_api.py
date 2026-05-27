@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from app.db import vacancies_repo
@@ -7,17 +5,34 @@ from app.db import vacancies_repo
 
 def _vacancy(vid: int = 1, **over) -> dict:
     base = {
-        "id": vid, "name": f"Test {vid}", "company_id": 100, "company_name": "Co",
-        "area_id": None, "area_name": None,
-        "salary_from": 100000, "salary_to": 200000, "salary_currency": "RUR",
-        "salary_gross": False, "salary_rub": 150000,
-        "work_schedule": "fullDay", "employment": "FULL", "work_experience": None,
+        "id": vid,
+        "name": f"Test {vid}",
+        "company_id": 100,
+        "company_name": "Co",
+        "area_id": None,
+        "area_name": None,
+        "salary_from": 100000,
+        "salary_to": 200000,
+        "salary_currency": "RUR",
+        "salary_gross": False,
+        "salary_rub": 150000,
+        "work_schedule": "fullDay",
+        "employment": "FULL",
+        "work_experience": None,
         "work_formats": "[]",
-        "publication_time": None, "creation_time": None,
-        "is_remote": 0, "is_remote_text": 0, "level": "middle",
-        "key_skills": None, "parsed_stack": '["python"]',
-        "responses_count": 5, "total_responses_count": 50, "online_users_count": 1,
-        "description": "desc", "raw_json": "{}", "url": f"https://hh.ru/vacancy/{vid}",
+        "publication_time": None,
+        "creation_time": None,
+        "is_remote": 0,
+        "is_remote_text": 0,
+        "level": "middle",
+        "key_skills": None,
+        "parsed_stack": '["python"]',
+        "responses_count": 5,
+        "total_responses_count": 50,
+        "online_users_count": 1,
+        "description": "desc",
+        "raw_json": "{}",
+        "url": f"https://hh.ru/vacancy/{vid}",
         "archived": False,
     }
     base.update(over)
@@ -26,6 +41,7 @@ def _vacancy(vid: int = 1, **over) -> dict:
 
 async def _seed(webapp, *vs: dict) -> None:
     from app.db.db import get_db
+
     db = await get_db()
     try:
         for v in vs:
@@ -93,6 +109,7 @@ async def test_set_vacancy_status(app_client):
     assert r.status_code == 200
     # проверим в БД
     from app.db.db import get_db
+
     db = await get_db()
     try:
         cur = await db.execute("SELECT status FROM vacancy_status WHERE vacancy_id=1")
@@ -107,6 +124,84 @@ async def test_set_vacancy_status_unknown_400(app_client):
     await _seed(webapp, _vacancy(1))
     r = await client.post("/api/vacancy/1/status", data={"status": "bogus"})
     assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_bulk_status_updates_multiple(app_client):
+    """Массовая смена статуса по списку ids."""
+    client, webapp = app_client
+    for vid in (10, 11, 12):
+        await _seed(webapp, _vacancy(vid))
+    r = await client.post(
+        "/api/vacancies/bulk-status",
+        data={"ids": ["10", "11", "12"], "status": "skipped"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["updated"] == 3
+    # проверка в БД
+    from app.db.db import get_db
+
+    db = await get_db()
+    try:
+        for vid in (10, 11, 12):
+            cur = await db.execute("SELECT status FROM vacancy_status WHERE vacancy_id=?", (vid,))
+            assert (await cur.fetchone())[0] == "skipped"
+    finally:
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_bulk_status_unknown_400(app_client):
+    client, webapp = app_client
+    await _seed(webapp, _vacancy(1))
+    r = await client.post("/api/vacancies/bulk-status", data={"ids": ["1"], "status": "bogus"})
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_bulk_status_empty_ids_400(app_client):
+    client, _ = app_client
+    r = await client.post("/api/vacancies/bulk-status", data={"status": "skipped"})
+    # 422 от FastAPI если ids обязательный, либо 400 от нас
+    assert r.status_code in (400, 422)
+
+
+@pytest.mark.asyncio
+async def test_format_filter_remote_only(app_client):
+    """Новый фильтр format=remote отдаёт только удалёнку."""
+    client, webapp = app_client
+    await _seed(webapp, _vacancy(1, name="Remote Job", is_remote=1, is_remote_text=0))
+    await _seed(webapp, _vacancy(2, name="Office Job", is_remote=0, is_remote_text=0))
+    r = await client.get("/api/vacancies?format=remote")
+    body = r.text
+    assert "Remote Job" in body
+    assert "Office Job" not in body
+
+
+@pytest.mark.asyncio
+async def test_format_filter_office_only(app_client):
+    """format=office отдаёт только офисные."""
+    client, webapp = app_client
+    await _seed(webapp, _vacancy(1, name="Remote Job", is_remote=1))
+    await _seed(webapp, _vacancy(2, name="Office Job", is_remote=0, is_remote_text=0))
+    r = await client.get("/api/vacancies?format=office")
+    body = r.text
+    assert "Office Job" in body
+    assert "Remote Job" not in body
+
+
+@pytest.mark.asyncio
+async def test_format_filter_all_default(app_client):
+    """format=all (или нет параметра) — все."""
+    client, webapp = app_client
+    await _seed(webapp, _vacancy(1, name="Remote Job", is_remote=1))
+    await _seed(webapp, _vacancy(2, name="Office Job", is_remote=0, is_remote_text=0))
+    r = await client.get("/api/vacancies?format=all")
+    body = r.text
+    assert "Remote Job" in body
+    assert "Office Job" in body
 
 
 @pytest.mark.asyncio

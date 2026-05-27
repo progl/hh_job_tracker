@@ -1,5 +1,6 @@
 """Тесты сборки откликов (personal): collect_negotiations, _sync_local_statuses,
 last_sync маркер, sync state mapping."""
+
 from __future__ import annotations
 
 import html as _html
@@ -10,18 +11,34 @@ import pytest
 from app.collector import personal as personal_col
 
 
-def _topic(nid: int, vid: int, state: str = "RESPONSE", last_modified: str = "2024-05-01T10:00:00",
-           viewed: bool = False, archived: bool = False) -> dict:
+def _topic(
+    nid: int,
+    vid: int,
+    state: str = "RESPONSE",
+    last_modified: str = "2024-05-01T10:00:00",
+    viewed: bool = False,
+    archived: bool = False,
+) -> dict:
     return {
-        "id": nid, "vacancyId": vid, "employerId": 1, "resumeId": 555,
-        "lastState": state, "lastEmployerState": state,
-        "viewedByOpponent": viewed, "archived": archived,
-        "lastModified": last_modified, "creationTime": "2024-01-01T00:00:00",
+        "id": nid,
+        "vacancyId": vid,
+        "employerId": 1,
+        "resumeId": 555,
+        "lastState": state,
+        "lastEmployerState": state,
+        "viewedByOpponent": viewed,
+        "archived": archived,
+        "lastModified": last_modified,
+        "creationTime": "2024-01-01T00:00:00",
     }
 
 
-def _state_html(topics: list[dict], paging: dict | None = None, account: dict | None = None,
-                politeness: dict | None = None) -> str:
+def _state_html(
+    topics: list[dict],
+    paging: dict | None = None,
+    account: dict | None = None,
+    politeness: dict | None = None,
+) -> str:
     state = {
         "applicantNegotiations": {"topicList": topics, "paging": paging or {}},
         "account": account or {"firstName": "Иван", "lastName": "Иванов"},
@@ -95,6 +112,53 @@ async def test_collect_negotiations_smart_stop_on_old_items_incremental(tmp_db):
 
 
 @pytest.mark.asyncio
+async def test_collect_negotiations_smart_stop_mixed_page_one_request(tmp_db):
+    """page 0 со смесью свежих/старых items — стопаем на странице 0 без перехода на page 1."""
+    await personal_col._save_last_sync(tmp_db, "2024-06-01T00:00:00")
+    await tmp_db.commit()
+    # 2 свежих (>) + 1 старый (<) → border на 3-м item, page 1 не запрашиваем
+    p1 = _state_html(
+        [
+            _topic(1, 100, last_modified="2024-07-15T00:00:00"),
+            _topic(2, 101, last_modified="2024-07-01T00:00:00"),
+            _topic(3, 102, last_modified="2024-05-01T00:00:00"),  # старый
+        ],
+        paging={"next": {"disabled": False}},  # next доступен, но мы должны остановиться
+    )
+    p2 = _state_html([_topic(99, 999)])  # этот не должен запрашиваться
+    client = _FakeClient([p1, p2])
+    res = await personal_col.collect_negotiations(client, tmp_db, max_pages=3, full=False)
+    assert res["stopped_early"] is True
+    assert res["pages"] == 1
+    assert len(client.calls) == 1, "должен быть ровно 1 запрос на /applicant/negotiations"
+    # сохранены только 2 свежих, старый игнорируем
+    assert res["saved_negotiations"] == 2
+
+
+@pytest.mark.asyncio
+async def test_collect_negotiations_all_fresh_continues_to_next_page(tmp_db):
+    """Если все items на page 0 свежие — идём на page 1 (граница ещё не пересечена)."""
+    await personal_col._save_last_sync(tmp_db, "2024-01-01T00:00:00")
+    await tmp_db.commit()
+    p1 = _state_html(
+        [
+            _topic(1, 100, last_modified="2024-07-01T00:00:00"),
+            _topic(2, 101, last_modified="2024-06-01T00:00:00"),
+        ],
+        paging={"next": {"disabled": False}},
+    )
+    p2 = _state_html(
+        [_topic(3, 102, last_modified="2023-12-01T00:00:00")],  # граница на page 1
+        paging={"next": {"disabled": True}},
+    )
+    client = _FakeClient([p1, p2])
+    res = await personal_col.collect_negotiations(client, tmp_db, max_pages=3, full=False)
+    assert len(client.calls) == 2
+    assert res["stopped_early"] is True
+    assert res["saved_negotiations"] == 2  # 2 свежих на page 0, 0 на page 1
+
+
+@pytest.mark.asyncio
 async def test_collect_negotiations_full_ignores_last_sync(tmp_db):
     await personal_col._save_last_sync(tmp_db, "2099-01-01T00:00:00")
     await tmp_db.commit()
@@ -125,7 +189,10 @@ async def test_collect_negotiations_progress_cb(tmp_db):
     client = _FakeClient([html])
     calls = []
     await personal_col.collect_negotiations(
-        client, tmp_db, max_pages=2, full=True,
+        client,
+        tmp_db,
+        max_pages=2,
+        full=True,
         progress_cb=lambda **kw: calls.append(kw),
     )
     assert calls
@@ -135,6 +202,7 @@ async def test_collect_negotiations_progress_cb(tmp_db):
 @pytest.mark.asyncio
 async def test_collect_negotiations_writes_profile(tmp_db):
     from app.db import profile_repo
+
     html = _state_html([_topic(1, 100)], account={"firstName": "Тест", "lastName": "Тестов"})
     client = _FakeClient([html])
     await personal_col.collect_negotiations(client, tmp_db, max_pages=1, full=True)
@@ -145,10 +213,13 @@ async def test_collect_negotiations_writes_profile(tmp_db):
 
 @pytest.mark.asyncio
 async def test_collect_negotiations_saves_last_sync_marker(tmp_db):
-    html = _state_html([
-        _topic(1, 100, last_modified="2024-05-01T00:00:00"),
-        _topic(2, 101, last_modified="2024-08-15T00:00:00"),
-    ], paging={"next": {"disabled": True}})
+    html = _state_html(
+        [
+            _topic(1, 100, last_modified="2024-05-01T00:00:00"),
+            _topic(2, 101, last_modified="2024-08-15T00:00:00"),
+        ],
+        paging={"next": {"disabled": True}},
+    )
     client = _FakeClient([html])
     await personal_col.collect_negotiations(client, tmp_db, max_pages=1, full=True)
     marker = await personal_col._load_last_sync(tmp_db)
@@ -184,8 +255,9 @@ async def test_save_last_sync_overwrites(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_discard_to_rejected(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(10, "X"))
     n = negotiations_repo.from_topic_item(_topic(101, 10, state="DISCARD"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -198,8 +270,9 @@ async def test_sync_local_statuses_discard_to_rejected(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_invitation_to_interview(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(11, "X"))
     n = negotiations_repo.from_topic_item(_topic(102, 11, state="INVITATION"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -211,8 +284,9 @@ async def test_sync_local_statuses_invitation_to_interview(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_hired_to_offer(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(12, "X"))
     n = negotiations_repo.from_topic_item(_topic(103, 12, state="HIRED"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -224,8 +298,9 @@ async def test_sync_local_statuses_hired_to_offer(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_response_to_applied(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(13, "X"))
     n = negotiations_repo.from_topic_item(_topic(104, 13, state="RESPONSE"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -237,8 +312,9 @@ async def test_sync_local_statuses_response_to_applied(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_skipped_not_overridden(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(14, "X"))
     n = negotiations_repo.from_topic_item(_topic(105, 14, state="INVITATION"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -256,8 +332,9 @@ async def test_sync_local_statuses_skipped_not_overridden(tmp_db):
 @pytest.mark.asyncio
 async def test_sync_local_statuses_no_downgrade(tmp_db):
     # текущий status='offer', новый mapped 'rejected' (DISCARD): не должен опускаться
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(15, "X"))
     n = negotiations_repo.from_topic_item(_topic(106, 15, state="DISCARD"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)
@@ -274,8 +351,9 @@ async def test_sync_local_statuses_no_downgrade(tmp_db):
 
 @pytest.mark.asyncio
 async def test_sync_local_statuses_unknown_state_skipped(tmp_db):
-    from app.db import vacancies_repo, negotiations_repo
+    from app.db import negotiations_repo, vacancies_repo
     from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(16, "X"))
     n = negotiations_repo.from_topic_item(_topic(107, 16, state="WEIRD_STATE"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, n)

@@ -16,9 +16,7 @@ def test_higher_score_higher_prob():
 
 def test_good_politeness_boosts():
     base = predict_invite_prob(50, None, 100, vacancy={})
-    boosted = predict_invite_prob(
-        50, {"read_topic_percent": 95, "reply_working_days": 1.0}, 100, vacancy={}
-    )
+    boosted = predict_invite_prob(50, {"read_topic_percent": 95, "reply_working_days": 1.0}, 100, vacancy={})
     assert boosted["prob"] >= base["prob"]
 
 

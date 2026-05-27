@@ -2,11 +2,11 @@
 
 hh_client.get_page мокается, БД настоящая (tmp_db).
 """
+
 from __future__ import annotations
 
 import html as _html
 import json
-from typing import Any
 
 import pytest
 
@@ -20,6 +20,7 @@ def _exc_classes():
         SessionExpiredError,
         VacancyUnavailableError,
     )
+
     return AntibotChallengeError, SessionExpiredError, VacancyUnavailableError
 
 
@@ -207,7 +208,7 @@ async def test_collect_search_progress_callback(tmp_db):
 
     await col.collect_search(client, tmp_db, {"text": "a"}, max_pages=2, progress_cb=cb)
     assert any(c.get("message", "").startswith("старт") for c in calls)
-    assert any("страница" in (c.get("message") or "") for c in calls)
+    assert any("стр " in (c.get("message") or "") for c in calls)
 
 
 @pytest.mark.asyncio
@@ -221,6 +222,201 @@ async def test_collect_search_dedup_upsert_same_id(tmp_db):
     cnt, name = await cur.fetchone()
     assert cnt == 1
     assert name == "B"
+
+
+@pytest.mark.asyncio
+async def test_collect_search_with_resume_adds_resumelist_markers(tmp_db):
+    """Если в params есть resume — collect_search добавляет from=resumelist&hhtmFrom=resume_list."""
+    html = _wrap_state([_search_item(42)], paging={})
+    client = _FakeClient([html])
+    await col.collect_search(client, tmp_db, {"resume": "abc123"}, max_pages=1)
+    assert len(client.calls) == 1
+    _, params = client.calls[0]
+    assert params["resume"] == "abc123"
+    assert params["from"] == "resumelist"
+    assert params["hhtmFrom"] == "resume_list"
+
+
+@pytest.mark.asyncio
+async def test_collect_search_without_resume_no_markers(tmp_db):
+    """Без resume — никаких новых маркеров не добавляется."""
+    html = _wrap_state([_search_item(43)], paging={})
+    client = _FakeClient([html])
+    await col.collect_search(client, tmp_db, {"text": "python"}, max_pages=1)
+    _, params = client.calls[0]
+    assert "from" not in params
+    assert "hhtmFrom" not in params
+
+
+@pytest.mark.asyncio
+async def test_collect_search_resume_preserves_existing_from(tmp_db):
+    """Если caller уже указал from — не перезатираем."""
+    html = _wrap_state([_search_item(44)], paging={})
+    client = _FakeClient([html])
+    await col.collect_search(client, tmp_db, {"resume": "x", "from": "custom"}, max_pages=1)
+    _, params = client.calls[0]
+    assert params["from"] == "custom"
+
+
+def test_vacancy_from_search_item_legacy_workformats():
+    """Старый формат HH: [{'id': 'REMOTE'}, {'id': 'HYBRID'}]"""
+    item = _search_item(1, workFormats=[{"id": "REMOTE"}, {"id": "HYBRID"}])
+    v = col.vacancy_from_search_item(item)
+    wf = json.loads(v["work_formats"])
+    assert wf == ["REMOTE", "HYBRID"]
+    assert v["is_remote"] == 1
+
+
+def test_vacancy_from_search_item_new_workformats():
+    """Новый формат HH: [{'workFormatsElement': ['ON_SITE', 'HYBRID']}]"""
+    item = _search_item(2, workFormats=[{"workFormatsElement": ["ON_SITE", "HYBRID"]}])
+    v = col.vacancy_from_search_item(item)
+    wf = json.loads(v["work_formats"])
+    assert wf == ["ON_SITE", "HYBRID"]
+    assert v["is_remote"] == 0
+
+
+def test_vacancy_from_search_item_new_workformats_with_remote():
+    """Новый формат с REMOTE — is_remote=1."""
+    item = _search_item(3, workFormats=[{"workFormatsElement": ["REMOTE", "HYBRID"]}])
+    v = col.vacancy_from_search_item(item)
+    wf = json.loads(v["work_formats"])
+    assert "REMOTE" in wf and "HYBRID" in wf
+    assert v["is_remote"] == 1
+
+
+def test_vacancy_from_search_item_flat_workformats():
+    """Плоский массив строк (на всякий случай)."""
+    item = _search_item(4, workFormats=["REMOTE", "ON_SITE"])
+    v = col.vacancy_from_search_item(item)
+    wf = json.loads(v["work_formats"])
+    assert wf == ["REMOTE", "ON_SITE"]
+
+
+def test_vacancy_from_search_item_empty_workformats():
+    """Пустой/отсутствующий workFormats — пустой массив, не [null]."""
+    item = _search_item(5, workFormats=[])
+    v = col.vacancy_from_search_item(item)
+    assert json.loads(v["work_formats"]) == []
+
+
+@pytest.mark.asyncio
+async def test_collect_search_early_stop_consecutive_seen(tmp_db):
+    """K подряд seen → stop. Не дочитываем остаток страниц, не вызываем mark_disappeared."""
+    from app.db import searches_repo
+
+    sid = await searches_repo.create_search(tmp_db, "py", {"text": "py"})
+    await tmp_db.execute("INSERT INTO vacancies(id, name) VALUES (10, 'a'), (11, 'b'), (12, 'c'), (13, 'd')")
+    await tmp_db.commit()
+    await searches_repo.mark_seen(tmp_db, sid, [10, 11, 12, 13])
+
+    # 1 новый, потом 3 подряд seen → K=3 триггерит stop, page 1 не запрашивается
+    page1 = _wrap_state(
+        [_search_item(99), _search_item(10), _search_item(11), _search_item(12)],
+        paging={"next": {"disabled": False}, "lastPage": {"page": 5}},
+    )
+    page2 = _wrap_state([_search_item(100)])  # не должна запрашиваться
+    client = _FakeClient([page1, page2])
+    res = await col.collect_search(
+        client,
+        tmp_db,
+        {"text": "py"},
+        max_pages=5,
+        search_id=sid,
+        early_stop_consecutive_seen=3,
+    )
+    assert res["partial"] is True
+    assert len(client.calls) == 1
+    assert res["disappeared"] == 0
+
+
+@pytest.mark.asyncio
+async def test_collect_search_consecutive_resets_on_new(tmp_db):
+    """seen, new, seen, seen — счётчик сбрасывается на new и K=3 не срабатывает."""
+    from app.db import searches_repo
+
+    sid = await searches_repo.create_search(tmp_db, "py", {"text": "py"})
+    await tmp_db.execute("INSERT INTO vacancies(id, name) VALUES (10, 'a'), (11, 'b')")
+    await tmp_db.commit()
+    await searches_repo.mark_seen(tmp_db, sid, [10, 11])
+
+    page1 = _wrap_state(
+        [_search_item(10), _search_item(50), _search_item(11), _search_item(10)],
+        paging={"next": {"disabled": True}},
+    )
+    client = _FakeClient([page1])
+    res = await col.collect_search(
+        client,
+        tmp_db,
+        {"text": "py"},
+        max_pages=3,
+        search_id=sid,
+        early_stop_consecutive_seen=3,
+    )
+    assert res["partial"] is False
+    assert res["saved"] == 4
+
+
+@pytest.mark.asyncio
+async def test_collect_search_skipped_counts_toward_early_stop(tmp_db):
+    """Скипнутые вакансии (vacancy_status.status='skipped') тоже идут в счётчик early-stop —
+    не имеет смысла снова их перебирать."""
+    from app.db import searches_repo
+
+    sid = await searches_repo.create_search(tmp_db, "py", {"text": "py"})
+    # 3 вакансии: пометим как skipped (ещё НЕ были в search_vacancy_seen этого поиска)
+    await tmp_db.execute("INSERT INTO vacancies(id, name) VALUES (20, 'a'), (21, 'b'), (22, 'c')")
+    for vid in (20, 21, 22):
+        await tmp_db.execute(
+            "INSERT INTO vacancy_status(vacancy_id, status) VALUES (?, 'skipped')",
+            (vid,),
+        )
+    await tmp_db.commit()
+
+    # 1 новый + 3 скипнутых подряд → K=3 триггерит stop
+    page1 = _wrap_state(
+        [_search_item(999), _search_item(20), _search_item(21), _search_item(22)],
+        paging={"next": {"disabled": False}, "lastPage": {"page": 5}},
+    )
+    page2 = _wrap_state([_search_item(100)])  # не должна запрашиваться
+    client = _FakeClient([page1, page2])
+    res = await col.collect_search(
+        client,
+        tmp_db,
+        {"text": "py"},
+        max_pages=5,
+        search_id=sid,
+        early_stop_consecutive_seen=3,
+    )
+    assert res["partial"] is True
+    assert len(client.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_collect_search_no_early_stop_when_disabled(tmp_db):
+    """early_stop_consecutive_seen=0 → ничего не пропускаем, идём до конца."""
+    from app.db import searches_repo
+
+    sid = await searches_repo.create_search(tmp_db, "py", {"text": "py"})
+    await tmp_db.execute("INSERT INTO vacancies(id, name) VALUES (10, 'a'), (11, 'b'), (12, 'c')")
+    await tmp_db.commit()
+    await searches_repo.mark_seen(tmp_db, sid, [10, 11, 12])
+
+    page1 = _wrap_state(
+        [_search_item(10), _search_item(11), _search_item(12)],
+        paging={"next": {"disabled": True}},
+    )
+    client = _FakeClient([page1])
+    res = await col.collect_search(
+        client,
+        tmp_db,
+        {"text": "py"},
+        max_pages=3,
+        search_id=sid,
+        early_stop_consecutive_seen=0,
+    )
+    assert res["partial"] is False  # никаких пропусков
+    assert res["saved"] == 3
 
 
 # ----- _detect_archived ----
@@ -341,6 +537,7 @@ async def test_resolve_query_from_collected_via(tmp_db):
 @pytest.mark.asyncio
 async def test_resolve_query_fallback_to_active_search(tmp_db):
     from app.db import searches_repo
+
     await searches_repo.create_search(tmp_db, name="active", params={"text": "go dev"})
     q = await col._resolve_query_for_vacancy(tmp_db, 9999)
     assert q == "go dev"
@@ -357,8 +554,12 @@ async def test_resolve_query_returns_none(tmp_db):
 
 async def _seed_negotiation(db, vid: int) -> None:
     from app.db import negotiations_repo
+
     item = {
-        "id": vid * 10 + 1, "vacancyId": vid, "employerId": 1, "lastState": "RESPONSE",
+        "id": vid * 10 + 1,
+        "vacancyId": vid,
+        "employerId": 1,
+        "lastState": "RESPONSE",
         "lastModified": "2024-01-01T00:00:00",
     }
     n = negotiations_repo.from_topic_item(item)
@@ -460,8 +661,9 @@ async def test_mark_vacancy_unavailable_new_placeholder(tmp_db):
 @pytest.mark.asyncio
 async def test_mark_vacancy_unavailable_existing_only_sets_timestamp(tmp_db):
     # сначала кладём обычную вакансию
-    from tests.integration.test_dedup import _v
     from app.db import vacancies_repo
+    from tests.integration.test_dedup import _v
+
     await vacancies_repo.upsert(tmp_db, _v(9002, "Real"))
     await tmp_db.commit()
     await col._mark_vacancy_unavailable(tmp_db, 9002, "ушла")

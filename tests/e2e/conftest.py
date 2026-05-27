@@ -5,13 +5,11 @@
 - БД — временный sqlite (tmp_path)
 - get_db в роутах автоматически смотрит на settings.DB_PATH (мы его подменили)
 """
+
 from __future__ import annotations
 
-import asyncio
 import sys
-from pathlib import Path
 
-import pytest
 import pytest_asyncio
 
 
@@ -26,8 +24,10 @@ async def app_client(tmp_path, monkeypatch):
             del sys.modules[mod]
 
     from app.config import settings
+
     settings.DB_PATH = str(db_path)
     import app.db.db as dbm
+
     dbm.DB_PATH = db_path
 
     # Импортируем модуль и патчим внешние вызовы перед запуском lifespan
@@ -52,16 +52,23 @@ async def app_client(tmp_path, monkeypatch):
     monkeypatch.setattr(
         webapp.hh_client.__class__,
         "status",
-        property(lambda self: {
-            "started": True, "paused_until": 0.0, "paused_now": False,
-            "challenge_count": 0, "base_url": "https://hh.ru",
-            "last_url": "", "cookie_count": 0,
-        }),
+        property(
+            lambda self: {
+                "started": True,
+                "paused_until": 0.0,
+                "paused_now": False,
+                "challenge_count": 0,
+                "base_url": "https://hh.ru",
+                "last_url": "",
+                "cookie_count": 0,
+            }
+        ),
     )
     monkeypatch.setattr(webapp.scheduler_mod, "start", _noop_sync)
     monkeypatch.setattr(webapp.scheduler_mod, "shutdown", _noop_sync)
     monkeypatch.setattr(
-        webapp.scheduler_mod, "status",
+        webapp.scheduler_mod,
+        "status",
         lambda: {"running": False, "jobs": []},
     )
     monkeypatch.setattr(webapp.ml_module, "reload_model", _noop_sync)

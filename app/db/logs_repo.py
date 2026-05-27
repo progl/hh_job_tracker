@@ -84,7 +84,7 @@ async def list_logs(
         sql = f"""
         SELECT id, ts, method, path, params, status, duration_ms, size_bytes, referer, redirect_to, error, kind
           FROM request_logs
-         WHERE {' AND '.join(where)}
+         WHERE {" AND ".join(where)}
       ORDER BY id DESC
          LIMIT ?
         """

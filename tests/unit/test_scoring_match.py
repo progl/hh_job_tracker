@@ -1,6 +1,5 @@
 from app.scoring.match import score_vacancy
 
-
 PROFILE_FULL = {
     "skills": ["python", "django", "postgresql"],
     "years_experience": 5,
@@ -9,7 +8,12 @@ PROFILE_FULL = {
 
 
 def test_full_stack_match():
-    v = {"parsed_stack": ["python", "django", "postgresql"], "salary_rub": 250000, "is_remote": 1, "level": "senior"}
+    v = {
+        "parsed_stack": ["python", "django", "postgresql"],
+        "salary_rub": 250000,
+        "is_remote": 1,
+        "level": "senior",
+    }
     r = score_vacancy(v, PROFILE_FULL, {"read_topic_percent": 90, "reply_working_days": 2.0})
     assert r["score"] >= 80
     assert r["max"] == 100

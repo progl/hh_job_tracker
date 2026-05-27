@@ -1,4 +1,5 @@
 """Дополнительное покрытие фильтров vacancies_repo.list_vacancies."""
+
 import pytest
 
 from app.db import vacancies_repo
@@ -57,9 +58,7 @@ async def test_list_vacancies_neg_state_filters(tmp_db):
     await _add_vac(tmp_db, 1)
     await _add_vac(tmp_db, 2)
     # для vid=2 — добавим negotiation
-    await tmp_db.execute(
-        "INSERT INTO negotiations(id, vacancy_id, last_state) VALUES (10, 2, 'RESPONSE')"
-    )
+    await tmp_db.execute("INSERT INTO negotiations(id, vacancy_id, last_state) VALUES (10, 2, 'RESPONSE')")
     await tmp_db.commit()
     # neg_states=['none'] → только без переговоров
     rows = await vacancies_repo.list_vacancies(tmp_db, neg_states=["none"])
@@ -125,9 +124,7 @@ async def test_list_vacancies_sort_by_salary(tmp_db):
 @pytest.mark.asyncio
 async def test_get_vacancy_source_from_negotiation(tmp_db):
     await _add_vac(tmp_db, 1)
-    await tmp_db.execute(
-        "INSERT INTO negotiations(id, vacancy_id, last_state) VALUES (10, 1, 'RESPONSE')"
-    )
+    await tmp_db.execute("INSERT INTO negotiations(id, vacancy_id, last_state) VALUES (10, 1, 'RESPONSE')")
     await tmp_db.commit()
     v = await vacancies_repo.get_vacancy(tmp_db, 1)
     assert v is not None

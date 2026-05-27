@@ -18,10 +18,13 @@ def test_parse_cookie_header_empty():
 
 def test_apply_cookies_to_client_and_dump_jar():
     client = httpx.AsyncClient()
-    ck.apply_cookies_to_client(client, [
-        {"name": "k1", "value": "v1"},
-        {"name": "k2", "value": "v2", "domain": ".example.com", "path": "/a"},
-    ])
+    ck.apply_cookies_to_client(
+        client,
+        [
+            {"name": "k1", "value": "v1"},
+            {"name": "k2", "value": "v2", "domain": ".example.com", "path": "/a"},
+        ],
+    )
     assert ck.jar_size(client) >= 2
     dumped = ck.dump_jar(client)
     names = {d["name"]: d for d in dumped}

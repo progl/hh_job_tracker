@@ -22,7 +22,6 @@ class AntibotChallengeError(Exception):
 
 class VacancyUnavailableError(Exception):
     """403 с HTML «Вам недоступна эта вакансия» — НЕ anti-bot, просто вакансия закрыта/снята."""
-    pass
 
 
 class HHClient:
@@ -100,6 +99,7 @@ class HHClient:
     async def get_page(self, path: str, params: dict | None = None) -> str:
         from app import events
         from app.db.logs_repo import log_request
+
         if time.monotonic() < self._paused_until:
             wait_s = int(self._paused_until - time.monotonic())
             events.emit("paused", f"клиент на паузе ещё {wait_s}с (anti-bot)", {"wait": wait_s, "path": path})
@@ -121,9 +121,20 @@ class HHClient:
         if r.status_code in (301, 302, 303, 307, 308):
             loc = r.headers.get("location", "")
             log.info("redirect from %s -> %s", path, loc)
-            events.emit("response", f"↪ {r.status_code} {path} → {loc[:80]}", {"path": path, "status": r.status_code, "duration_ms": dt, "redirect": loc})
-            log_request(path=path, params=params, referer=ref, status=r.status_code, duration_ms=dt,
-                        redirect_to=loc, kind="redirect")
+            events.emit(
+                "response",
+                f"↪ {r.status_code} {path} → {loc[:80]}",
+                {"path": path, "status": r.status_code, "duration_ms": dt, "redirect": loc},
+            )
+            log_request(
+                path=path,
+                params=params,
+                referer=ref,
+                status=r.status_code,
+                duration_ms=dt,
+                redirect_to=loc,
+                kind="redirect",
+            )
             if "/account/login" in loc or "auth.hh.ru" in loc:
                 events.emit("error", "сессия протухла, обнови HH_COOKIE в .env", {"path": path})
                 raise SessionExpiredError(f"redirected to login: {loc}")
@@ -134,12 +145,20 @@ class HHClient:
             if (
                 "Вам недоступна эта вакансия" in body
                 or "HH-PageLayout-Description" in body
-                or "Поиск работы" in body and len(body) > 5000
+                or ("Поиск работы" in body and len(body) > 5000)
             ):
                 # обычная закрытая/удалённая вакансия — НЕ anti-bot
                 events.emit("info", f"вакансия скрыта: {path}", {"path": path})
-                log_request(path=path, params=params, referer=ref, status=r.status_code, duration_ms=dt,
-                            size_bytes=len(r.content), error="vacancy hidden by HH (not anti-bot)", kind="hidden")
+                log_request(
+                    path=path,
+                    params=params,
+                    referer=ref,
+                    status=r.status_code,
+                    duration_ms=dt,
+                    size_bytes=len(r.content),
+                    error="vacancy hidden by HH (not anti-bot)",
+                    kind="hidden",
+                )
                 raise VacancyUnavailableError(f"vacancy unavailable: {path}")
             # настоящий anti-bot 403 — обычно маленькое тело
             self._challenge_count += 1
@@ -147,19 +166,54 @@ class HHClient:
             if self._consecutive_403 >= self._pause_threshold:
                 pause = 600 if self._consecutive_403 == self._pause_threshold else 1800
                 self._paused_until = time.monotonic() + pause
-                events.emit("paused", f"⚠ {self._consecutive_403} подряд anti-bot → пауза {pause//60}м", {"status": r.status_code, "path": path})
-                log_request(path=path, params=params, referer=ref, status=r.status_code, duration_ms=dt,
-                            error=f"anti-bot {r.status_code} #{self._consecutive_403}, pause {pause//60}m", kind="antibot")
-                raise AntibotChallengeError(f"got {r.status_code} from hh.ru (#{self._consecutive_403}) — pausing {pause//60}m")
+                events.emit(
+                    "paused",
+                    f"⚠ {self._consecutive_403} подряд anti-bot → пауза {pause // 60}м",
+                    {"status": r.status_code, "path": path},
+                )
+                log_request(
+                    path=path,
+                    params=params,
+                    referer=ref,
+                    status=r.status_code,
+                    duration_ms=dt,
+                    error=f"anti-bot {r.status_code} #{self._consecutive_403}, pause {pause // 60}m",
+                    kind="antibot",
+                )
+                raise AntibotChallengeError(
+                    f"got {r.status_code} from hh.ru (#{self._consecutive_403}) — pausing {pause // 60}m"
+                )
             # одиночный 403 — вероятно вакансия снята/недоступна, не ставим паузу
-            events.emit("warn", f"403 на {path} (одиночный, #{self._consecutive_403}/{self._pause_threshold} до паузы)", {"status": r.status_code, "path": path})
-            log_request(path=path, params=params, referer=ref, status=r.status_code, duration_ms=dt,
-                        error=f"403 individual #{self._consecutive_403}/{self._pause_threshold}", kind="unavailable")
+            events.emit(
+                "warn",
+                f"403 на {path} (одиночный, #{self._consecutive_403}/{self._pause_threshold} до паузы)",
+                {"status": r.status_code, "path": path},
+            )
+            log_request(
+                path=path,
+                params=params,
+                referer=ref,
+                status=r.status_code,
+                duration_ms=dt,
+                error=f"403 individual #{self._consecutive_403}/{self._pause_threshold}",
+                kind="unavailable",
+            )
             raise AntibotChallengeError(f"403 on {path} (probably removed)")
         self._consecutive_403 = 0
-        events.emit("response", f"{r.status_code} {path} ({dt}ms, {len(r.content)//1024}KB)", {"path": path, "status": r.status_code, "duration_ms": dt, "size": len(r.content)})
-        log_request(path=path, params=params, referer=ref, status=r.status_code, duration_ms=dt,
-                    size_bytes=len(r.content), kind="ok")
+        events.emit(
+            "response",
+            f"{r.status_code} {path} ({dt}ms, {len(r.content) // 1024}KB)",
+            {"path": path, "status": r.status_code, "duration_ms": dt, "size": len(r.content)},
+        )
+        log_request(
+            path=path,
+            params=params,
+            referer=ref,
+            status=r.status_code,
+            duration_ms=dt,
+            size_bytes=len(r.content),
+            kind="ok",
+        )
         r.raise_for_status()
         self._last_url = str(r.url)
         return r.text

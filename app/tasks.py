@@ -4,12 +4,14 @@
 - Прогресс публикуется в SSE-стрим (`/api/tasks/stream`).
 - Жизненный цикл: queued → running → done | error | cancelled.
 """
+
 import asyncio
 import json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 
 @dataclass
@@ -161,7 +163,9 @@ class ProgressCtx:
     def __init__(self, task: Task):
         self.task = task
 
-    def update(self, current: int | None = None, total: int | None = None, message: str | None = None) -> None:
+    def update(
+        self, current: int | None = None, total: int | None = None, message: str | None = None
+    ) -> None:
         if current is not None:
             self.task.current = current
         if total is not None:
@@ -185,7 +189,7 @@ async def subscribe():
             try:
                 ev = await asyncio.wait_for(q.get(), timeout=15)
                 yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": keepalive\n\n"
     finally:
         _subs.discard(q)

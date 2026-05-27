@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Журнал джобов{% endblock %}
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">⚙️ Журнал джобов</h2>
+    <a href="/" class="text-xs text-neutral-500 hover:underline">← Список</a>
+  </div>
+
+  <form method="get" class="flex flex-wrap gap-2 mb-4 text-xs items-end">
+    <div>
+      <label class="block text-[10px] uppercase text-neutral-500">Джоб</label>
+      <select name="job_id" class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1">
+        <option value="">все</option>
+        {% for jid in all_job_ids %}
+          <option value="{{ jid }}" {% if filters.job_id == jid %}selected{% endif %}>{{ labels.get(jid, jid) }} ({{ jid }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] uppercase text-neutral-500">Статус</label>
+      <select name="status" class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1">
+        <option value="">все</option>
+        <option value="ok" {% if filters.status == 'ok' %}selected{% endif %}>ok</option>
+        <option value="error" {% if filters.status == 'error' %}selected{% endif %}>error</option>
+        <option value="running" {% if filters.status == 'running' %}selected{% endif %}>running</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] uppercase text-neutral-500">Лимит</label>
+      <input type="number" name="limit" value="{{ filters.limit }}" min="10" max="1000"
+             class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20">
+    </div>
+    <button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
+    <a href="/jobs" class="px-2 py-1 text-neutral-500 hover:underline">сброс</a>
+  </form>
+
+  <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+        <tr>
+          <th class="px-3 py-2 w-16">id</th>
+          <th class="px-3 py-2">джоб</th>
+          <th class="px-3 py-2">старт</th>
+          <th class="px-3 py-2">финиш</th>
+          <th class="px-3 py-2 text-right">мс</th>
+          <th class="px-3 py-2 text-center">статус</th>
+          <th class="px-3 py-2">триггер</th>
+          <th class="px-3 py-2">результат / ошибка</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+          {% set status_color = {'ok': 'emerald', 'error': 'red', 'running': 'blue'}.get(r.status, 'neutral') %}
+          <tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+            <td class="px-3 py-1.5 tabular-nums text-neutral-500">{{ r.id }}</td>
+            <td class="px-3 py-1.5">
+              <span class="font-medium">{{ labels.get(r.job_id, r.job_id) }}</span>
+              <span class="text-[10px] text-neutral-500 ml-1 font-mono">{{ r.job_id }}</span>
+            </td>
+            <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">{{ (r.started_at or '')[:19] }}</td>
+            <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">{{ (r.finished_at or '—')[:19] }}</td>
+            <td class="px-3 py-1.5 text-right tabular-nums">{{ r.duration_ms or '—' }}</td>
+            <td class="px-3 py-1.5 text-center">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-{{ status_color }}-100 text-{{ status_color }}-700 dark:bg-{{ status_color }}-900/30 dark:text-{{ status_color }}-300">{{ r.status }}</span>
+            </td>
+            <td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">{{ r.trigger or '—' }}</td>
+            <td class="px-3 py-1.5 max-w-[500px]">
+              {% if r.error %}
+                <span class="text-red-600 dark:text-red-400 text-[11px]" title="{{ r.error }}">{{ r.error[:120] }}{% if r.error|length > 120 %}…{% endif %}</span>
+              {% elif r.result %}
+                <details>
+                  <summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{{ r.result[:100] }}{% if r.result|length > 100 %}…{% endif %}</summary>
+                  <pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{{ r.result }}</pre>
+                </details>
+              {% else %}
+                <span class="text-neutral-400">—</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="px-3 py-4 text-center text-neutral-500">Пусто.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

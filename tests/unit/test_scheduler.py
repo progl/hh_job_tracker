@@ -12,6 +12,7 @@ def _resync_get_db(monkeypatch):
     чтобы _record-декоратор писал в актуальный tmp_db."""
     import app.db.db as dbm
     import app.db.job_runs_repo as jr
+
     monkeypatch.setattr(jr, "get_db", dbm.get_db)
     # внутри scheduler.py есть `from app.db import job_runs_repo` — это ссылка
     # на конкретный объект модуля. Если e2e его перезагрузил, поправим.
@@ -131,6 +132,7 @@ async def test_run_now_starts_task_and_calls_job(monkeypatch):
 
     # дождёмся завершения внутренней task
     from app import tasks as task_mod
+
     t = task_mod._tasks.get(res["task_id"])
     assert t is not None
     await t._async_task
@@ -143,6 +145,7 @@ async def test_run_now_starts_task_and_calls_job(monkeypatch):
 @pytest.mark.asyncio
 async def test_run_now_already_running(monkeypatch):
     from app import tasks as task_mod
+
     task_mod._tasks.clear()
 
     started = asyncio.Event()

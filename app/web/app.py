@@ -8,13 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import scheduler as scheduler_mod
 from app import tasks as task_mod
-from fastapi.responses import StreamingResponse
 from app.clients import cbr as cbr_client
 from app.clients.cookies import load_jar, save_jar
 from app.clients.hh import AntibotChallengeError, HHClient, SessionExpiredError
@@ -22,7 +21,15 @@ from app.collector import favorites as fav_collector
 from app.collector import personal as personal_collector
 from app.collector import vacancies as collector
 from app.config import settings
-from app.db import employers_repo, funnel_repo, logs_repo, negotiations_repo, profile_repo, searches_repo, vacancies_repo
+from app.db import (
+    employers_repo,
+    funnel_repo,
+    logs_repo,
+    negotiations_repo,
+    profile_repo,
+    searches_repo,
+    vacancies_repo,
+)
 from app.db.db import get_db, init_db
 from app.parsers.state import extract_initial_state
 from app.scoring import ml as ml_module
@@ -30,6 +37,7 @@ from app.scoring.match import score_vacancy
 from app.scoring.predict import predict_invite_prob
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -98,8 +106,13 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 STATUSES = ["new", "viewed", "applied", "interview", "rejected", "offer", "skipped"]
 STATUS_LABELS = {
-    "new": "Новое", "viewed": "Просмотрел", "applied": "Откликнулся",
-    "interview": "Собес", "rejected": "Отказ", "offer": "Оффер", "skipped": "Скип",
+    "new": "Новое",
+    "viewed": "Просмотрел",
+    "applied": "Откликнулся",
+    "interview": "Собес",
+    "rejected": "Отказ",
+    "offer": "Оффер",
+    "skipped": "Скип",
 }
 STATUS_COLORS = {
     "new": "bg-blue-100 text-blue-800",
@@ -112,9 +125,14 @@ STATUS_COLORS = {
 }
 
 NEGOTIATION_STATE_LABELS = {
-    None: "—", "RESPONSE": "ждёт", "INVITATION": "приглашение", "INTERVIEW": "собес",
-    "DISCARD": "отказ", "DISCARD_NO_INTERACTION": "отказ (без интер.)",
-    "DISCARD_BY_APPLICANT": "отозвал", "HIRED": "оффер",
+    None: "—",
+    "RESPONSE": "ждёт",
+    "INVITATION": "приглашение",
+    "INTERVIEW": "собес",
+    "DISCARD": "отказ",
+    "DISCARD_NO_INTERACTION": "отказ (без интер.)",
+    "DISCARD_BY_APPLICANT": "отозвал",
+    "HIRED": "оффер",
 }
 NEGOTIATION_STATE_COLORS = {
     "RESPONSE": "bg-amber-100 text-amber-800",
@@ -154,17 +172,34 @@ async def _enrich_with_scoring(db, rows: list[dict]) -> list[dict]:
     return out
 
 
-def _filters_from_query(statuses, only_remote, text, stack, level, salary_rub_min,
-                        sort_by=None, sort_dir="desc", statuses_exclude=None,
-                        neg_states=None, neg_states_exclude=None,
-                        show_disappeared="hide", show_archived="hide"):
+def _filters_from_query(
+    statuses,
+    only_remote,
+    text,
+    stack,
+    level,
+    salary_rub_min,
+    sort_by=None,
+    sort_dir="desc",
+    statuses_exclude=None,
+    neg_states=None,
+    neg_states_exclude=None,
+    show_disappeared="hide",
+    show_archived="hide",
+    only_office=False,
+    name_contains=None,
+    company_contains=None,
+):
     return {
         "statuses": statuses or None,
         "statuses_exclude": statuses_exclude or None,
         "neg_states": neg_states or None,
         "neg_states_exclude": neg_states_exclude or None,
         "only_remote": only_remote,
+        "only_office": only_office,
         "text": text or None,
+        "name_contains": name_contains or None,
+        "company_contains": company_contains or None,
         "stack_any": stack or None,
         "level": level or None,
         "salary_rub_min": salary_rub_min,
@@ -178,6 +213,33 @@ def _filters_from_query(statuses, only_remote, text, stack, level, salary_rub_mi
 PY_SORT_KEYS = {"score", "predict"}
 
 
+def _parse_sort(sort: str | None, dir_legacy: str = "desc") -> list[tuple[str, str]]:
+    """Парсит sort-параметр: 'score,-name,+salary_rub' → [('score','desc'), ('name','desc'), ('salary_rub','asc')].
+    Префикс '-' = DESC, '+' = ASC, без префикса — берём dir_legacy (по умолчанию desc).
+    Возвращает [] если sort пустой."""
+    if not sort:
+        return []
+    out: list[tuple[str, str]] = []
+    for raw in str(sort).split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        if raw.startswith("-"):
+            out.append((raw[1:], "desc"))
+        elif raw.startswith("+"):
+            out.append((raw[1:], "asc"))
+        else:
+            out.append((raw, dir_legacy or "desc"))
+    return out
+
+
+def _apply_py_sort(rows: list[dict], parsed: list[tuple[str, str]]) -> None:
+    """Multi-sort in-place. Применяем поля reversed (stable sort) — последнее становится primary key."""
+    for field, d in reversed(parsed):
+        reverse = d.lower() == "desc"
+        rows.sort(key=lambda r: (r.get(field) is None, r.get(field) or 0), reverse=reverse)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
@@ -185,15 +247,18 @@ async def index(
     hide_status: list[str] | None = Query(None),
     neg: list[str] | None = Query(None),
     hide_neg: list[str] | None = Query(None),
-    only_remote: bool = Query(False),
+    only_remote: bool = Query(False),  # legacy — поддерживаем старые ссылки
+    format: str | None = Query(None),  # remote | office | all (новый, перекрывает only_remote)
     q: str | None = Query(None),
+    name_q: str | None = Query(None),
+    company_q: str | None = Query(None),
     stack: list[str] | None = Query(None),
     level: str | None = Query(None),
     salary_rub_min: int | None = Query(None),
     sort: str | None = Query(None),
     dir: str = Query("desc"),
     disappeared: str = Query("hide"),  # hide | only | all
-    archived: str = Query("hide"),     # hide | only | all
+    archived: str = Query("hide"),  # hide | only | all
 ):
     # «Скип» всегда скрыт автоматически — кроме режима архива (когда пользователь явно показывает только skipped).
     archive_mode = bool(status and "skipped" in status)
@@ -202,18 +267,46 @@ async def index(
         if "skipped" not in hide_status:
             hide_status.append("skipped")
 
+    # format перекрывает legacy only_remote, иначе fallback
+    fmt = (format or "").lower()
+    if fmt == "remote":
+        only_remote, only_office = True, False
+    elif fmt == "office":
+        only_remote, only_office = False, True
+    else:
+        only_office = False
+        # only_remote приходит из legacy — оставляем как есть
+
     db = await get_db()
     try:
         counts = await vacancies_repo.count_vacancies(db)
-        sql_sort = None if sort in PY_SORT_KEYS else sort
-        filters = _filters_from_query(status, only_remote, q, stack, level, salary_rub_min,
-                                      sql_sort, dir, hide_status, neg, hide_neg,
-                                      disappeared, archived)
+        # Multi-sort: если хоть одно поле — PY (score/predict) → весь sort в Python.
+        # Иначе передаём raw-строку (CSV) в SQL.
+        parsed_sort = _parse_sort(sort, dir)
+        has_py = any(f in PY_SORT_KEYS for f, _ in parsed_sort)
+        sql_sort = None if has_py else sort
+        filters = _filters_from_query(
+            status,
+            only_remote,
+            q,
+            stack,
+            level,
+            salary_rub_min,
+            sql_sort,
+            dir,
+            hide_status,
+            neg,
+            hide_neg,
+            disappeared,
+            archived,
+            only_office,
+            name_q,
+            company_q,
+        )
         rows = await vacancies_repo.list_vacancies(db, **filters, limit=400)
         rows = await _enrich_with_scoring(db, rows)
-        if sort in PY_SORT_KEYS:
-            reverse = (dir or "desc").lower() == "desc"
-            rows.sort(key=lambda r: (r.get(sort) is None, r.get(sort) or 0), reverse=reverse)
+        if has_py and parsed_sort:
+            _apply_py_sort(rows, parsed_sort)
         funnel = await negotiations_repo.counters(db)
         profile = await profile_repo.get_profile(db)
         searches = await searches_repo.list_searches(db)
@@ -225,18 +318,29 @@ async def index(
     finally:
         await db.close()
     return render(
-        "index.html", request=request, status=hh_client.status,
-        counts=counts, funnel=funnel, profile=profile, rows=rows, searches=searches,
+        "index.html",
+        request=request,
+        status=hh_client.status,
+        counts=counts,
+        funnel=funnel,
+        profile=profile,
+        rows=rows,
+        searches=searches,
         disappeared_count=disappeared_count,
         archived_count=archived_count,
-        statuses=STATUSES, status_labels=STATUS_LABELS, status_colors=STATUS_COLORS,
+        statuses=STATUSES,
+        status_labels=STATUS_LABELS,
+        status_colors=STATUS_COLORS,
         applied={
             "status": status or [],
             "hide_status": hide_status or [],
             "neg": neg or [],
             "hide_neg": hide_neg or [],
             "only_remote": only_remote,
+            "format": "remote" if only_remote else ("office" if only_office else "all"),
             "q": q or "",
+            "name_q": name_q or "",
+            "company_q": company_q or "",
             "stack": stack or [],
             "level": level or "",
             "salary_rub_min": salary_rub_min or "",
@@ -259,13 +363,18 @@ async def backfill(limit: int = Form(200)):
         db = await get_db()
         try:
             res = await collector.backfill_from_negotiations(
-                hh_client, db, limit=limit,
-                progress_cb=lambda current=None, total=None, message=None: ctx.update(current, total, message),
+                hh_client,
+                db,
+                limit=limit,
+                progress_cb=lambda current=None, total=None, message=None: ctx.update(
+                    current, total, message
+                ),
             )
             await save_jar(db, hh_client.client)
             return res
         finally:
             await db.close()
+
     try:
         t = await task_mod.run("backfill", "Подтянуть вакансии", job)
         return _task_response(t)
@@ -308,6 +417,7 @@ async def fx_refresh():
             return res
         finally:
             await db.close()
+
     try:
         t = await task_mod.run("fx_refresh", "Курсы ЦБ", job, if_running="reject")
         return _task_response(t)
@@ -322,6 +432,7 @@ async def ml_train():
         res = await ml_module.train_if_enough_data()
         ml_module.reload_model()
         return res
+
     try:
         t = await task_mod.run("ml_train", "Обучить ML", job, if_running="reject")
         return _task_response(t)
@@ -338,11 +449,24 @@ async def export_csv():
     finally:
         await db.close()
     fields = [
-        "id", "name", "company_name", "area_name", "url",
-        "salary_rub", "salary_currency", "is_remote", "level",
-        "score", "predict", "status", "neg_label",
-        "responses_count", "total_responses_count", "online_users_count",
-        "parsed_stack", "updated_at",
+        "id",
+        "name",
+        "company_name",
+        "area_name",
+        "url",
+        "salary_rub",
+        "salary_currency",
+        "is_remote",
+        "level",
+        "score",
+        "predict",
+        "status",
+        "neg_label",
+        "responses_count",
+        "total_responses_count",
+        "online_users_count",
+        "parsed_stack",
+        "updated_at",
     ]
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
@@ -392,10 +516,13 @@ async def probe():
     finally:
         await db.close()
     return {
-        "ok": True, "hhid": state.get("hhid"),
+        "ok": True,
+        "hhid": state.get("hhid"),
         "name": f"{account.get('firstName', '')} {account.get('lastName', '')}".strip(),
-        "email": account.get("email"), "pro": state.get("stateHhPro"),
-        "resumes_total": info.get("total"), "resumes_finished": info.get("finished"),
+        "email": account.get("email"),
+        "pro": state.get("stateHhPro"),
+        "resumes_total": info.get("total"),
+        "resumes_finished": info.get("finished"),
         "negotiations_counters": state.get("applicantNegotiationsCounters"),
     }
 
@@ -423,8 +550,13 @@ async def collect(
         try:
             ctx.update(message="ищу на hh.ru…")
             res = await collector.collect_search(
-                hh_client, db, params, max_pages=max_pages,
-                progress_cb=lambda current=None, total=None, message=None: ctx.update(current, total, message),
+                hh_client,
+                db,
+                params,
+                max_pages=max_pages,
+                progress_cb=lambda current=None, total=None, message=None: ctx.update(
+                    current, total, message
+                ),
             )
             await save_jar(db, hh_client.client)
             return res
@@ -450,14 +582,21 @@ async def collect_personal(
         try:
             ctx.update(message=("полный sync…" if full else "инкрем. sync…"))
             neg_res = await personal_collector.collect_negotiations(
-                hh_client, db, max_pages=max_pages, full=full,
-                progress_cb=lambda current=None, total=None, message=None: ctx.update(current, total, message),
+                hh_client,
+                db,
+                max_pages=max_pages,
+                full=full,
+                progress_cb=lambda current=None, total=None, message=None: ctx.update(
+                    current, total, message
+                ),
             )
             resume_res = None
             if import_resume:
                 ctx.update(message="импорт резюме…")
                 try:
-                    resume_res = await personal_collector.collect_resume(hh_client, db, neg_res.get("resume_id"))
+                    resume_res = await personal_collector.collect_resume(
+                        hh_client, db, neg_res.get("resume_id")
+                    )
                 except Exception as e:
                     resume_res = {"ok": False, "error": str(e)}
             fav_res = None
@@ -495,6 +634,7 @@ async def tasks_stream():
     async def gen():
         async for chunk in task_mod.subscribe():
             yield chunk
+
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
@@ -529,12 +669,137 @@ async def searches_create(
         await db.close()
 
 
+@app.post("/api/searches/recommendations")
+async def searches_create_recommendations():
+    """Подключает saved_search «✨ Рекомендации» по resume_id из профиля.
+    Идемпотентно: если такой уже есть — возвращает его id."""
+    db = await get_db()
+    try:
+        prof = await profile_repo.get_profile(db)
+        resume_id = (prof or {}).get("resume_id")
+        if not resume_id:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "reason": "no_resume_id",
+                    "message": "В профиле нет resume_id. Запусти «Полный sync откликов».",
+                },
+                status_code=400,
+            )
+        existing = await searches_repo.list_searches(db)
+        for s in existing:
+            if (s.get("params") or {}).get("resume") == resume_id:
+                return {"ok": True, "id": s["id"], "existed": True}
+        # max_pages=200 ≈ «до конца» — HH режет ~100 страниц.
+        # early-stop K=5 сэкономит трафик при повторных синках.
+        params = {
+            "resume": resume_id,
+            "items_on_page": 20,
+            "order_by": "relevance",
+            "max_pages": 200,
+            "early_stop_seen": 5,
+        }
+        sid = await searches_repo.create_search(db, "✨ Рекомендации", params)
+        return {"ok": True, "id": sid, "existed": False}
+    finally:
+        await db.close()
+
+
 @app.delete("/api/searches/{sid}")
 async def searches_delete(sid: int):
     db = await get_db()
     try:
         await searches_repo.delete_search(db, sid)
         return {"ok": True}
+    finally:
+        await db.close()
+
+
+async def _bulk_set_param(
+    field: str,
+    value: int,
+    *,
+    only_active: bool,
+    only_with_resume: bool,
+) -> dict:
+    """Общая логика bulk-апдейта одного поля params для saved_searches."""
+    import json as _json
+
+    db = await get_db()
+    try:
+        searches = await searches_repo.list_searches(db)
+        updated = 0
+        for s in searches:
+            if only_active and not s.get("is_active"):
+                continue
+            params = dict(s.get("params") or {})
+            if only_with_resume and not params.get("resume"):
+                continue
+            if params.get(field) == value:
+                continue
+            params[field] = value
+            await searches_repo.update_search(
+                db,
+                s["id"],
+                params=_json.dumps(params, ensure_ascii=False),
+            )
+            updated += 1
+        return {"ok": True, "updated": updated, field: value}
+    finally:
+        await db.close()
+
+
+@app.post("/api/searches/bulk-max-pages")
+async def searches_bulk_set_max_pages(
+    max_pages: int = Form(...),
+    only_active: bool = Form(True),
+    only_with_resume: bool = Form(False),
+):
+    """Массовое обновление глубины. only_with_resume=True → только рекомендации."""
+    if max_pages < 1 or max_pages > 1000:
+        return JSONResponse({"ok": False, "reason": "out_of_range"}, status_code=400)
+    return await _bulk_set_param(
+        "max_pages",
+        max_pages,
+        only_active=only_active,
+        only_with_resume=only_with_resume,
+    )
+
+
+@app.post("/api/searches/bulk-early-stop")
+async def searches_bulk_set_early_stop(
+    early_stop_seen: int = Form(...),
+    only_active: bool = Form(True),
+    only_with_resume: bool = Form(False),
+):
+    """Массовое обновление early_stop_seen (K подряд seen → stop).
+    0 = отключить early-stop у выбранных. Типичные: 3 (обычные) / 5 (рекомендации)."""
+    if early_stop_seen < 0 or early_stop_seen > 100:
+        return JSONResponse({"ok": False, "reason": "out_of_range"}, status_code=400)
+    return await _bulk_set_param(
+        "early_stop_seen",
+        early_stop_seen,
+        only_active=only_active,
+        only_with_resume=only_with_resume,
+    )
+
+
+@app.post("/api/searches/{sid}/max-pages")
+async def searches_set_max_pages(sid: int, max_pages: int = Form(...)):
+    """Меняет глубину сохранённого поиска (params.max_pages)."""
+    if max_pages < 1 or max_pages > 1000:
+        return JSONResponse({"ok": False, "reason": "out_of_range"}, status_code=400)
+    db = await get_db()
+    try:
+        s = await searches_repo.get(db, sid)
+        if not s:
+            return JSONResponse({"ok": False, "reason": "not_found"}, status_code=404)
+        params = dict(s["params"])
+        params["max_pages"] = max_pages
+        import json as _json
+
+        await searches_repo.update_search(db, sid, params=_json.dumps(params, ensure_ascii=False))
+        return {"ok": True, "max_pages": max_pages}
     finally:
         await db.close()
 
@@ -553,7 +818,10 @@ async def searches_toggle(sid: int):
 
 
 @app.post("/api/searches/{sid}/run")
-async def searches_run_one(sid: int):
+async def searches_run_one(sid: int, full: bool = Form(False)):
+    """full=True → отключает early-stop, проходим до конца. Полезно после долгой паузы
+    или если порядок выдачи HH сильно сдвинулся."""
+
     async def job(ctx):
         db = await get_db()
         try:
@@ -561,16 +829,43 @@ async def searches_run_one(sid: int):
             if not s:
                 raise RuntimeError(f"search {sid} not found")
             params = dict(s["params"])
+            # рекомендации: перед запросом обновим resume-хеш (он у HH меняется)
+            if params.get("resume"):
+                try:
+                    ctx.update(message="обновляю resume-токен…")
+                    from app.collector import personal as personal_col
+
+                    new_token = await personal_col.refresh_resume_search_token(db=db, client=hh_client)
+                    if new_token and new_token != params["resume"]:
+                        import json as _json
+
+                        params["resume"] = new_token
+                        sp = dict(s["params"])
+                        sp["resume"] = new_token
+                        await searches_repo.update_search(db, sid, params=_json.dumps(sp, ensure_ascii=False))
+                except Exception as e:
+                    log.warning("searches_run_one: refresh resume token failed: %s", e)
             max_pages = int(params.pop("max_pages", 5))
-            ctx.update(message=f"«{s['name']}»…")
+            es_k = 0 if full else int(params.pop("early_stop_seen", 5 if params.get("resume") else 3))
+            params.pop("early_stop_seen", None)  # в любом случае не передавать в HH
+            mode = " [full]" if full else ""
+            ctx.update(message=f"«{s['name']}»{mode}…")
             res = await collector.collect_search(
-                hh_client, db, params, max_pages=max_pages, search_id=sid,
-                progress_cb=lambda current=None, total=None, message=None: ctx.update(current, total, message),
+                hh_client,
+                db,
+                params,
+                max_pages=max_pages,
+                search_id=sid,
+                progress_cb=lambda current=None, total=None, message=None: ctx.update(
+                    current, total, message
+                ),
+                early_stop_consecutive_seen=es_k,
             )
             await save_jar(db, hh_client.client)
             return {"name": s["name"], **res}
         finally:
             await db.close()
+
     try:
         t = await task_mod.run(f"search_{sid}", f"Поиск #{sid}", job)
         return _task_response(t)
@@ -579,7 +874,9 @@ async def searches_run_one(sid: int):
 
 
 @app.post("/api/searches/sync-all")
-async def searches_sync_all():
+async def searches_sync_all(full: bool = Form(False)):
+    """full=True → отключает early-stop у всех поисков (тяжёлый прогон по всему корпусу)."""
+
     async def job(ctx):
         db = await get_db()
         try:
@@ -591,10 +888,20 @@ async def searches_sync_all():
             for i, s in enumerate(searches, 1):
                 params = dict(s["params"])
                 max_pages = int(params.pop("max_pages", 5))
-                ctx.update(current=i, total=len(searches), message=f"{i}/{len(searches)}: «{s['name']}»")
+                es_k = 0 if full else int(params.pop("early_stop_seen", 5 if params.get("resume") else 3))
+                params.pop("early_stop_seen", None)
+                mode = " [full]" if full else ""
+                ctx.update(
+                    current=i, total=len(searches), message=f"{i}/{len(searches)}: «{s['name']}»{mode}"
+                )
                 try:
                     r = await collector.collect_search(
-                        hh_client, db, params, max_pages=max_pages, search_id=s["id"],
+                        hh_client,
+                        db,
+                        params,
+                        max_pages=max_pages,
+                        search_id=s["id"],
+                        early_stop_consecutive_seen=es_k,
                     )
                     results.append({"id": s["id"], "name": s["name"], **r})
                 except (SessionExpiredError, AntibotChallengeError) as e:
@@ -604,6 +911,7 @@ async def searches_sync_all():
             return {"ran": len(results), "results": results}
         finally:
             await db.close()
+
     try:
         t = await task_mod.run("sync_searches", "Синхронизировать все поиски", job)
         return _task_response(t)
@@ -655,6 +963,7 @@ async def cleanup(also_resync: bool = Form(False)):
 
     if also_resync:
         try:
+
             async def job(ctx):
                 inner_db = await get_db()
                 try:
@@ -664,9 +973,13 @@ async def cleanup(also_resync: bool = Form(False)):
                     for i, s in enumerate(searches, 1):
                         params = dict(s["params"])
                         max_pages = int(params.pop("max_pages", 5))
-                        ctx.update(current=i, total=len(searches), message=f"{i}/{len(searches)}: «{s['name']}»")
+                        ctx.update(
+                            current=i, total=len(searches), message=f"{i}/{len(searches)}: «{s['name']}»"
+                        )
                         try:
-                            r = await collector.collect_search(hh_client, inner_db, params, max_pages=max_pages, search_id=s["id"])
+                            r = await collector.collect_search(
+                                hh_client, inner_db, params, max_pages=max_pages, search_id=s["id"]
+                            )
                             results.append({"id": s["id"], "name": s["name"], **r})
                         except (SessionExpiredError, AntibotChallengeError) as e:
                             results.append({"id": s["id"], "error": str(e)})
@@ -675,7 +988,10 @@ async def cleanup(also_resync: bool = Form(False)):
                     return {"ran": len(results), "results": results}
                 finally:
                     await inner_db.close()
-            await task_mod.run("sync_searches", "Пересборка сохранённых поисков", job, if_running="cancel_previous")
+
+            await task_mod.run(
+                "sync_searches", "Пересборка сохранённых поисков", job, if_running="cancel_previous"
+            )
         except Exception as e:
             return {"ok": True, "deleted": len(ids), "resync_started": False, "error": str(e)}
 
@@ -701,6 +1017,26 @@ async def status_endpoint():
     }
 
 
+@app.get("/api/status/stream")
+async def status_stream():
+    """SSE-стрим client+scheduler. Шлёт снапшот каждые 10 сек.
+    При дисконнекте клиента ASGI бросит CancelledError в генератор — он выйдет."""
+
+    async def gen():
+        try:
+            while True:
+                payload = {
+                    "client": hh_client.status,
+                    "scheduler": scheduler_mod.status(),
+                }
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            return
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
 @app.get("/api/vacancies", response_class=HTMLResponse)
 async def vacancies_fragment(
     request: Request,
@@ -709,7 +1045,10 @@ async def vacancies_fragment(
     neg: list[str] | None = Query(None),
     hide_neg: list[str] | None = Query(None),
     only_remote: bool = Query(False),
+    format: str | None = Query(None),
     q: str | None = Query(None),
+    name_q: str | None = Query(None),
+    company_q: str | None = Query(None),
     stack: list[str] | None = Query(None),
     level: str | None = Query(None),
     salary_rub_min: int | None = Query(None),
@@ -718,27 +1057,81 @@ async def vacancies_fragment(
     disappeared: str = Query("hide"),
     archived: str = Query("hide"),
 ):
+    fmt = (format or "").lower()
+    if fmt == "remote":
+        only_remote, only_office = True, False
+    elif fmt == "office":
+        only_remote, only_office = False, True
+    else:
+        only_office = False
+
     db = await get_db()
     try:
-        sql_sort = None if sort in PY_SORT_KEYS else sort
-        filters = _filters_from_query(status, only_remote, q, stack, level, salary_rub_min,
-                                      sql_sort, dir, hide_status, neg, hide_neg,
-                                      disappeared, archived)
+        parsed_sort = _parse_sort(sort, dir)
+        has_py = any(f in PY_SORT_KEYS for f, _ in parsed_sort)
+        sql_sort = None if has_py else sort
+        filters = _filters_from_query(
+            status,
+            only_remote,
+            q,
+            stack,
+            level,
+            salary_rub_min,
+            sql_sort,
+            dir,
+            hide_status,
+            neg,
+            hide_neg,
+            disappeared,
+            archived,
+            only_office,
+            name_q,
+            company_q,
+        )
         rows = await vacancies_repo.list_vacancies(db, **filters, limit=500)
         rows = await _enrich_with_scoring(db, rows)
-        if sort in PY_SORT_KEYS:
-            reverse = (dir or "desc").lower() == "desc"
-            rows.sort(key=lambda r: (r.get(sort) is None, r.get(sort) or 0), reverse=reverse)
+        if has_py and parsed_sort:
+            _apply_py_sort(rows, parsed_sort)
     finally:
         await db.close()
     return render(
-        "_table.html", request=request, rows=rows,
-        status_labels=STATUS_LABELS, status_colors=STATUS_COLORS, statuses=STATUSES,
+        "_table.html",
+        request=request,
+        rows=rows,
+        status_labels=STATUS_LABELS,
+        status_colors=STATUS_COLORS,
+        statuses=STATUSES,
     )
 
 
+@app.post("/api/vacancies/bulk-status")
+async def vacancies_bulk_status(
+    ids: list[int] = Form(...),
+    status: str = Form(...),
+):
+    """Массовая смена локального статуса выбранных вакансий (галочки в таблице → toolbar)."""
+    if status not in STATUSES:
+        return JSONResponse({"ok": False, "reason": f"unknown status: {status}"}, status_code=400)
+    if not ids:
+        return JSONResponse({"ok": False, "reason": "empty_ids"}, status_code=400)
+    db = await get_db()
+    try:
+        updated = 0
+        for vid in ids:
+            try:
+                await vacancies_repo.set_status(db, vid, status)
+                updated += 1
+            except Exception as e:
+                log.warning("bulk_status vid=%s failed: %s", vid, e)
+        return {"ok": True, "updated": updated, "status": status}
+    finally:
+        await db.close()
+
+
 @app.post("/api/vacancy/{vid}/status", response_class=HTMLResponse)
-async def set_vacancy_status(request: Request, vid: int, status: str = Form(...), note: str | None = Form(None)):
+async def set_vacancy_status(
+    request: Request, vid: int, status: str = Form(...), note: str | None = Form(None)
+):
     if status not in STATUSES:
         raise HTTPException(400, f"unknown status: {status}")
     db = await get_db()
@@ -751,8 +1144,12 @@ async def set_vacancy_status(request: Request, vid: int, status: str = Form(...)
     if not rows:
         raise HTTPException(404)
     return render(
-        "_row.html", request=request, v=rows[0],
-        status_labels=STATUS_LABELS, status_colors=STATUS_COLORS, statuses=STATUSES,
+        "_row.html",
+        request=request,
+        v=rows[0],
+        status_labels=STATUS_LABELS,
+        status_colors=STATUS_COLORS,
+        statuses=STATUSES,
     )
 
 
@@ -762,14 +1159,404 @@ async def vacancy_detail(request: Request, vid: int):
     try:
         v = await vacancies_repo.get_vacancy(db, vid)
         v_enriched = (await _enrich_with_scoring(db, [v]))[0] if v else None
+        reqs = []
+        last_run = None
+        analyses: dict = {}
+        analyzers_list: list = []
+        enabled_kinds: list[str] = []
+        if v_enriched:
+            from app.db import llm_repo
+            from app.llm.registry import ANALYZERS, get_enabled_analyzers
+
+            reqs = await llm_repo.get_requirements(db, vid)
+            runs = await llm_repo.list_runs(
+                db, target_kind="vacancy", target_id=str(vid), task_kind="requirements", limit=1
+            )
+            last_run = runs[0] if runs else None
+            analyses = await llm_repo.get_all_analysis(db, vid)
+            enabled_kinds = await get_enabled_analyzers(db)
+            analyzers_list = [
+                {
+                    "kind": a.kind,
+                    "label": a.label,
+                    "description": a.description,
+                    "enabled": a.kind in enabled_kinds,
+                }
+                for a in ANALYZERS.values()
+            ]
     finally:
         await db.close()
     if not v_enriched:
         raise HTTPException(404)
     return render(
-        "vacancy.html", request=request, v=v_enriched,
-        statuses=STATUSES, status_labels=STATUS_LABELS, status_colors=STATUS_COLORS,
+        "vacancy.html",
+        request=request,
+        v=v_enriched,
+        statuses=STATUSES,
+        status_labels=STATUS_LABELS,
+        status_colors=STATUS_COLORS,
+        requirements=reqs,
+        last_llm_run=last_run,
+        analyzers=analyzers_list,
+        analyses=analyses,
     )
+
+
+@app.post("/api/vacancy/{vid}/llm-parse")
+async def vacancy_llm_parse(vid: int, model: str | None = Form(None)):
+    """Прогнать LLM-разбор требований для одной вакансии (синхронно)."""
+    from app.llm.tasks.requirements import parse_one
+
+    db = await get_db()
+    try:
+        res = await parse_one(db, vid, model=model)
+    finally:
+        await db.close()
+    return res
+
+
+@app.get("/api/llm/analyzers")
+async def llm_analyzers_list():
+    """Список всех зарегистрированных анализаторов + какие включены сейчас."""
+    from app.llm.registry import ANALYZERS, get_enabled_analyzers
+
+    db = await get_db()
+    try:
+        enabled = await get_enabled_analyzers(db)
+    finally:
+        await db.close()
+    return {
+        "analyzers": [
+            {
+                "kind": a.kind,
+                "label": a.label,
+                "description": a.description,
+                "default_enabled": a.default_enabled,
+                "enabled": a.kind in enabled,
+            }
+            for a in ANALYZERS.values()
+        ],
+        "enabled": enabled,
+    }
+
+
+@app.post("/api/llm/analyzers/enabled")
+async def llm_analyzers_set_enabled(kinds: list[str] = Form(default=[])):
+    """Сохраняет глобальный набор включённых анализаторов (для cron и UI-дефолтов)."""
+    from app.llm.registry import get_enabled_analyzers, set_enabled_analyzers
+
+    db = await get_db()
+    try:
+        await set_enabled_analyzers(db, kinds)
+        return {"ok": True, "enabled": await get_enabled_analyzers(db)}
+    finally:
+        await db.close()
+
+
+@app.post("/api/vacancy/{vid}/analyze")
+async def vacancy_analyze(
+    vid: int,
+    kinds: list[str] = Form(default=[]),
+    model: str | None = Form(None),
+):
+    """Запустить выбранные анализаторы по одной вакансии. Если kinds пустой — берём enabled."""
+    from app.llm.registry import analyze_one, get_enabled_analyzers
+
+    db = await get_db()
+    try:
+        if not kinds:
+            kinds = await get_enabled_analyzers(db)
+        results = await analyze_one(db, vid, kinds, model=model)
+    finally:
+        await db.close()
+    return {
+        "vacancy_id": vid,
+        "results": [
+            {
+                "kind": r.kind,
+                "ok": r.ok,
+                "model": r.model,
+                "latency_ms": r.latency_ms,
+                "llm_run_id": r.llm_run_id,
+                "error": r.error,
+                "data": r.data,
+            }
+            for r in results
+        ],
+    }
+
+
+@app.post("/api/vacancy/{vid}/llm-parse-multi")
+async def vacancy_llm_parse_multi(vid: int, models: list[str] = Form(...)):
+    """Прогнать на нескольких моделях подряд для сравнения. Сохраняет requirements
+    из последнего успешного прогона."""
+    from app.llm.tasks.requirements import parse_one_multi_model
+
+    db = await get_db()
+    try:
+        res = await parse_one_multi_model(db, vid, models)
+    finally:
+        await db.close()
+    return {"runs": res}
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(
+    request: Request,
+    kind: str | None = Query(None),
+    category: str | None = Query(None),
+    top: int = Query(50),
+):
+    """Топ-N требований/категорий по корпусу. SQL по vacancy_requirements + vacancy_analysis."""
+    db = await get_db()
+    try:
+        req_where = ["1=1"]
+        req_args: list = []
+        if kind:
+            req_where.append("kind = ?")
+            req_args.append(kind)
+        if category:
+            req_where.append("category = ?")
+            req_args.append(category)
+        req_args.append(top)
+        cur = await db.execute(
+            f"""
+            SELECT text, kind, category, COUNT(DISTINCT vacancy_id) AS cnt
+              FROM vacancy_requirements
+             WHERE {" AND ".join(req_where)}
+          GROUP BY LOWER(text), kind, category
+          ORDER BY cnt DESC, text
+             LIMIT ?
+            """,
+            req_args,
+        )
+        top_requirements = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute(
+            "SELECT kind, COUNT(*) AS cnt FROM vacancy_requirements GROUP BY kind ORDER BY cnt DESC"
+        )
+        by_kind = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute(
+            "SELECT category, COUNT(*) AS cnt FROM vacancy_requirements "
+            "WHERE category IS NOT NULL GROUP BY category ORDER BY cnt DESC"
+        )
+        by_category = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute(
+            """
+            SELECT json_extract(data_json, '$.kind') AS k, COUNT(*) AS cnt
+              FROM vacancy_analysis
+             WHERE kind = 'company_kind'
+          GROUP BY json_extract(data_json, '$.kind')
+          ORDER BY cnt DESC
+            """,
+        )
+        company_kinds = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute(
+            """
+            SELECT text AS t, COUNT(DISTINCT vacancy_id) AS cnt
+              FROM vacancy_requirements
+             WHERE category = 'stack'
+          GROUP BY text
+          ORDER BY cnt DESC
+             LIMIT 30
+            """
+        )
+        top_stack = [dict(r) for r in await cur.fetchall()]
+
+        # Топ-вопросов из interview_prep:
+        # data_json.likely_questions — массив объектов {q, why}.
+        # Группируем как есть (SQLite LOWER не работает с кириллицей).
+        cur = await db.execute(
+            """
+            SELECT json_extract(value, '$.q') AS q,
+                   COUNT(DISTINCT vacancy_id) AS cnt
+              FROM vacancy_analysis,
+                   json_each(json_extract(data_json, '$.likely_questions'))
+             WHERE kind = 'interview_prep'
+               AND json_extract(value, '$.q') IS NOT NULL
+          GROUP BY json_extract(value, '$.q')
+          ORDER BY cnt DESC, q
+             LIMIT 30
+            """
+        )
+        top_questions = [dict(r) for r in await cur.fetchall()]
+
+        # Топ-тем (topics — плоский массив строк)
+        cur = await db.execute(
+            """
+            SELECT value AS t, COUNT(DISTINCT vacancy_id) AS cnt
+              FROM vacancy_analysis,
+                   json_each(json_extract(data_json, '$.topics'))
+             WHERE kind = 'interview_prep' AND value IS NOT NULL AND value != ''
+          GROUP BY value
+          ORDER BY cnt DESC
+             LIMIT 20
+            """
+        )
+        top_topics = [dict(r) for r in await cur.fetchall()]
+
+        cur = await db.execute("SELECT COUNT(*) FROM vacancy_analysis WHERE kind = 'interview_prep'")
+        interview_prep_count = (await cur.fetchone())[0]
+
+        cur = await db.execute("SELECT COUNT(DISTINCT vacancy_id) FROM vacancy_requirements")
+        parsed_count = (await cur.fetchone())[0]
+        cur = await db.execute("SELECT COUNT(*) FROM vacancies")
+        total_vacancies = (await cur.fetchone())[0]
+    finally:
+        await db.close()
+
+    return render(
+        "analytics.html",
+        request=request,
+        top_requirements=top_requirements,
+        by_kind=by_kind,
+        by_category=by_category,
+        company_kinds=company_kinds,
+        top_stack=top_stack,
+        top_questions=top_questions,
+        top_topics=top_topics,
+        interview_prep_count=interview_prep_count,
+        parsed_count=parsed_count,
+        total_vacancies=total_vacancies,
+        filters={"kind": kind or "", "category": category or "", "top": top},
+    )
+
+
+@app.get("/jobs", response_class=HTMLResponse)
+async def jobs_page(
+    request: Request,
+    job_id: str | None = Query(None),
+    status_filter: str | None = Query(None, alias="status"),
+    limit: int = Query(100),
+):
+    """История прогонов фоновых джобов (job_runs)."""
+    from app.db import job_runs_repo
+
+    runs = await job_runs_repo.list_runs(job_id=job_id, limit=limit)
+    if status_filter:
+        runs = [r for r in runs if r.get("status") == status_filter]
+    # для красивого ярлыка джоба — реальные label'ы из scheduler
+    labels = scheduler_mod._JOB_LABELS if hasattr(scheduler_mod, "_JOB_LABELS") else {}
+    # уникальные job_id для селектора фильтра
+    all_job_ids = sorted({r["job_id"] for r in await job_runs_repo.list_runs(limit=500)})
+    return render(
+        "jobs.html",
+        request=request,
+        runs=runs,
+        labels=labels,
+        all_job_ids=all_job_ids,
+        filters={"job_id": job_id or "", "status": status_filter or "", "limit": limit},
+    )
+
+
+@app.get("/llm-logs", response_class=HTMLResponse)
+async def llm_logs_page(
+    request: Request,
+    task_kind: str | None = Query(None),
+    target_id: str | None = Query(None),
+    run: int | None = Query(None),
+    limit: int = Query(100),
+):
+    from app.db import llm_repo
+
+    db = await get_db()
+    try:
+        runs = await llm_repo.list_runs(
+            db,
+            task_kind=task_kind,
+            target_id=target_id,
+            target_kind="vacancy" if target_id else None,
+            limit=limit,
+        )
+        focused = None
+        if run:
+            focused = await llm_repo.get_run(db, run)
+    finally:
+        await db.close()
+    return render(
+        "llm_logs.html",
+        request=request,
+        runs=runs,
+        focused=focused,
+        filters={"task_kind": task_kind or "", "target_id": target_id or "", "run": run or ""},
+    )
+
+
+@app.get("/api/llm/runs")
+async def llm_runs_list(
+    task_kind: str | None = Query(None),
+    target_id: str | None = Query(None),
+    limit: int = Query(50),
+):
+    from app.db import llm_repo
+
+    db = await get_db()
+    try:
+        runs = await llm_repo.list_runs(
+            db,
+            task_kind=task_kind,
+            target_id=target_id,
+            target_kind="vacancy" if target_id else None,
+            limit=limit,
+        )
+        return {"runs": runs}
+    finally:
+        await db.close()
+
+
+@app.post("/api/llm/parse-corpus")
+async def llm_parse_corpus(
+    limit: int = Form(20),
+    model: str | None = Form(None),
+    only_unparsed: bool = Form(True),
+):
+    """Прогнать LLM-разбор по корпусу. Запускается как task (видна в панели задач)."""
+
+    async def job(ctx):
+        from app.llm.tasks.requirements import parse_one
+
+        db = await get_db()
+        try:
+            sql = """
+              SELECT v.id FROM vacancies v
+              {join}
+              WHERE v.description IS NOT NULL AND length(v.description) > 100
+              {where}
+              ORDER BY v.id DESC
+              LIMIT ?
+            """
+            if only_unparsed:
+                sql = sql.format(
+                    join="LEFT JOIN vacancy_requirements r ON r.vacancy_id = v.id",
+                    where="AND r.id IS NULL",
+                )
+            else:
+                sql = sql.format(join="", where="")
+            cur = await db.execute(sql, (limit,))
+            ids = [r[0] for r in await cur.fetchall()]
+            total = len(ids)
+            ctx.update(current=0, total=total, message=f"найдено {total}")
+            ok = 0
+            for i, vid in enumerate(ids, 1):
+                try:
+                    res = await parse_one(db, vid, model=model)
+                    if res.get("ok"):
+                        ok += 1
+                except Exception as e:
+                    log.warning("llm parse corpus: vid=%s failed: %s", vid, e)
+                ctx.update(current=i, message=f"{i}/{total} (успешных: {ok})")
+            return {"processed": total, "ok": ok, "model": model or settings.LLM_MODEL_REQUIREMENTS}
+        finally:
+            await db.close()
+
+    try:
+        t = await task_mod.run("llm_parse_corpus", "LLM: разбор корпуса", job)
+        return _task_response(t)
+    except task_mod.TaskAlreadyRunning as e:
+        return JSONResponse({"ok": False, "reason": "already_running", "kind": e.kind}, status_code=409)
 
 
 @app.get("/compare", response_class=HTMLResponse)
@@ -790,30 +1577,53 @@ async def compare(request: Request, ids: list[int] = Query(None)):
         return f"{x:,}".replace(",", " ") if x else "—"
 
     fields = [
-        {"label": "Должность", "html": True, "vals": [
-            f'<a class="text-blue-600 hover:underline" href="/vacancy/{v["id"]}">{v["name"]}</a>' for v in vacs
-        ]},
+        {
+            "label": "Должность",
+            "html": True,
+            "vals": [
+                f'<a class="text-blue-600 hover:underline" href="/vacancy/{v["id"]}">{v["name"]}</a>'
+                for v in vacs
+            ],
+        },
         {"label": "Компания", "vals": [v.get("company_name") for v in vacs]},
         {"label": "Город", "vals": [v.get("area_name") for v in vacs]},
         {"label": "Match score", "vals": [v.get("score") for v in vacs]},
         {"label": "Предсказание приглашения, %", "vals": [v.get("predict") for v in vacs]},
         {"label": "ЗП, ₽", "vals": [fmt_money(v.get("salary_rub")) for v in vacs]},
-        {"label": "Формат", "vals": ["удалёнка" if (v.get("is_remote") or v.get("is_remote_text")) else "офис" for v in vacs]},
+        {
+            "label": "Формат",
+            "vals": ["удалёнка" if (v.get("is_remote") or v.get("is_remote_text")) else "офис" for v in vacs],
+        },
         {"label": "Уровень", "vals": [v.get("level") or "—" for v in vacs]},
         {"label": "Опыт (HH)", "vals": [v.get("work_experience") or "—" for v in vacs]},
-        {"label": "Стек (распознанный)", "html": True, "vals": [
-            ", ".join(v.get("parsed_stack") or []) or "—" for v in vacs
-        ]},
-        {"label": "Откликов (мои / всего)", "vals": [
-            f'{v.get("responses_count") or "—"} / {v.get("total_responses_count") or "—"}' for v in vacs
-        ]},
+        {
+            "label": "Стек (распознанный)",
+            "html": True,
+            "vals": [", ".join(v.get("parsed_stack") or []) or "—" for v in vacs],
+        },
+        {
+            "label": "Откликов (мои / всего)",
+            "vals": [
+                f"{v.get('responses_count') or '—'} / {v.get('total_responses_count') or '—'}" for v in vacs
+            ],
+        },
         {"label": "Сейчас смотрят", "vals": [v.get("online_users_count") or "—" for v in vacs]},
-        {"label": "Вежливость работодателя", "vals": [
-            (f'{v["politeness"]["read_topic_percent"]}% за {v["politeness"]["reply_working_days"]} раб.дн.' if v.get("politeness") else "—")
-            for v in vacs
-        ]},
+        {
+            "label": "Вежливость работодателя",
+            "vals": [
+                (
+                    f"{v['politeness']['read_topic_percent']}% за {v['politeness']['reply_working_days']} раб.дн."
+                    if v.get("politeness")
+                    else "—"
+                )
+                for v in vacs
+            ],
+        },
         {"label": "Мой статус", "vals": [STATUS_LABELS.get(v.get("status"), v.get("status")) for v in vacs]},
-        {"label": "Состояние отклика", "vals": [v.get("neg_label") if v.get("neg_state") else "—" for v in vacs]},
+        {
+            "label": "Состояние отклика",
+            "vals": [v.get("neg_label") if v.get("neg_state") else "—" for v in vacs],
+        },
     ]
     return render("compare.html", request=request, rows=vacs, fields=fields)
 
@@ -832,15 +1642,44 @@ async def funnel_page(request: Request):
     total = c["total"] or 1
     cards = [
         {"label": "Всего", "value": c["total"], "color": "", "pct": None},
-        {"label": "Ждут", "value": c["waiting"], "color": "text-amber-700", "pct": round(c["waiting"] / total * 100)},
-        {"label": "HR смотрел", "value": c["viewed"], "color": "text-blue-700", "pct": round(c["viewed"] / total * 100)},
-        {"label": "Собес/Приглашения", "value": c["invited"], "color": "text-violet-700", "pct": round(c["invited"] / total * 100)},
-        {"label": "Отказов", "value": c["rejected"], "color": "text-red-700", "pct": round(c["rejected"] / total * 100)},
-        {"label": "Архив", "value": c["archived"], "color": "text-neutral-500", "pct": round(c["archived"] / total * 100)},
+        {
+            "label": "Ждут",
+            "value": c["waiting"],
+            "color": "text-amber-700",
+            "pct": round(c["waiting"] / total * 100),
+        },
+        {
+            "label": "HR смотрел",
+            "value": c["viewed"],
+            "color": "text-blue-700",
+            "pct": round(c["viewed"] / total * 100),
+        },
+        {
+            "label": "Собес/Приглашения",
+            "value": c["invited"],
+            "color": "text-violet-700",
+            "pct": round(c["invited"] / total * 100),
+        },
+        {
+            "label": "Отказов",
+            "value": c["rejected"],
+            "color": "text-red-700",
+            "pct": round(c["rejected"] / total * 100),
+        },
+        {
+            "label": "Архив",
+            "value": c["archived"],
+            "color": "text-neutral-500",
+            "pct": round(c["archived"] / total * 100),
+        },
     ]
     return render(
-        "funnel.html", request=request, cards=cards,
-        top_employers=top, weeks=weeks, avg_hr_response_hours=avg_h,
+        "funnel.html",
+        request=request,
+        cards=cards,
+        top_employers=top,
+        weeks=weeks,
+        avg_hr_response_hours=avg_h,
     )
 
 
@@ -852,11 +1691,19 @@ async def logs_page(
     only_errors: bool = Query(False),
     limit: int = Query(200),
 ):
-    rows = await logs_repo.list_logs(limit=limit, status_filter=status, path_filter=path, only_errors=only_errors)
+    rows = await logs_repo.list_logs(
+        limit=limit, status_filter=status, path_filter=path, only_errors=only_errors
+    )
     st = await logs_repo.stats()
     return render(
-        "logs.html", request=request, rows=rows, stats=st,
-        cur_status=status, cur_path=path, cur_only_errors=only_errors, cur_limit=limit,
+        "logs.html",
+        request=request,
+        rows=rows,
+        stats=st,
+        cur_status=status,
+        cur_path=path,
+        cur_only_errors=only_errors,
+        cur_limit=limit,
     )
 
 
@@ -868,7 +1715,9 @@ async def logs_api(
     limit: int = Query(200),
 ):
     return {
-        "rows": await logs_repo.list_logs(limit=limit, status_filter=status, path_filter=path, only_errors=only_errors),
+        "rows": await logs_repo.list_logs(
+            limit=limit, status_filter=status, path_filter=path, only_errors=only_errors
+        ),
         "stats": await logs_repo.stats(),
     }
 
@@ -881,12 +1730,40 @@ async def logs_cleanup(keep: int = Form(5000)):
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
+    from app.llm import settings as llm_settings
+    from app.llm.registry import ANALYZERS, get_enabled_analyzers
+
     db = await get_db()
     try:
         p = await profile_repo.get_profile(db) or {"skills": [], "formats": []}
+        llm_model = await llm_settings.get_requirements_model(db)
+        enabled = await get_enabled_analyzers(db)
+        analyzers_list = [
+            {"kind": a.kind, "label": a.label, "description": a.description, "enabled": a.kind in enabled}
+            for a in ANALYZERS.values()
+        ]
     finally:
         await db.close()
-    return render("profile.html", request=request, p=p)
+    return render(
+        "profile.html",
+        request=request,
+        p=p,
+        llm_model=llm_model,
+        llm_default=settings.LLM_MODEL_REQUIREMENTS,
+        analyzers=analyzers_list,
+    )
+
+
+@app.post("/api/settings/llm-model")
+async def settings_set_llm_model(model: str = Form(...)):
+    from app.llm import settings as llm_settings
+
+    db = await get_db()
+    try:
+        await llm_settings.set_requirements_model(db, model)
+        return {"ok": True, "model": model}
+    finally:
+        await db.close()
 
 
 @app.post("/api/profile", response_class=HTMLResponse)
@@ -902,14 +1779,17 @@ async def update_profile(
     formats = [s.strip().upper() for s in formats_csv.split(",") if s.strip()]
     db = await get_db()
     try:
-        await profile_repo.update_manual(db, {
-            "title": title or None,
-            "years_experience": years_experience,
-            "salary_expected_from": salary_expected_from,
-            "salary_currency": salary_currency,
-            "skills": skills,
-            "formats": formats,
-        })
+        await profile_repo.update_manual(
+            db,
+            {
+                "title": title or None,
+                "years_experience": years_experience,
+                "salary_expected_from": salary_expected_from,
+                "salary_currency": salary_currency,
+                "skills": skills,
+                "formats": formats,
+            },
+        )
     finally:
         await db.close()
     return HTMLResponse("сохранено")

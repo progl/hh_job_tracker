@@ -9,6 +9,7 @@ from app.db import job_runs_repo
 def _resync_get_db(monkeypatch):
     """e2e conftest перезагружает app.db.db; job_runs_repo держит старую ссылку на get_db."""
     import app.db.db as dbm
+
     monkeypatch.setattr(job_runs_repo, "get_db", dbm.get_db)
 
 
@@ -16,9 +17,7 @@ def _resync_get_db(monkeypatch):
 async def test_start_creates_running_row(tmp_db):
     run_id = await job_runs_repo.start("personal_refresh", trigger="manual")
     assert isinstance(run_id, int) and run_id > 0
-    cur = await tmp_db.execute(
-        "SELECT job_id, status, trigger FROM job_runs WHERE id=?", (run_id,)
-    )
+    cur = await tmp_db.execute("SELECT job_id, status, trigger FROM job_runs WHERE id=?", (run_id,))
     r = await cur.fetchone()
     assert r["job_id"] == "personal_refresh"
     assert r["status"] == "running"
@@ -46,9 +45,7 @@ async def test_finish_updates_row(tmp_db):
 async def test_finish_with_error(tmp_db):
     run_id = await job_runs_repo.start("ml_retrain")
     await job_runs_repo.finish(run_id, "error", error="boom", started_mono=None)
-    cur = await tmp_db.execute(
-        "SELECT status, error, duration_ms FROM job_runs WHERE id=?", (run_id,)
-    )
+    cur = await tmp_db.execute("SELECT status, error, duration_ms FROM job_runs WHERE id=?", (run_id,))
     r = await cur.fetchone()
     assert r["status"] == "error"
     assert r["error"] == "boom"

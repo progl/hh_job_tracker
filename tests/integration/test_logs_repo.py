@@ -8,6 +8,7 @@ def _resync_get_db(monkeypatch):
     """e2e conftest перезагружает app.db.db; logs_repo держит старую ссылку на get_db.
     Здесь возвращаем актуальную."""
     import app.db.db as dbm
+
     monkeypatch.setattr(logs_repo, "get_db", dbm.get_db)
 
 

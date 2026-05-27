@@ -23,8 +23,20 @@ def vacancy_from_search_item(item: dict[str, Any]) -> dict[str, Any]:
     comp = item.get("compensation") or {}
     schedule = item.get("@workSchedule") or item.get("workSchedule")
     employment = item.get("employmentForm") or (item.get("employment") or {}).get("id")
+    # HH меняет структуру workFormats. Поддерживаем оба формата:
+    #   старый: [{"id": "REMOTE"}, {"id": "HYBRID"}]
+    #   новый:  [{"workFormatsElement": ["ON_SITE", "HYBRID"]}]
+    #   плоский: ["REMOTE", "HYBRID"]
     work_formats_raw = item.get("workFormats") or []
-    work_formats = [(wf.get("id") if isinstance(wf, dict) else wf) for wf in work_formats_raw]
+    work_formats: list[str] = []
+    for wf in work_formats_raw:
+        if isinstance(wf, dict):
+            if wf.get("id"):
+                work_formats.append(str(wf["id"]))
+            elif "workFormatsElement" in wf and isinstance(wf["workFormatsElement"], list):
+                work_formats.extend(str(x) for x in wf["workFormatsElement"] if x)
+        elif wf:
+            work_formats.append(str(wf))
     pub = item.get("publicationTime") or {}
     pub_ts = pub.get("@timestamp") if isinstance(pub, dict) else pub
     creation = item.get("creationTime")
@@ -35,10 +47,7 @@ def vacancy_from_search_item(item: dict[str, Any]) -> dict[str, Any]:
     text_for_analysis = f"{item.get('name', '')} {descr}"
     parsed_stack = extract_stack(text_for_analysis)
     level = detect_level(text_for_analysis)
-    explicit_remote = (
-        (schedule == "remote")
-        or any((str(f).lower() == "remote") for f in work_formats)
-    )
+    explicit_remote = (schedule == "remote") or any((str(f).lower() == "remote") for f in work_formats)
     text_remote = is_remote_by_text(text_for_analysis)
 
     return {
@@ -81,22 +90,43 @@ async def collect_search(
     max_pages: int = 5,
     search_id: int | None = None,
     progress_cb=None,
+    early_stop_consecutive_seen: int = 0,
 ) -> dict[str, int]:
-    from app.db import searches_repo
+    """Инкрементальный сбор: если early_stop_consecutive_seen>0 и встретили K подряд
+    вакансий, уже виденных этим search_id за последние 24 часа — выходим. При early-stop
+    НЕ помечаем disappeared (мы просто не дочитали — это не значит, что их нет)."""
     import datetime as _dt
+
+    from app.db import searches_repo
+
     saved = 0
     pages_done = 0
     total_results: int | None = None
     seen_ids: list[int] = []
-    run_started_iso = _dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    run_started_iso = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%d %H:%M:%S")
+    # Рекомендации по резюме — добавляем сопутствующие маркеры HH,
+    # чтобы запрос был неотличим от клика «1457 вакансий» на странице резюме.
+    if query_params.get("resume") and not query_params.get("from"):
+        query_params = {**query_params, "from": "resumelist", "hhtmFrom": "resume_list"}
+
     via_text = (query_params.get("text") or "").strip()
     via_area = str(query_params.get("area") or "")
     via_sched = str(query_params.get("schedule") or "")
+
+    # для early-stop — что мы видели этим поиском за сутки
+    # Для early-stop: множество «уже знакомых» = seen этим search_id за сутки + все skipped глобально.
+    # Скипнутые в моём статусе тоже считаются «уже видели» — нет смысла снова их перебирать.
+    recent_seen: set[int] = set()
+    if early_stop_consecutive_seen > 0 and search_id is not None:
+        recent_seen = await searches_repo.get_seen_recent_ids(db, search_id, hours=24)
+        recent_seen |= await searches_repo.get_skipped_ids(db)
 
     if progress_cb:
         progress_cb(current=0, total=max_pages, message="старт")
 
     real_total_pages = max_pages
+    partial = False
+    consecutive_seen = 0
     for page in range(max_pages):
         params = {**query_params, "page": page}
         html = await client.get_page("/search/vacancy", params=params)
@@ -110,6 +140,7 @@ async def collect_search(
         items = vsr.get("vacancies") or []
         if not items:
             break
+        stop_now = False
         for item in items:
             v = vacancy_from_search_item(item)
             await vacancies_repo.upsert(db, v)
@@ -124,16 +155,35 @@ async def collect_search(
                 """,
                 (v["id"], via_text, via_area, via_sched),
             )
+            if early_stop_consecutive_seen > 0:
+                if v["id"] in recent_seen:
+                    consecutive_seen += 1
+                    if consecutive_seen >= early_stop_consecutive_seen:
+                        stop_now = True
+                        partial = True
+                        break
+                else:
+                    consecutive_seen = 0
         await db.commit()
         pages_done += 1
         # реальное число доступных страниц из paging.lastPage (если меньше max_pages)
         paging = vsr.get("paging") or {}
         last_page = (paging.get("lastPage") or {}).get("page")
-        if last_page is not None:
-            real_total_pages = min(max_pages, last_page + 1)
+        hh_total_pages = (last_page + 1) if last_page is not None else None
+        if hh_total_pages is not None:
+            real_total_pages = min(max_pages, hh_total_pages)
         if progress_cb:
-            progress_cb(current=pages_done, total=real_total_pages,
-                        message=f"страница {pages_done}/{real_total_pages}, сохранено {saved}")
+            tail = " [early-stop]" if stop_now else ""
+            cap_note = ""
+            if hh_total_pages is not None and hh_total_pages > max_pages:
+                cap_note = f" (у HH {hh_total_pages}, лимит {max_pages})"
+            progress_cb(
+                current=pages_done,
+                total=real_total_pages,
+                message=f"стр {pages_done}/{real_total_pages}{cap_note}, сохранено {saved}{tail}",
+            )
+        if stop_now:
+            break
         nxt = paging.get("next") or {}
         if not nxt or nxt.get("disabled"):
             break
@@ -141,7 +191,9 @@ async def collect_search(
     disappeared = 0
     if search_id is not None:
         await searches_repo.mark_seen(db, search_id, seen_ids)
-        disappeared = await searches_repo.mark_disappeared(db, search_id, run_started_iso)
+        # mark_disappeared только при ПОЛНОМ обходе — иначе пометим живые как пропавшие
+        if not partial:
+            disappeared = await searches_repo.mark_disappeared(db, search_id, run_started_iso)
         await searches_repo.update_last_run(db, search_id)
 
     return {
@@ -150,6 +202,7 @@ async def collect_search(
         "total_results": total_results or 0,
         "disappeared": disappeared,
         "search_id": search_id,
+        "partial": partial,
     }
 
 
@@ -186,7 +239,7 @@ def _vacancy_from_view(state: dict[str, Any], vid: int, html: str | None = None)
     """Из state страницы /vacancy/{id} собирает структуру для upsert."""
     view = None
     for k in ("vacancyView", "vacancyResult", "vacancy"):
-        if isinstance(state.get(k), dict) and state[k].get("vacancyId") or state.get(k, {}).get("name"):
+        if (isinstance(state.get(k), dict) and state[k].get("vacancyId")) or state.get(k, {}).get("name"):
             view = state[k]
             break
     if not view:
@@ -201,7 +254,7 @@ def _vacancy_from_view(state: dict[str, Any], vid: int, html: str | None = None)
     if descr_raw:
         out["description"] = descr_raw
     skills = []
-    for s in (view.get("keySkills") or view.get("key_skills") or []):
+    for s in view.get("keySkills") or view.get("key_skills") or []:
         if isinstance(s, dict):
             skills.append(s.get("name") or s.get("title") or s.get("string") or "")
         elif isinstance(s, str):
@@ -276,6 +329,7 @@ async def _mark_vacancy_unavailable(db: aiosqlite.Connection, vid: int, reason: 
 async def collect_one_vacancy(client: HHClient, db: aiosqlite.Connection, vid: int) -> bool:
     """Тянет /vacancy/{id} с правильным трекинг-параметром, как пришёл бы из реального поиска."""
     from app.clients.hh import AntibotChallengeError, SessionExpiredError, VacancyUnavailableError
+
     q = await _resolve_query_for_vacancy(db, vid)
     params: dict[str, Any] = {"hhtmFrom": "vacancy_search_list"}
     if q:
@@ -317,6 +371,7 @@ async def backfill_from_negotiations(
     """Подтягивает /vacancy/{id} для всех vacancy_id из negotiations, которых нет в vacancies.
     При anti-bot challenge — корректно останавливается и возвращает остаток."""
     from app.clients.hh import AntibotChallengeError, SessionExpiredError
+
     cur = await db.execute(
         """
         SELECT DISTINCT n.vacancy_id
@@ -358,7 +413,11 @@ async def backfill_from_negotiations(
             failed += 1
             await db.commit()
             if progress_cb:
-                progress_cb(current=idx, total=len(ids), message=f"{idx}/{len(ids)}, saved {saved}, недоступно {unavailable}")
+                progress_cb(
+                    current=idx,
+                    total=len(ids),
+                    message=f"{idx}/{len(ids)}, saved {saved}, недоступно {unavailable}",
+                )
             continue
         except SessionExpiredError as e:
             paused = True
@@ -370,7 +429,11 @@ async def backfill_from_negotiations(
             failed += 1
         await db.commit()
         if progress_cb:
-            progress_cb(current=idx, total=len(ids), message=f"{idx}/{len(ids)}, saved {saved}, недоступно {unavailable}")
+            progress_cb(
+                current=idx,
+                total=len(ids),
+                message=f"{idx}/{len(ids)}, saved {saved}, недоступно {unavailable}",
+            )
     remaining = total - saved
     if progress_cb:
         if paused:

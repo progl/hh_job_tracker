@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}LLM-логи{% endblock %}
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">✨ LLM-логи</h2>
+    <a href="/" class="text-xs text-neutral-500 hover:underline">← Список</a>
+  </div>
+
+  {% if focused %}
+    <div class="border border-fuchsia-300 dark:border-fuchsia-700 rounded-lg p-4 mb-4 bg-fuchsia-50/30 dark:bg-fuchsia-900/10">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm">
+          <span class="text-fuchsia-700 dark:text-fuchsia-300 font-medium">run #{{ focused.id }}</span>
+          · {{ focused.task_kind }}
+          · модель <span class="font-mono">{{ focused.model }}</span>
+          · <span class="font-mono">{{ focused.prompt_version }}</span>
+          · {{ focused.latency_ms }}ms
+          · in={{ focused.prompt_tokens or '?' }} out={{ focused.response_tokens or '?' }}
+          {% if focused.target_kind %}
+            · <a href="/vacancy/{{ focused.target_id }}" class="text-blue-600 hover:underline">→ {{ focused.target_kind }}/{{ focused.target_id }}</a>
+          {% endif %}
+        </div>
+        <a href="/llm-logs" class="text-xs text-neutral-500 hover:underline">закрыть ✕</a>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div>
+          <div class="text-[11px] uppercase text-neutral-500 mb-1">System prompt</div>
+          <pre class="text-[11px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded overflow-x-auto max-h-72 whitespace-pre-wrap">{{ focused.system_prompt or '—' }}</pre>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase text-neutral-500 mb-1">User prompt</div>
+          <pre class="text-[11px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded overflow-x-auto max-h-72 whitespace-pre-wrap">{{ focused.user_prompt or '—' }}</pre>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase text-neutral-500 mb-1">Response (raw)</div>
+          <pre class="text-[11px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded overflow-x-auto max-h-72 whitespace-pre-wrap">{{ focused.response_raw or '—' }}</pre>
+        </div>
+      </div>
+      {% if focused.error %}
+        <div class="mt-3 text-xs text-red-600">error: {{ focused.error }}</div>
+      {% endif %}
+      {% if focused.parsed_json %}
+        <details class="mt-3">
+          <summary class="cursor-pointer text-xs text-fuchsia-700 dark:text-fuchsia-300">parsed JSON</summary>
+          <pre class="text-[11px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-2 overflow-x-auto max-h-96">{{ focused.parsed_json | tojson(indent=2) }}</pre>
+        </details>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <form method="get" class="flex flex-wrap gap-2 mb-3 text-xs">
+    <input name="task_kind" value="{{ filters.task_kind }}" placeholder="task_kind"
+           class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-32">
+    <input name="target_id" value="{{ filters.target_id }}" placeholder="vacancy id"
+           class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-32">
+    <button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
+    <a href="/llm-logs" class="px-2 py-1 text-neutral-500 hover:underline">сброс</a>
+  </form>
+
+  <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+        <tr>
+          <th class="px-3 py-2 w-16">id</th>
+          <th class="px-3 py-2">когда</th>
+          <th class="px-3 py-2">task</th>
+          <th class="px-3 py-2">модель</th>
+          <th class="px-3 py-2">target</th>
+          <th class="px-3 py-2 text-right">ms</th>
+          <th class="px-3 py-2 text-right">in/out</th>
+          <th class="px-3 py-2 text-center">ok</th>
+          <th class="px-3 py-2">error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+          <tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+            <td class="px-3 py-1.5 tabular-nums"><a href="/llm-logs?run={{ r.id }}" class="text-blue-600 hover:underline">{{ r.id }}</a></td>
+            <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">{{ r.created_at[:19] }}</td>
+            <td class="px-3 py-1.5">{{ r.task_kind }}</td>
+            <td class="px-3 py-1.5 font-mono">{{ r.model }}</td>
+            <td class="px-3 py-1.5">
+              {% if r.target_kind == 'vacancy' %}
+                <a href="/vacancy/{{ r.target_id }}" class="text-blue-600 hover:underline">vac/{{ r.target_id }}</a>
+              {% else %}
+                {{ r.target_kind or '' }}/{{ r.target_id or '' }}
+              {% endif %}
+            </td>
+            <td class="px-3 py-1.5 text-right tabular-nums">{{ r.latency_ms or '?' }}</td>
+            <td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">{{ r.prompt_tokens or '?' }}/{{ r.response_tokens or '?' }}</td>
+            <td class="px-3 py-1.5 text-center">
+              {% if r.ok %}<span class="text-emerald-600">✓</span>{% else %}<span class="text-red-600">✗</span>{% endif %}
+            </td>
+            <td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title="{{ r.error or '' }}">{{ r.error or '' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="px-3 py-4 text-center text-neutral-500">Пока ничего нет. Жми «Разобрать» на странице вакансии.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -169,3 +169,54 @@ CREATE INDEX IF NOT EXISTS idx_vacancies_area ON vacancies(area_id);
 CREATE INDEX IF NOT EXISTS idx_vacancies_seen ON vacancies(seen_at);
 CREATE INDEX IF NOT EXISTS idx_negotiations_vacancy ON negotiations(vacancy_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_neg ON status_snapshots(negotiation_id, snapshot_at);
+
+-- LLM pipeline: лог каждого вызова модели (что дали / что вернула)
+CREATE TABLE IF NOT EXISTS llm_runs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_kind       TEXT NOT NULL,                         -- requirements | ...
+    target_kind     TEXT,                                  -- vacancy | resume | ...
+    target_id       TEXT,                                  -- "12345"
+    model           TEXT NOT NULL,                         -- qwen3:14b
+    prompt_version  TEXT NOT NULL,                         -- requirements_v1
+    system_prompt   TEXT,
+    user_prompt     TEXT,
+    response_raw    TEXT,
+    parsed_json     TEXT,                                  -- результат JSON-парсинга или NULL
+    ok              INTEGER NOT NULL DEFAULT 0,
+    error           TEXT,
+    latency_ms      INTEGER,
+    prompt_tokens   INTEGER,
+    response_tokens INTEGER,
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_llm_runs_target ON llm_runs(target_kind, target_id);
+CREATE INDEX IF NOT EXISTS idx_llm_runs_created ON llm_runs(created_at);
+CREATE INDEX IF NOT EXISTS idx_llm_runs_task ON llm_runs(task_kind, ok);
+
+-- Универсальное хранилище результатов LLM-анализа (один результат на (vacancy, kind))
+-- Для kind='requirements' список идёт в отдельную таблицу vacancy_requirements (см. ниже),
+-- здесь хранятся «однообъектные» анализы: salary, company_kind, summary, …
+CREATE TABLE IF NOT EXISTS vacancy_analysis (
+    vacancy_id   INTEGER NOT NULL,
+    kind         TEXT NOT NULL,           -- salary | company_kind | summary | ...
+    data_json    TEXT NOT NULL,           -- результат анализа в JSON
+    llm_run_id   INTEGER,
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (vacancy_id, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_vacancy_analysis_kind ON vacancy_analysis(kind);
+
+-- Извлечённые из описаний требования
+CREATE TABLE IF NOT EXISTS vacancy_requirements (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    vacancy_id   INTEGER NOT NULL,
+    kind         TEXT NOT NULL,                            -- must | nice | plus
+    category     TEXT,                                     -- stack | exp | soft | edu | other
+    text         TEXT NOT NULL,
+    source       TEXT NOT NULL DEFAULT 'llm',              -- llm | regex | manual
+    llm_run_id   INTEGER,
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(vacancy_id, kind, text)
+);
+CREATE INDEX IF NOT EXISTS idx_vacancy_requirements_vid ON vacancy_requirements(vacancy_id);
+CREATE INDEX IF NOT EXISTS idx_vacancy_requirements_cat ON vacancy_requirements(category, kind);

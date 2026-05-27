@@ -5,6 +5,7 @@
 target = 1 если last_state in (INVITATION, INTERVIEW), 0 если DISCARD*.
 RESPONSE без ответа в датасет не идёт.
 """
+
 import asyncio
 import csv
 import json
@@ -65,7 +66,7 @@ async def main():
         return
 
     Path("data").mkdir(exist_ok=True)
-    fieldnames = sorted({k for r in out for k in r.keys()})
+    fieldnames = sorted({k for r in out for k in r})
     with open("data/dataset.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()

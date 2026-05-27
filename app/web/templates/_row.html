@@ -53,11 +53,30 @@
     {{ v.salary_rub | money }}
   </td>
   <td>
-    {% if v.is_remote or v.is_remote_text %}
-      <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
-    {% else %}
-      <span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500" title="Не удалёнка (офис/гибрид/не указано)">офис</span>
-    {% endif %}
+    {# Все основные форматы из workFormats — каждый отдельным chip'ом.
+       Чтобы было видно «удалёнка ИЛИ гибрид» когда HH допускает оба. #}
+    {% set wf = v.work_formats or [] %}
+    {% set wf_upper = wf | map('upper') | list %}
+    {% set has_remote = ('REMOTE' in wf_upper) or v.work_schedule == 'remote' or v.is_remote or v.is_remote_text %}
+    {% set has_hybrid = 'HYBRID' in wf_upper %}
+    {# «офис» показываем только когда он рядом с другими форматами (вариативность).
+       Если массив = ['ON_SITE'] (по дефолту) — у HH в UI обычно нет строки формата → у нас «—». #}
+    {% set has_office_explicit = (('ON_SITE' in wf_upper) or ('OFFICE' in wf_upper)) and (has_remote or has_hybrid) %}
+    {% set fmt_none = not (has_remote or has_hybrid or has_office_explicit) %}
+    <div class="flex flex-wrap gap-0.5">
+      {% if has_remote %}
+        <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+      {% endif %}
+      {% if has_hybrid %}
+        <span class="text-[11px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" title="HH workFormats содержит HYBRID — допускается смешанный формат">гибрид</span>
+      {% endif %}
+      {% if has_office_explicit %}
+        <span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400" title="HH workFormats: можно в офис (рядом с другими вариантами)">офис</span>
+      {% endif %}
+      {% if fmt_none %}
+        <span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
+      {% endif %}
+    </div>
   </td>
   <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">{{ v.level or '—' }}</td>
   <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -81,6 +100,8 @@
           <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 whitespace-nowrap" title="Собрано через форму «Собрать сейчас» (текст запроса не сохранился)">разовый</span>
         {% elif src.startswith('⌕') %}
           <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 whitespace-nowrap max-w-[100px] truncate inline-block" title="Найдена разовым сбором с запросом {{ src }}">{{ src }}</span>
+        {% elif src.startswith('✨') %}
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 whitespace-nowrap" title="Вакансия пришла из рекомендаций hh.ru по твоему резюме">✨ рек.</span>
         {% else %}
           <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap max-w-[100px] truncate inline-block" title="Найдена сохранённым поиском «{{ src }}»">📌 {{ (src.split() | first) if (src | length) > 12 else src }}</span>
         {% endif %}

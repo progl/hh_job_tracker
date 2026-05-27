@@ -1,4 +1,5 @@
 """Тесты HHClient — мокаем httpx.AsyncClient через AsyncMock, БД-логи отключаем."""
+
 from __future__ import annotations
 
 import time
@@ -37,16 +38,19 @@ def _silence_logs(monkeypatch):
     monkeypatch.setattr(hh_mod, "log_request", _noop_log, raising=False)
     # log_request импортируется внутри get_page по месту
     import app.db.logs_repo as logs_repo
+
     monkeypatch.setattr(logs_repo, "log_request", _noop_log)
 
 
 @pytest.fixture(autouse=True)
 def _fast_rate_limit(monkeypatch):
     """Чтобы RateLimiter.wait не задерживал тесты."""
+
     async def _noop(self):
         return None
 
     from app.clients.rate_limit import RateLimiter
+
     monkeypatch.setattr(RateLimiter, "wait", _noop)
 
 

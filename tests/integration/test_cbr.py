@@ -68,6 +68,7 @@ async def test_get_rates_force_refetches(tmp_db):
 @pytest.mark.asyncio
 async def test_get_rates_fetch_failure_returns_static(tmp_db):
     from app.parsers import salary as salary_parser
+
     with patch.object(cbr, "_fetch_cbr", new=AsyncMock(side_effect=RuntimeError("net"))):
         result = await cbr.get_rates(tmp_db)
     # упало → static FX_TO_RUB
@@ -89,11 +90,14 @@ async def test_refresh_salary_module_updates_static(tmp_db):
 @pytest.mark.asyncio
 async def test_fetch_cbr_parses_valute(monkeypatch):
     """Проверяем парсинг JSON ответа ЦБ."""
+
     class FakeResp:
         status_code = 200
         content = b"x"
+
         def raise_for_status(self):
             pass
+
         def json(self):
             return {
                 "Valute": {
@@ -106,10 +110,13 @@ async def test_fetch_cbr_parses_valute(monkeypatch):
     class FakeClient:
         def __init__(self, *a, **kw):
             pass
+
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, *a):
             return None
+
         async def get(self, url):
             return FakeResp()
 

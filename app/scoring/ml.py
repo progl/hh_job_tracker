@@ -5,20 +5,21 @@
 
 Если положительных примеров < MIN_POSITIVES — пропускаем обучение, используется эвристика.
 """
+
 import logging
 from pathlib import Path
 from typing import Any
 
 import joblib
 
-from app.db.db import get_db
 from app.db import employers_repo, vacancies_repo
+from app.db.db import get_db
 
 log = logging.getLogger(__name__)
 
 MODEL_PATH = Path("data/model.pkl")
-MIN_POSITIVES = 10
-MIN_NEGATIVES = 10
+MIN_POSITIVES = 5
+MIN_NEGATIVES = 5
 
 FEATURES = [
     "viewed_by_opponent",
@@ -68,9 +69,13 @@ async def _build_dataset(db) -> tuple[list[list[float]], list[int], dict[str, An
 
 
 async def train_if_enough_data() -> dict[str, Any]:
+    import numpy as np
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+    from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
+
     db = await get_db()
     try:
         X, y, stats = await _build_dataset(db)
@@ -84,13 +89,62 @@ async def train_if_enough_data() -> dict[str, Any]:
     clf = LogisticRegression(max_iter=2000, class_weight="balanced")
     clf.fit(Xs, y)
     try:
-        auc = float(roc_auc_score(y, clf.predict_proba(Xs)[:, 1]))
+        train_auc = float(roc_auc_score(y, clf.predict_proba(Xs)[:, 1]))
     except ValueError:
-        auc = None
+        train_auc = None
+
+    cv_auc_mean: float | None = None
+    cv_auc_std: float | None = None
+    cv_scores: list[float] | None = None
+    n_splits = min(5, stats["positives"], stats["negatives"])
+    if n_splits >= 2:
+        try:
+            pipe = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("clf", LogisticRegression(max_iter=2000, class_weight="balanced")),
+                ]
+            )
+            skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+            scores = cross_val_score(pipe, X, y, cv=skf, scoring="roc_auc")
+            cv_scores = [float(s) for s in scores]
+            cv_auc_mean = float(np.mean(scores))
+            cv_auc_std = float(np.std(scores))
+            log.debug("ml: cv folds=%s scores=%s", n_splits, [round(s, 3) for s in cv_scores])
+        except Exception as e:
+            log.debug("ml: cv failed: %s", e)
+    else:
+        log.debug("ml: cv skipped, n_splits=%s (need >=2)", n_splits)
+
+    try:
+        coefs = dict(zip(FEATURES, (float(c) for c in clf.coef_[0]), strict=False))
+        top = sorted(coefs.items(), key=lambda kv: abs(kv[1]), reverse=True)
+        log.debug("ml: feature weights (sorted by |w|): %s", [(k, round(v, 3)) for k, v in top])
+    except Exception as e:
+        log.debug("ml: weights dump failed: %s", e)
+
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump({"scaler": scaler, "clf": clf, "features": FEATURES}, MODEL_PATH)
-    log.info("ml: trained, auc=%s, n=%s", auc, stats["rows"])
-    return {"trained": True, "auc": auc, "model_path": str(MODEL_PATH), **stats}
+    log.info(
+        "ml: trained n=%s (pos=%s, neg=%s) train_auc=%s cv_auc=%s±%s (k=%s)",
+        stats["rows"],
+        stats["positives"],
+        stats["negatives"],
+        round(train_auc, 3) if train_auc is not None else None,
+        round(cv_auc_mean, 3) if cv_auc_mean is not None else None,
+        round(cv_auc_std, 3) if cv_auc_std is not None else None,
+        n_splits if n_splits >= 2 else 0,
+    )
+    return {
+        "trained": True,
+        "auc": train_auc,
+        "cv_auc_mean": cv_auc_mean,
+        "cv_auc_std": cv_auc_std,
+        "cv_scores": cv_scores,
+        "cv_splits": n_splits if n_splits >= 2 else 0,
+        "model_path": str(MODEL_PATH),
+        **stats,
+    }
 
 
 _MODEL = None

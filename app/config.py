@@ -19,5 +19,12 @@ class Settings(BaseSettings):
 
     DB_PATH: str = "data/hh.db"
 
+    # --- LLM-пайплайн (Ollama) ---
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    LLM_MODEL_REQUIREMENTS: str = "qwen3:14b"
+    LLM_TIMEOUT_SECONDS: float = 180.0
+    LLM_TEMPERATURE: float = 0.0
+    LLM_MAX_DESCRIPTION_CHARS: int = 16000  # обрезать длинные описания, чтобы не разносить context window
+
 
 settings = Settings()

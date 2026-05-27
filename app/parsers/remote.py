@@ -1,7 +1,8 @@
 import re
 
 _REMOTE_PATTERNS = [
-    re.compile(p, re.IGNORECASE) for p in [
+    re.compile(p, re.IGNORECASE)
+    for p in [
         r"\bremote\b",
         r"\bудал[её]н\w*",
         r"\bдистанцион\w+",
@@ -13,7 +14,8 @@ _REMOTE_PATTERNS = [
 ]
 
 _HYBRID_PATTERNS = [
-    re.compile(p, re.IGNORECASE) for p in [
+    re.compile(p, re.IGNORECASE)
+    for p in [
         r"\bгибрид\w*",
         r"\bhybrid\b",
         r"\bсмешан\w+\s+(график|формат)",

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Аналитика{% endblock %}
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">📊 Аналитика корпуса</h2>
+    <a href="/" class="text-xs text-neutral-500 hover:underline">← Список</a>
+  </div>
+
+  <div class="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+    Разобрано LLM: <span class="font-mono font-semibold">{{ parsed_count }}</span> / {{ total_vacancies }} вакансий.
+    {% if parsed_count < total_vacancies %}
+      <span class="text-amber-700 dark:text-amber-400">
+        Чтобы добить корпус — на /profile включи нужные анализаторы, потом «Прогнать корпус» в API или ждите cron каждый час.
+      </span>
+    {% endif %}
+  </div>
+
+  {# фильтры #}
+  <form method="get" class="flex flex-wrap gap-2 mb-4 text-xs">
+    <select name="kind" class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1">
+      <option value="">все строгости</option>
+      <option value="must" {% if filters.kind == 'must' %}selected{% endif %}>must</option>
+      <option value="nice" {% if filters.kind == 'nice' %}selected{% endif %}>nice</option>
+      <option value="plus" {% if filters.kind == 'plus' %}selected{% endif %}>plus</option>
+    </select>
+    <select name="category" class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1">
+      <option value="">все категории</option>
+      <option value="stack" {% if filters.category == 'stack' %}selected{% endif %}>stack</option>
+      <option value="exp" {% if filters.category == 'exp' %}selected{% endif %}>exp</option>
+      <option value="soft" {% if filters.category == 'soft' %}selected{% endif %}>soft</option>
+      <option value="edu" {% if filters.category == 'edu' %}selected{% endif %}>edu</option>
+      <option value="other" {% if filters.category == 'other' %}selected{% endif %}>other</option>
+    </select>
+    <input type="number" name="top" value="{{ filters.top }}" min="10" max="500"
+           class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20">
+    <button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
+    <a href="/analytics" class="px-2 py-1 text-neutral-500 hover:underline">сброс</a>
+  </form>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    {# топ-стек #}
+    <div class="lg:col-span-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+      <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Топ-стек (category=stack)</div>
+      {% if top_stack %}
+        {% set max_cnt = (top_stack | map(attribute='cnt') | list | max) or 1 %}
+        <div class="space-y-1">
+          {% for r in top_stack %}
+            <div class="flex items-center gap-2 text-xs">
+              <div class="w-32 truncate font-mono">{{ r.t }}</div>
+              <div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden">
+                <div class="bg-fuchsia-500 h-full" style="width: {{ (r.cnt / max_cnt * 100) | round }}%"></div>
+              </div>
+              <div class="w-12 text-right tabular-nums">{{ r.cnt }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-neutral-500 text-sm">Нет данных. Включи анализатор «Требования» и прогони корпус.</div>
+      {% endif %}
+    </div>
+
+    {# распределение #}
+    <div class="space-y-4">
+      <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+        <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">По строгости</div>
+        {% for r in by_kind %}
+          <div class="flex justify-between text-sm py-0.5">
+            <span class="font-mono">{{ r.kind }}</span>
+            <span class="tabular-nums text-neutral-500">{{ r.cnt }}</span>
+          </div>
+        {% else %}
+          <div class="text-neutral-500 text-sm">—</div>
+        {% endfor %}
+      </div>
+
+      <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+        <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">По категории</div>
+        {% for r in by_category %}
+          <div class="flex justify-between text-sm py-0.5">
+            <span class="font-mono">{{ r.category }}</span>
+            <span class="tabular-nums text-neutral-500">{{ r.cnt }}</span>
+          </div>
+        {% else %}
+          <div class="text-neutral-500 text-sm">—</div>
+        {% endfor %}
+      </div>
+
+      <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+        <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Тип компании</div>
+        {% for r in company_kinds %}
+          <div class="flex justify-between text-sm py-0.5">
+            <span class="font-mono">{{ r.k }}</span>
+            <span class="tabular-nums text-neutral-500">{{ r.cnt }}</span>
+          </div>
+        {% else %}
+          <div class="text-neutral-500 text-sm">Включи анализатор «company_kind».</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# топ-вопросов и топ-тем из interview_prep #}
+  {% if top_questions or top_topics %}
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+        <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">
+          🎤 Топ-вопросов к собесу
+          <span class="text-neutral-500 normal-case font-normal">(из {{ interview_prep_count }} разобранных)</span>
+        </div>
+        {% if top_questions %}
+          {% set max_q = (top_questions | map(attribute='cnt') | list | max) or 1 %}
+          <div class="space-y-1">
+            {% for r in top_questions %}
+              <div class="flex items-center gap-2 text-xs">
+                <div class="flex-1 truncate" title="{{ r.q }}">{{ r.q }}</div>
+                <div class="w-24 bg-neutral-100 dark:bg-neutral-800 rounded h-2 overflow-hidden">
+                  <div class="bg-fuchsia-500 h-full" style="width: {{ (r.cnt / max_q * 100) | round }}%"></div>
+                </div>
+                <div class="w-8 text-right tabular-nums text-neutral-500">{{ r.cnt }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-neutral-500 text-sm">Включи «interview_prep» в /profile и прогони корпус.</div>
+        {% endif %}
+      </div>
+
+      <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+        <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">
+          📚 Топ-тем для подготовки
+        </div>
+        {% if top_topics %}
+          {% set max_t = (top_topics | map(attribute='cnt') | list | max) or 1 %}
+          <div class="space-y-1">
+            {% for r in top_topics %}
+              <div class="flex items-center gap-2 text-xs">
+                <div class="w-40 truncate font-mono">{{ r.t }}</div>
+                <div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-2 overflow-hidden">
+                  <div class="bg-emerald-500 h-full" style="width: {{ (r.cnt / max_t * 100) | round }}%"></div>
+                </div>
+                <div class="w-8 text-right tabular-nums text-neutral-500">{{ r.cnt }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-neutral-500 text-sm">—</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# полная таблица top_requirements с фильтрами #}
+  <div class="mt-6 border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+    <div class="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 bg-neutral-50 dark:bg-neutral-800">
+      Топ-{{ filters.top }} требований{% if filters.kind or filters.category %} (фильтр: {{ filters.kind }}{% if filters.kind and filters.category %} · {% endif %}{{ filters.category }}){% endif %}
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-neutral-50 dark:bg-neutral-800 text-left text-xs">
+        <tr>
+          <th class="px-3 py-1.5">#</th>
+          <th class="px-3 py-1.5">Текст</th>
+          <th class="px-3 py-1.5">kind</th>
+          <th class="px-3 py-1.5">category</th>
+          <th class="px-3 py-1.5 text-right">вакансий</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in top_requirements %}
+          <tr class="border-t border-neutral-100 dark:border-neutral-800">
+            <td class="px-3 py-1 text-neutral-400 tabular-nums">{{ loop.index }}</td>
+            <td class="px-3 py-1">{{ r.text }}</td>
+            <td class="px-3 py-1 font-mono text-xs">{{ r.kind }}</td>
+            <td class="px-3 py-1 font-mono text-xs text-neutral-500">{{ r.category or 'other' }}</td>
+            <td class="px-3 py-1 text-right tabular-nums">{{ r.cnt }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="px-3 py-4 text-center text-neutral-500">Пусто.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

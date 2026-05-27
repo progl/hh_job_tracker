@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import aiosqlite
@@ -98,7 +99,6 @@ async def collect_negotiations(
     saved_emps = 0
     pages_done = 0
     resume_id: int | None = None
-    last_state: dict | None = None
     stopped_early = False
 
     last_sync_iso = None if full else await _load_last_sync(db)
@@ -111,24 +111,26 @@ async def collect_negotiations(
             log.warning("no initial state on negotiations page %s", page)
             break
         if page == 0:
-            last_state = state
             await profile_repo.upsert_from_state(db, state)
 
         an = state.get("applicantNegotiations") or {}
         items = an.get("topicList") or []
         if not items:
             break
-        # smart-stop: если на этой странице ВСЕ items старше last_sync — следующие тоже,
-        # потому что HH сортирует по lastModified DESC
-        page_has_fresh = last_sync_iso is None
+        # smart-stop: HH сортирует topicList по lastModified DESC.
+        # Как только встретили item <= last_sync → граница пересечена,
+        # дальше будут только такие же или старее, читать следующие страницы бессмысленно.
+        border_crossed = False
         for it in items:
             n = negotiations_repo.from_topic_item(it)
+            lm = n.get("last_modified")
+            if last_sync_iso and lm and lm <= last_sync_iso and not full:
+                border_crossed = True
+                break
             if n.get("resume_id"):
                 resume_id = n["resume_id"]
             await negotiations_repo.upsert_and_snapshot(db, n)
             saved_negs += 1
-            if last_sync_iso and n.get("last_modified") and n["last_modified"] > last_sync_iso:
-                page_has_fresh = True
 
         politeness = (state.get("applicantEmployerPoliteness") or {}).get("employerPolitenessIndexes") or {}
         saved_emps += await employers_repo.upsert_politeness(db, politeness)
@@ -137,9 +139,10 @@ async def collect_negotiations(
         pages_done += 1
         if progress_cb:
             mode = "полный" if full else "инкрем."
-            progress_cb(current=pages_done, total=max_pages,
-                        message=f"{mode} стр {pages_done}, откликов {saved_negs}")
-        if not page_has_fresh and not full:
+            progress_cb(
+                current=pages_done, total=max_pages, message=f"{mode} стр {pages_done}, откликов {saved_negs}"
+            )
+        if border_crossed:
             stopped_early = True
             break
         paging = an.get("paging") or {}
@@ -165,6 +168,63 @@ async def collect_negotiations(
         "mode": "full" if full else "incremental",
         "counters": counters,
     }
+
+
+_RESUME_TOKEN_RE = re.compile(r"/search/vacancy\?[^\"']*?resume=([a-f0-9]{20,})")
+
+
+async def refresh_resume_search_token(client: HHClient, db: aiosqlite.Connection) -> str | None:
+    """Открывает /applicant/resumes, парсит актуальный поисковый хеш резюме
+    (тот, что используется в ?resume=... для рекомендаций). HH периодически его меняет.
+
+    Сохраняет в profile.resume_id. Возвращает токен или None."""
+    html = await client.get_page("/applicant/resumes")
+    if not html:
+        return None
+    m = _RESUME_TOKEN_RE.search(html)
+    if not m:
+        log.warning("refresh_resume_search_token: не нашёл хеш в /applicant/resumes")
+        return None
+    token = m.group(1)
+    await db.execute(
+        "INSERT INTO profile(id, resume_id) VALUES (1, ?) "
+        "ON CONFLICT(id) DO UPDATE SET resume_id = excluded.resume_id, updated_at = CURRENT_TIMESTAMP",
+        (token,),
+    )
+    await db.commit()
+    return token
+
+
+async def sync_resume_token_into_searches(
+    client: HHClient,
+    db: aiosqlite.Connection,
+) -> dict[str, Any]:
+    """Если есть активные saved_searches с params.resume — обновляет хеш в profile
+    и переписывает params.resume у всех таких поисков. Идемпотентно."""
+    import json as _json
+
+    from app.db import searches_repo
+
+    searches = await searches_repo.list_searches(db)
+    rec_searches = [s for s in searches if (s.get("params") or {}).get("resume")]
+    if not rec_searches:
+        return {"refreshed": False, "reason": "no_recommendation_searches"}
+    token = await refresh_resume_search_token(client, db)
+    if not token:
+        return {"refreshed": False, "reason": "token_not_found"}
+    updated = 0
+    for s in rec_searches:
+        params = dict(s["params"])
+        if params.get("resume") == token:
+            continue
+        params["resume"] = token
+        await db.execute(
+            "UPDATE searches SET params = ? WHERE id = ?",
+            (_json.dumps(params, ensure_ascii=False), s["id"]),
+        )
+        updated += 1
+    await db.commit()
+    return {"refreshed": True, "token": token, "searches_updated": updated}
 
 
 async def collect_resume(

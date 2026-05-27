@@ -4,6 +4,7 @@
 
 Подписчики: каждый SSE-клиент имеет свою asyncio.Queue, прошлые события доступны через `tail()`.
 """
+
 import asyncio
 import json
 import time
@@ -51,7 +52,7 @@ async def subscribe():
             try:
                 ev = await asyncio.wait_for(q.get(), timeout=15)
                 yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": keepalive\n\n"
     finally:
         _subscribers.discard(q)

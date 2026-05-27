@@ -51,7 +51,9 @@ TECH_KEYWORDS: dict[str, list[str]] = {
     "tdd": [r"\btdd\b"],
 }
 
-_COMPILED = {tech: [re.compile(p, re.IGNORECASE) for p in patterns] for tech, patterns in TECH_KEYWORDS.items()}
+_COMPILED = {
+    tech: [re.compile(p, re.IGNORECASE) for p in patterns] for tech, patterns in TECH_KEYWORDS.items()
+}
 
 
 def extract_stack(text: str) -> list[str]:

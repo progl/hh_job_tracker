@@ -4,6 +4,7 @@
 /api/logs*, /api/profile, /compare, /api/client/unpause, /api/vacancy/{vid}/refresh,
 /api/vacancies (с фильтрами), /api/ml/train, /api/fx/refresh, /api/probe.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -13,17 +14,34 @@ from app.db import vacancies_repo
 
 def _vacancy(vid: int = 1, **over) -> dict:
     base = {
-        "id": vid, "name": f"Test {vid}", "company_id": 100, "company_name": "Co",
-        "area_id": None, "area_name": None,
-        "salary_from": 100000, "salary_to": 200000, "salary_currency": "RUR",
-        "salary_gross": False, "salary_rub": 150000,
-        "work_schedule": "fullDay", "employment": "FULL", "work_experience": None,
+        "id": vid,
+        "name": f"Test {vid}",
+        "company_id": 100,
+        "company_name": "Co",
+        "area_id": None,
+        "area_name": None,
+        "salary_from": 100000,
+        "salary_to": 200000,
+        "salary_currency": "RUR",
+        "salary_gross": False,
+        "salary_rub": 150000,
+        "work_schedule": "fullDay",
+        "employment": "FULL",
+        "work_experience": None,
         "work_formats": "[]",
-        "publication_time": None, "creation_time": None,
-        "is_remote": 0, "is_remote_text": 0, "level": "middle",
-        "key_skills": None, "parsed_stack": '["python"]',
-        "responses_count": 5, "total_responses_count": 50, "online_users_count": 1,
-        "description": "desc", "raw_json": "{}", "url": f"https://hh.ru/vacancy/{vid}",
+        "publication_time": None,
+        "creation_time": None,
+        "is_remote": 0,
+        "is_remote_text": 0,
+        "level": "middle",
+        "key_skills": None,
+        "parsed_stack": '["python"]',
+        "responses_count": 5,
+        "total_responses_count": 50,
+        "online_users_count": 1,
+        "description": "desc",
+        "raw_json": "{}",
+        "url": f"https://hh.ru/vacancy/{vid}",
         "archived": False,
     }
     base.update(over)
@@ -32,6 +50,7 @@ def _vacancy(vid: int = 1, **over) -> dict:
 
 async def _seed(webapp, *vs: dict) -> None:
     from app.db.db import get_db
+
     db = await get_db()
     try:
         for v in vs:
@@ -222,9 +241,12 @@ async def test_update_profile(app_client):
     r = await client.post(
         "/api/profile",
         data={
-            "title": "Senior Python", "years_experience": "5",
-            "salary_expected_from": "300000", "salary_currency": "RUR",
-            "skills_csv": "python, django, fastapi", "formats_csv": "remote, hybrid",
+            "title": "Senior Python",
+            "years_experience": "5",
+            "salary_expected_from": "300000",
+            "salary_currency": "RUR",
+            "skills_csv": "python, django, fastapi",
+            "formats_csv": "remote, hybrid",
         },
     )
     assert r.status_code == 200
@@ -297,13 +319,16 @@ async def test_vacancy_refresh(app_client, monkeypatch):
 
     async def fake_collect_one(hh_client, db, vid):
         return True
+
     async def _noop_save_jar(*a, **kw):
         return None
+
     monkeypatch.setattr(webapp.collector, "collect_one_vacancy", fake_collect_one)
     monkeypatch.setattr(webapp, "save_jar", _noop_save_jar)
     # hh_client.client — property, бросает если не start'нут; ставим заглушку
     monkeypatch.setattr(
-        webapp.hh_client.__class__, "client",
+        webapp.hh_client.__class__,
+        "client",
         property(lambda self: object()),
     )
     r = await client.post("/api/vacancy/42/refresh")
@@ -322,7 +347,9 @@ async def test_probe_session_expired(app_client, monkeypatch):
 
     async def boom(*a, **kw):
         from app.clients.hh import SessionExpiredError
+
         raise SessionExpiredError("login")
+
     monkeypatch.setattr(webapp.hh_client, "get_page", boom)
     r = await client.get("/api/probe")
     assert r.status_code == 401
@@ -335,7 +362,9 @@ async def test_probe_antibot(app_client, monkeypatch):
 
     async def boom(*a, **kw):
         from app.clients.hh import AntibotChallengeError
+
         raise AntibotChallengeError("paused")
+
     monkeypatch.setattr(webapp.hh_client, "get_page", boom)
     r = await client.get("/api/probe")
     assert r.status_code == 429
@@ -348,6 +377,7 @@ async def test_probe_no_initial_state(app_client, monkeypatch):
 
     async def returns_empty(*a, **kw):
         return "<html>no state</html>"
+
     monkeypatch.setattr(webapp.hh_client, "get_page", returns_empty)
     r = await client.get("/api/probe")
     assert r.status_code == 500
@@ -380,6 +410,7 @@ async def test_fx_refresh(app_client, monkeypatch):
 
     async def fake_refresh(db):
         return {"ok": True}
+
     monkeypatch.setattr(webapp.cbr_client, "refresh_salary_module", fake_refresh)
     r = await client.post("/api/fx/refresh")
     assert r.status_code == 200
@@ -393,6 +424,7 @@ async def test_ml_train(app_client, monkeypatch):
 
     async def fake_train():
         return {"trained": False, "reason": "not_enough"}
+
     monkeypatch.setattr(webapp.ml_module, "train_if_enough_data", fake_train)
     monkeypatch.setattr(webapp.ml_module, "reload_model", lambda *a, **kw: None)
     r = await client.post("/api/ml/train")

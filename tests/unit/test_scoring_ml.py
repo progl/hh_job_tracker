@@ -1,6 +1,3 @@
-import pickle
-from pathlib import Path
-
 import joblib
 import pytest
 
@@ -35,7 +32,6 @@ def test_load_handles_corrupt_file(monkeypatch, tmp_path):
 def test_predict_ml_with_trained_model(monkeypatch, tmp_path):
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
-    import numpy as np
 
     # обучим минимальную модель
     X = [[0, 0], [1, 1], [0, 1], [1, 0], [0, 0], [1, 1]]
@@ -79,10 +75,12 @@ async def test_train_if_enough_data_skips_when_no_data(tmp_db, monkeypatch):
     """Без данных — обучение пропускается."""
     # дублируем _resync_get_db паттерн для scoring/ml.py
     import app.db.db as dbm
+
     monkeypatch.setattr(ml, "get_db", dbm.get_db)
     # employers/vacancies — тоже могут быть перезагружены
     import app.db.employers_repo as er
     import app.db.vacancies_repo as vr
+
     monkeypatch.setattr(ml, "employers_repo", er)
     monkeypatch.setattr(ml, "vacancies_repo", vr)
 
@@ -96,6 +94,7 @@ async def test_build_dataset_collects_features(tmp_db, monkeypatch):
     import app.db.db as dbm
     import app.db.employers_repo as er
     import app.db.vacancies_repo as vr
+
     monkeypatch.setattr(ml, "get_db", dbm.get_db)
     monkeypatch.setattr(ml, "employers_repo", er)
     monkeypatch.setattr(ml, "vacancies_repo", vr)
@@ -119,9 +118,7 @@ async def test_build_dataset_collects_features(tmp_db, monkeypatch):
         "INSERT INTO vacancies(id, name, salary_rub, is_remote, parsed_stack, total_responses_count) "
         "VALUES (100, 'A', 200000, 1, '[\"python\",\"django\"]', 10)"
     )
-    await tmp_db.execute(
-        "INSERT INTO vacancies(id, name, salary_rub) VALUES (200, 'B', 50000)"
-    )
+    await tmp_db.execute("INSERT INTO vacancies(id, name, salary_rub) VALUES (200, 'B', 50000)")
     await tmp_db.commit()
 
     X, y, stats = await ml._build_dataset(tmp_db)
@@ -140,6 +137,7 @@ async def test_train_if_enough_data_trains_with_enough(tmp_db, monkeypatch, tmp_
     import app.db.db as dbm
     import app.db.employers_repo as er
     import app.db.vacancies_repo as vr
+
     monkeypatch.setattr(ml, "get_db", dbm.get_db)
     monkeypatch.setattr(ml, "employers_repo", er)
     monkeypatch.setattr(ml, "vacancies_repo", vr)
@@ -165,3 +163,73 @@ async def test_train_if_enough_data_trains_with_enough(tmp_db, monkeypatch, tmp_
     assert res["positives"] == 10
     assert res["negatives"] == 10
     assert (tmp_path / "m.pkl").exists()
+
+
+@pytest.mark.asyncio
+async def test_train_returns_cv_auc(tmp_db, monkeypatch, tmp_path):
+    """train_if_enough_data возвращает cv_auc_mean/std/splits и логирует фолды."""
+    import app.db.db as dbm
+    import app.db.employers_repo as er
+    import app.db.vacancies_repo as vr
+
+    monkeypatch.setattr(ml, "get_db", dbm.get_db)
+    monkeypatch.setattr(ml, "employers_repo", er)
+    monkeypatch.setattr(ml, "vacancies_repo", vr)
+    monkeypatch.setattr(ml, "MODEL_PATH", tmp_path / "m.pkl")
+
+    # 6 positives + 6 negatives → проходят порог 5/5, CV должен быть с k=5
+    for i in range(6):
+        await tmp_db.execute(
+            "INSERT INTO negotiations(id, vacancy_id, last_state, viewed_by_opponent, "
+            "conversation_messages, has_response_letter) VALUES (?, ?, 'INVITATION', 1, 2, 1)",
+            (i + 1, 1000 + i),
+        )
+    for i in range(6):
+        await tmp_db.execute(
+            "INSERT INTO negotiations(id, vacancy_id, last_state, viewed_by_opponent) "
+            "VALUES (?, ?, 'DISCARD_BY_EMPLOYER', 0)",
+            (i + 100, 2000 + i),
+        )
+    await tmp_db.commit()
+
+    res = await ml.train_if_enough_data()
+    assert res["trained"] is True
+    assert "cv_auc_mean" in res
+    assert "cv_auc_std" in res
+    assert "cv_scores" in res
+    assert res["cv_splits"] == 5
+    assert res["cv_auc_mean"] is not None and 0.0 <= res["cv_auc_mean"] <= 1.0
+    assert len(res["cv_scores"]) == 5
+
+
+@pytest.mark.asyncio
+async def test_train_cv_skipped_when_too_few(tmp_db, monkeypatch, tmp_path):
+    """Если позитивов меньше 2 — CV пропускается, но (если порог проходит) модель всё равно обучается."""
+    import app.db.db as dbm
+    import app.db.employers_repo as er
+    import app.db.vacancies_repo as vr
+
+    monkeypatch.setattr(ml, "get_db", dbm.get_db)
+    monkeypatch.setattr(ml, "employers_repo", er)
+    monkeypatch.setattr(ml, "vacancies_repo", vr)
+    monkeypatch.setattr(ml, "MODEL_PATH", tmp_path / "m.pkl")
+    monkeypatch.setattr(ml, "MIN_POSITIVES", 1)
+    monkeypatch.setattr(ml, "MIN_NEGATIVES", 1)
+
+    # 1 positive + 5 negatives — CV с min(5,1,5)=1 фолд → skip
+    await tmp_db.execute(
+        "INSERT INTO negotiations(id, vacancy_id, last_state, viewed_by_opponent, "
+        "conversation_messages, has_response_letter) VALUES (1, 1000, 'INVITATION', 1, 2, 1)"
+    )
+    for i in range(5):
+        await tmp_db.execute(
+            "INSERT INTO negotiations(id, vacancy_id, last_state, viewed_by_opponent) "
+            "VALUES (?, ?, 'DISCARD_BY_EMPLOYER', 0)",
+            (i + 100, 2000 + i),
+        )
+    await tmp_db.commit()
+
+    res = await ml.train_if_enough_data()
+    assert res["trained"] is True
+    assert res["cv_splits"] == 0
+    assert res["cv_auc_mean"] is None

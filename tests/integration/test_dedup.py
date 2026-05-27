@@ -5,16 +5,34 @@ from app.db import vacancies_repo
 
 def _v(vid: int, name: str, company: str | None = "Co", **over) -> dict:
     base = {
-        "id": vid, "name": name, "company_id": None, "company_name": company,
-        "area_id": None, "area_name": None,
-        "salary_from": None, "salary_to": None, "salary_currency": None,
-        "salary_gross": False, "salary_rub": None,
-        "work_schedule": None, "employment": None, "work_experience": None,
-        "work_formats": "[]", "publication_time": None, "creation_time": None,
-        "is_remote": 0, "is_remote_text": 0, "level": None,
-        "key_skills": None, "parsed_stack": "[]",
-        "responses_count": None, "total_responses_count": None, "online_users_count": None,
-        "description": None, "raw_json": "{}", "url": f"https://hh.ru/vacancy/{vid}",
+        "id": vid,
+        "name": name,
+        "company_id": None,
+        "company_name": company,
+        "area_id": None,
+        "area_name": None,
+        "salary_from": None,
+        "salary_to": None,
+        "salary_currency": None,
+        "salary_gross": False,
+        "salary_rub": None,
+        "work_schedule": None,
+        "employment": None,
+        "work_experience": None,
+        "work_formats": "[]",
+        "publication_time": None,
+        "creation_time": None,
+        "is_remote": 0,
+        "is_remote_text": 0,
+        "level": None,
+        "key_skills": None,
+        "parsed_stack": "[]",
+        "responses_count": None,
+        "total_responses_count": None,
+        "online_users_count": None,
+        "description": None,
+        "raw_json": "{}",
+        "url": f"https://hh.ru/vacancy/{vid}",
         "archived": False,
     }
     base.update(over)
@@ -65,14 +83,12 @@ async def test_mark_duplicates_keeps_min_id_skips_rest(tmp_db):
     await tmp_db.commit()
     res = await vacancies_repo.mark_duplicates_as_skipped(tmp_db)
     assert res == {"groups": 1, "marked": 2}
-    cur = await tmp_db.execute(
-        "SELECT vacancy_id, status FROM vacancy_status ORDER BY vacancy_id"
-    )
+    cur = await tmp_db.execute("SELECT vacancy_id, status FROM vacancy_status ORDER BY vacancy_id")
     rows = {r[0]: r[1] for r in await cur.fetchall()}
-    assert rows[1] == "new"       # оставлен оригинал (min id)
+    assert rows[1] == "new"  # оставлен оригинал (min id)
     assert rows[2] == "skipped"
     assert rows[3] == "skipped"
-    assert rows[4] == "new"       # не дубликат — не тронут
+    assert rows[4] == "new"  # не дубликат — не тронут
 
 
 @pytest.mark.asyncio

@@ -54,5 +54,75 @@
       <span id="save-result" class="text-sm text-emerald-700"></span>
     </div>
   </form>
+
+  <div class="mt-6 bg-white dark:bg-neutral-900 border border-fuchsia-200 dark:border-fuchsia-900/40 rounded-lg p-4">
+    <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">✨ LLM-пайплайн</div>
+    <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
+      Модель по умолчанию для разбора требований. Можно переопределить в любом месте через селект.
+      На карточке вакансии и в крон-джобе используется эта.
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-sm">Модель:</label>
+      <select id="llm-default-model" class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 text-sm font-mono">
+        {% for m in ['qwen3:14b', 'qwen2.5:14b', 'llama3.1:8b'] %}
+          <option value="{{ m }}" {% if m == llm_model %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+        {% if llm_model not in ['qwen3:14b', 'qwen2.5:14b', 'llama3.1:8b'] %}
+          <option value="{{ llm_model }}" selected>{{ llm_model }} (custom)</option>
+        {% endif %}
+      </select>
+      <button onclick="window.setLLMModel()" class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600">Сохранить</button>
+      <span id="llm-save-result" class="text-xs text-emerald-700"></span>
+    </div>
+    <div class="text-[11px] text-neutral-500 mt-2">
+      Дефолт из .env: <span class="font-mono">{{ llm_default }}</span>.
+      <a href="/llm-logs" class="text-blue-600 hover:underline">→ посмотреть логи прогонов</a>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-fuchsia-200/50 dark:border-fuchsia-900/30">
+      <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">Анализаторы</div>
+      <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+        Какие задачи прогонять автоматически в cron-джобе «LLM: разбор требований»
+        и какие включены по умолчанию на карточке вакансии.
+      </div>
+      <div class="flex flex-wrap gap-3">
+        {% for a in analyzers %}
+          <label class="flex items-start gap-1.5 text-sm cursor-pointer" title="{{ a.description }}">
+            <input type="checkbox" class="profile-analyzer-cb" value="{{ a.kind }}" {% if a.enabled %}checked{% endif %}>
+            <span>
+              <span>{{ a.label }}</span>
+              <span class="block text-[10px] text-neutral-500">{{ a.kind }}</span>
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+      <div class="mt-2 flex items-center gap-2">
+        <button onclick="window.setEnabledAnalyzers()" class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600">Сохранить</button>
+        <span id="llm-analyzers-save" class="text-xs text-emerald-700"></span>
+      </div>
+    </div>
+  </div>
 </div>
+<script>
+window.setLLMModel = async () => {
+  const sel = document.getElementById('llm-default-model');
+  const fd = new FormData();
+  fd.append('model', sel.value);
+  const r = await fetch('/api/settings/llm-model', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('llm-save-result');
+  out.textContent = d.ok ? `✓ ${d.model}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+window.setEnabledAnalyzers = async () => {
+  const kinds = Array.from(document.querySelectorAll('.profile-analyzer-cb:checked')).map(c => c.value);
+  const fd = new FormData();
+  kinds.forEach(k => fd.append('kinds', k));
+  const r = await fetch('/api/llm/analyzers/enabled', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('llm-analyzers-save');
+  out.textContent = d.ok ? `✓ ${d.enabled.join(', ') || '(пусто)'}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+</script>
 {% endblock %}

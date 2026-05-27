@@ -5,15 +5,25 @@ from app.db import negotiations_repo
 
 def _neg(nid: int, vid: int, **over) -> dict:
     base = {
-        "id": nid, "vacancy_id": vid, "employer_id": 1000,
-        "employer_manager_id": None, "resume_id": None,
-        "last_state": "RESPONSE", "last_employer_state": "RESPONSE",
-        "applicant_sub_state": None, "employer_sub_state": None,
-        "initial_topic_type": None, "current_topic_type": None,
-        "archived": 0, "declined_by_applicant": 0, "viewed_by_opponent": 0,
-        "has_new_messages": 0, "has_response_letter": 0,
+        "id": nid,
+        "vacancy_id": vid,
+        "employer_id": 1000,
+        "employer_manager_id": None,
+        "resume_id": None,
+        "last_state": "RESPONSE",
+        "last_employer_state": "RESPONSE",
+        "applicant_sub_state": None,
+        "employer_sub_state": None,
+        "initial_topic_type": None,
+        "current_topic_type": None,
+        "archived": 0,
+        "declined_by_applicant": 0,
+        "viewed_by_opponent": 0,
+        "has_new_messages": 0,
+        "has_response_letter": 0,
         "conversation_messages": 0,
-        "creation_time": None, "last_modified": "2026-05-22T10:00:00",
+        "creation_time": None,
+        "last_modified": "2026-05-22T10:00:00",
         "raw_json": "{}",
     }
     base.update(over)
@@ -48,8 +58,12 @@ async def test_no_snapshot_when_state_unchanged(tmp_db):
 
 @pytest.mark.asyncio
 async def test_counters_basic(tmp_db):
-    await negotiations_repo.upsert_and_snapshot(tmp_db, _neg(1, 100, last_state="RESPONSE", viewed_by_opponent=1))
-    await negotiations_repo.upsert_and_snapshot(tmp_db, _neg(2, 200, last_state="INVITATION", viewed_by_opponent=1))
+    await negotiations_repo.upsert_and_snapshot(
+        tmp_db, _neg(1, 100, last_state="RESPONSE", viewed_by_opponent=1)
+    )
+    await negotiations_repo.upsert_and_snapshot(
+        tmp_db, _neg(2, 200, last_state="INVITATION", viewed_by_opponent=1)
+    )
     await negotiations_repo.upsert_and_snapshot(tmp_db, _neg(3, 300, last_state="DISCARD"))
     await negotiations_repo.upsert_and_snapshot(tmp_db, _neg(4, 400, last_state="RESPONSE", archived=1))
     await tmp_db.commit()
@@ -87,9 +101,14 @@ async def test_map_vacancy_to_state(tmp_db):
 
 def test_from_topic_item_maps_fields():
     item = {
-        "id": 42, "vacancyId": 100, "employerId": 200,
-        "lastState": "INVITATION", "lastEmployerState": "INVITATION",
-        "archived": True, "viewedByOpponent": True, "hasResponseLetter": True,
+        "id": 42,
+        "vacancyId": 100,
+        "employerId": 200,
+        "lastState": "INVITATION",
+        "lastEmployerState": "INVITATION",
+        "archived": True,
+        "viewedByOpponent": True,
+        "hasResponseLetter": True,
         "conversationMessagesCount": 3,
     }
     n = negotiations_repo.from_topic_item(item)

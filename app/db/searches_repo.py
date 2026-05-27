@@ -25,7 +25,9 @@ async def list_searches(db: aiosqlite.Connection) -> list[dict]:
     return out
 
 
-async def create_search(db: aiosqlite.Connection, name: str, params: dict[str, Any], is_active: bool = True) -> int:
+async def create_search(
+    db: aiosqlite.Connection, name: str, params: dict[str, Any], is_active: bool = True
+) -> int:
     cur = await db.execute(
         "INSERT INTO searches(name, params, is_active) VALUES (?, ?, ?)",
         (name, json.dumps(params, ensure_ascii=False), int(is_active)),
@@ -118,7 +120,32 @@ async def mark_disappeared(db: aiosqlite.Connection, search_id: int, run_started
 
 
 async def update_last_run(db: aiosqlite.Connection, sid: int) -> None:
-    await db.execute(
-        "UPDATE searches SET last_run_at = CURRENT_TIMESTAMP WHERE id = ?", (sid,)
-    )
+    await db.execute("UPDATE searches SET last_run_at = CURRENT_TIMESTAMP WHERE id = ?", (sid,))
     await db.commit()
+
+
+async def get_seen_recent_ids(
+    db: aiosqlite.Connection,
+    search_id: int,
+    hours: int = 24,
+) -> set[int]:
+    """Возвращает set vacancy_id, виденных этим поиском за последние `hours` часов.
+    Используется для early-stop: если K подряд встретили из этого множества — выходим."""
+    cur = await db.execute(
+        """
+        SELECT vacancy_id FROM search_vacancy_seen
+         WHERE search_id = ?
+           AND datetime(last_seen_at) >= datetime('now', ?)
+        """,
+        (search_id, f"-{int(hours)} hours"),
+    )
+    rows = await cur.fetchall()
+    return {r[0] for r in rows}
+
+
+async def get_skipped_ids(db: aiosqlite.Connection) -> set[int]:
+    """vacancy_id с локальным статусом 'skipped'. Используется для early-stop:
+    если K подряд скипнутых — нет смысла читать дальше."""
+    cur = await db.execute("SELECT vacancy_id FROM vacancy_status WHERE status = 'skipped'")
+    rows = await cur.fetchall()
+    return {r[0] for r in rows}

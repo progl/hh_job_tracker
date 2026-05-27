@@ -41,6 +41,39 @@
   .score-bar { height: 4px; border-radius: 2px; background: #e5e5e5; overflow: hidden; }
   .dark .score-bar { background: #262626; }
   .score-bar > div { height: 100%; }
+  /* Колоночные фильтры в <th> */
+  .th-filter-btn {
+    display: inline-block; margin-left: 4px;
+    font-size: 12px; line-height: 1; color: #737373;
+    padding: 2px 5px; border-radius: 4px; cursor: pointer;
+    border: 1px solid transparent; background: transparent; user-select: none;
+  }
+  .th-filter-btn:hover { background: #e5e5e5; color: #171717; }
+  .dark .th-filter-btn:hover { background: #404040; color: #fafafa; }
+  .th-filter-btn.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+  .dark .th-filter-btn.active { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+  .th-popup {
+    position: fixed; z-index: 60;
+    background: #fff; border: 1px solid #d4d4d4; border-radius: 8px;
+    padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 220px; max-width: 320px; max-height: 60vh; overflow-y: auto;
+  }
+  .th-popup-wide { min-width: 360px; max-width: 480px; }
+  .dark .th-popup { background: #171717; border-color: #404040; color: #e5e5e5; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .th-popup-title { font-size: 11px; text-transform: uppercase; color: #737373; margin-bottom: 6px; letter-spacing: 0.05em; }
+  .chip-mini {
+    cursor: pointer; padding: 3px 8px; font-size: 11px; border-radius: 9999px;
+    border: 1px solid #d4d4d4; background: #fff; color: #404040; user-select: none;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .chip-mini:hover { background: #fafafa; }
+  .chip-mini input { display: none; }
+  .chip-mini:has(input:checked) { background: #171717; color: #fff; border-color: #171717; }
+  .chip-mini.chip-exclude-mini:has(input:checked) { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .chip-mini.chip-exclude-mini:has(input:checked)::before { content: '✕ '; }
+  .dark .chip-mini { background: #262626; border-color: #525252; color: #d4d4d4; }
+  .dark .chip-mini:hover { background: #404040; }
+  .dark .chip-mini:has(input:checked) { background: #fafafa; color: #171717; border-color: #fafafa; }
 </style>
 
 <section class="space-y-4">
@@ -123,13 +156,15 @@
             </select>
           </div>
           <div>
-            <label class="block text-[11px] text-neutral-500" title="Сколько страниц по 20 вакансий пройти (макс. 5 = 100 вакансий, дольше = риск anti-bot)">Глубина</label>
-            <select name="max_pages" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-32">
+            <label class="block text-[11px] text-neutral-500" title="Сколько страниц по 20 вакансий пройти. «До конца» — идём пока есть следующая страница (HH режет ~100 стр). С early-stop безопасно: следующий синк остановится на K подряд уже виденных.">Глубина</label>
+            <select name="max_pages" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-44">
               <option value="1">1 стр (20 вак)</option>
               <option value="3">3 стр (60 вак)</option>
               <option value="5" selected>5 стр (100 вак)</option>
               <option value="10">10 стр (200 вак)</option>
-              <option value="20">20 стр (макс)</option>
+              <option value="20">20 стр (400 вак)</option>
+              <option value="50">50 стр (1000 вак)</option>
+              <option value="200">до конца (все)</option>
             </select>
           </div>
           <label class="flex items-center gap-2 text-sm pb-2" title="Добавить в HH-запрос фильтр schedule=remote">
@@ -152,7 +187,10 @@
       <div class="flex items-center justify-between">
         <div class="text-[11px] uppercase tracking-wide text-neutral-500">Сохранённые поиски ({{ searches | length }})</div>
         <div class="flex items-center gap-2">
-          <button onclick="window.syncAllSearches()" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу. Также автоматически каждые 4 часа.">↻ Синкать все</button>
+          <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">↻ Синкать все</button>
+          <button onclick="window.bulkMaxPages()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать глубину (max_pages) сразу всем активным поискам — например, 200 = «до конца»">🔧 Глубину всем</button>
+          <button onclick="window.bulkEarlyStop()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать early_stop_seen (K подряд seen → stop) всем активным. 0 = выключить early-stop.&#10;Типичные: 3 (обычные) / 5 (рекомендации).">⚡ Early-stop всем</button>
+          <button onclick="window.addRecommendations()" class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨ Рекомендации</button>
           <button onclick="window.toggleSaveForm()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">+ Сохранить новый</button>
         </div>
       </div>
@@ -163,13 +201,18 @@
           {% set last_run_short = s.last_run_at[5:16] if s.last_run_at else 'никогда' %}
           <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs {{ 'opacity-60' if not s.is_active }}"
                title="запрос: «{{ params_text }}»&#10;формат: {{ params_remote }}&#10;страниц: {{ s.params.get('max_pages',5) }}{% if s.last_run_at %}&#10;последний прогон: {{ s.last_run_at }}{% endif %}&#10;найдено вакансий: {{ s.found_count or 0 }}">
-            <button onclick="window.runSearch({{ s.id }}, '{{ s.name }}')" class="flex-1 text-left hover:underline truncate" title="Запустить сейчас">
+            <button onclick="window.runSearch({{ s.id }}, '{{ s.name }}', event)" class="flex-1 text-left hover:underline truncate" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
               <div class="font-medium truncate flex items-center gap-1">
                 <span class="text-blue-700 dark:text-blue-400">▶</span>{{ s.name }}
               </div>
               <div class="text-[10px] text-neutral-500 truncate">
                 «{{ params_text }}» · {{ s.found_count or 0 }} вак · {{ last_run_short }}
               </div>
+            </button>
+            <button onclick="window.editSearchPages({{ s.id }}, '{{ s.name }}', {{ s.params.get('max_pages', 5) }})"
+                    class="text-[10px] text-neutral-400 hover:text-blue-600 px-1"
+                    title="Глубина: {{ s.params.get('max_pages', 5) }} стр (~{{ s.params.get('max_pages', 5) * 20 }} вак). Клик — поменять.">
+              ✎{{ s.params.get('max_pages', 5) }}
             </button>
             <button onclick="window.toggleSearch({{ s.id }})" class="text-[10px] px-1.5 py-0.5 rounded {{ 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' if s.is_active else 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800' }}" title="{{ 'Активен (синкается). Клик — выключить.' if s.is_active else 'Выключен. Клик — включить.' }}">
               {{ 'ON' if s.is_active else 'OFF' }}
@@ -191,138 +234,69 @@
       </form>
     </div>
 
+    {# Форма #filters — все hidden inputs управляются popup'ами в шапке таблицы (см. ниже).
+       Видимыми остаются только: Поиск + 3 кнопки-переключателя (Только скрытые / Снятые HH / Архив HH)
+       и кнопка «Сбросить фильтры». Всё остальное — в <th> dropdowns. #}
+    {% set neg_kinds = [
+      ('RESPONSE', 'ждёт'),
+      ('INVITATION', 'приглашение'),
+      ('INTERVIEW', 'собес'),
+      ('DISCARD', 'отказ'),
+      ('HIRED', 'оффер'),
+      ('none', 'нет отклика'),
+    ] %}
     <form id="filters" hx-get="/api/vacancies" hx-target="#table-body" hx-swap="innerHTML"
-          hx-trigger="change, keyup delay:250ms from:input[name=q]"
+          hx-trigger="change, keyup delay:250ms from:input[name=q], refresh"
           hx-push-url="false"
           class="space-y-3">
       <input type="hidden" name="sort" id="sort-field" value="{{ applied.sort }}">
       <input type="hidden" name="dir" id="sort-dir" value="{{ applied.dir }}">
-      <div class="flex flex-wrap gap-4 items-start">
-        <div class="grow min-w-[260px]">
-          <label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">Поиск</label>
-          <input name="q" value="{{ applied.q }}" placeholder="название, компания, описание…" class="w-full border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm">
-        </div>
-        <div>
-          <label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">Формат</label>
-          <label class="flex items-center gap-2 text-sm h-[34px]">
-            <input type="checkbox" name="only_remote" value="true" class="rounded" {% if applied.only_remote %}checked{% endif %}> только удалёнка
-          </label>
-        </div>
-        <div>
-          <label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">ЗП от, ₽</label>
-          <input name="salary_rub_min" value="{{ applied.salary_rub_min }}" type="number" step="10000" placeholder="100 000" class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-28">
-        </div>
-        <div class="ml-auto self-end">
-          <button type="button" onclick="location.href = location.pathname"
-                  class="px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                  title="Очистить все фильтры и вернуть дефолт (скрыт «Скип»)">
-            Сбросить фильтры
-          </button>
-        </div>
-      </div>
 
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5" title="Локальный статус. Выбери в верхнем ряду — покажет только их. Выбери в нижнем — скроет их.">Статус — показать</div>
-        <div class="flex flex-wrap gap-1.5">
-          {% for s in statuses %}
-            <input type="checkbox" name="status" id="status-{{s}}" value="{{s}}" class="hidden" {% if s in applied.status %}checked{% endif %}>
-            {% set tt = {
-              'new': 'Ещё не открывал',
-              'viewed': 'Открывал карточку',
-              'applied': 'Откликнулся (RESPONSE)',
-              'interview': 'Приглашение/собес',
-              'rejected': 'Отказ (DISCARD)',
-              'offer': 'Оффер',
-              'skipped': 'Скип',
-            }[s] %}
-            <label for="status-{{s}}" class="chip" title="Показывать только: {{ tt }}">
-              {{ status_labels[s] }}<span class="chip-count">{{ counts.by_status.get(s, 0) }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </div>
+      {# Hidden inputs для popup-фильтров — popup-ы синкают их через JS #}
+      <input type="hidden" name="format" id="filter-format" value="{{ applied.format }}">
+      <input type="hidden" name="salary_rub_min" id="filter-salary" value="{{ applied.salary_rub_min }}">
+      <input type="hidden" name="level" id="filter-level" value="{{ applied.level }}">
+      <input type="hidden" name="name_q" id="filter-name-q" value="{{ applied.name_q }}">
+      <input type="hidden" name="company_q" id="filter-company-q" value="{{ applied.company_q }}">
+      {% for s in statuses %}
+        <input type="checkbox" name="status" id="filter-status-{{s}}" value="{{s}}" class="hidden" {% if s in applied.status %}checked{% endif %}>
+        <input type="checkbox" name="hide_status" id="filter-hide-{{s}}" value="{{s}}" class="hidden" {% if s in applied.hide_status %}checked{% endif %}>
+      {% endfor %}
+      {% for code, _ in neg_kinds %}
+        <input type="checkbox" name="neg" id="filter-neg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.neg %}checked{% endif %}>
+        <input type="checkbox" name="hide_neg" id="filter-hideneg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.hide_neg %}checked{% endif %}>
+      {% endfor %}
+      {% for t in ['python','django','fastapi','flask','drf','postgresql','redis','kafka','rabbitmq','celery','sqlalchemy','asyncio','docker','kubernetes','aws','linux','nginx','elasticsearch','clickhouse','microservices','tests','ml'] %}
+        <input type="checkbox" name="stack" id="filter-stack-{{t}}" value="{{t}}" class="hidden" {% if t in applied.stack %}checked{% endif %}>
+      {% endfor %}
 
-      <div>
-        <div class="flex items-center justify-between mb-1.5">
-          <div class="text-[11px] uppercase tracking-wide text-neutral-500" title="Скрыть эти статусы из выдачи.">Статус — скрыть</div>
-          <div class="flex items-center gap-1">
-            <button type="button" onclick="window.toggleArchive()" id="archive-btn"
-                    class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    title="Переключиться на просмотр только скрытых вакансий (status=skipped)">
-              📦 Только скрытые ({{ counts.by_status.get('skipped', 0) }})
-            </button>
-            <input type="hidden" name="disappeared" id="disappeared-mode" value="{{ applied.disappeared }}">
-            <button type="button" onclick="window.cycleDisappeared()" id="disappeared-btn"
-                    class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты">
-              {% if applied.disappeared == 'hide' %}⌫ Снятые HH ({{ disappeared_count }}){% elif applied.disappeared == 'only' %}⌫ Только снятые{% else %}⌫ Все, включая снятые{% endif %}
-            </button>
-            <input type="hidden" name="archived" id="archived-mode" value="{{ applied.archived }}">
-            <button type="button" onclick="window.cycleArchived()" id="archived-btn"
-                    class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты">
-              {% if applied.archived == 'hide' %}📦 Архив HH ({{ archived_count }}){% elif applied.archived == 'only' %}📦 Только архив{% else %}📦 Все, включая архив{% endif %}
-            </button>
-          </div>
-        </div>
-        <div class="flex flex-wrap gap-1.5">
-          {% for s in statuses %}
-            <input type="checkbox" name="hide_status" id="hide-{{s}}" value="{{s}}" class="hidden" {% if s in applied.hide_status %}checked{% endif %}>
-            <label for="hide-{{s}}" class="chip chip-exclude" title="Скрыть {{ status_labels[s] }} из выдачи">
-              {{ status_labels[s] }}
-            </label>
-          {% endfor %}
-        </div>
-      </div>
+      {# Видимая верхняя строка — компактно #}
+      <div class="flex flex-wrap gap-2 items-center">
+        <input name="q" value="{{ applied.q }}" placeholder="🔍 поиск по названию/компании/описанию…"
+               class="flex-1 min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm">
 
-      {% set neg_kinds = [
-        ('RESPONSE', 'ждёт'),
-        ('INVITATION', 'приглашение'),
-        ('INTERVIEW', 'собес'),
-        ('DISCARD', 'отказ'),
-        ('HIRED', 'оффер'),
-        ('none', 'нет отклика'),
-      ] %}
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5" title="Фильтр по состоянию отклика на HH (negotiation.last_state)">Отклик HH — показать</div>
-        <div class="flex flex-wrap gap-1.5">
-          {% for code, label in neg_kinds %}
-            <input type="checkbox" name="neg" id="neg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.neg %}checked{% endif %}>
-            <label for="neg-{{code}}" class="chip" title="Показать только: {{ label }}">{{ label }}</label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Отклик HH — скрыть</div>
-        <div class="flex flex-wrap gap-1.5">
-          {% for code, label in neg_kinds %}
-            <input type="checkbox" name="hide_neg" id="hideneg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.hide_neg %}checked{% endif %}>
-            <label for="hideneg-{{code}}" class="chip chip-exclude" title="Скрыть: {{ label }}">{{ label }}</label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Уровень</div>
-        <div class="flex flex-wrap gap-1.5">
-          <input type="radio" name="level" id="lvl-all" value="" class="hidden" {% if not applied.level %}checked{% endif %}>
-          <label for="lvl-all" class="chip">все</label>
-          {% for lvl in ['junior','middle','senior','lead','intern'] %}
-            <input type="radio" name="level" id="lvl-{{lvl}}" value="{{lvl}}" class="hidden" {% if applied.level == lvl %}checked{% endif %}>
-            <label for="lvl-{{lvl}}" class="chip">{{ lvl }}</label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Стек (any)</div>
-        <div class="flex flex-wrap gap-1.5">
-          {% for t in ['python','django','fastapi','flask','drf','postgresql','redis','kafka','rabbitmq','celery','sqlalchemy','asyncio','docker','kubernetes','aws','linux','nginx','elasticsearch','clickhouse','microservices','tests','ml'] %}
-            <input type="checkbox" name="stack" id="tech-{{t}}" value="{{t}}" class="hidden" {% if t in applied.stack %}checked{% endif %}>
-            <label for="tech-{{t}}" class="chip">{{ t }}</label>
-          {% endfor %}
-        </div>
+        <button type="button" onclick="window.toggleArchive()" id="archive-btn"
+                class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Переключиться на просмотр только скрытых вакансий (status=skipped)">
+          📦 Только скрытые ({{ counts.by_status.get('skipped', 0) }})
+        </button>
+        <input type="hidden" name="disappeared" id="disappeared-mode" value="{{ applied.disappeared }}">
+        <button type="button" onclick="window.cycleDisappeared()" id="disappeared-btn"
+                class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты">
+          {% if applied.disappeared == 'hide' %}⌫ Снятые HH ({{ disappeared_count }}){% elif applied.disappeared == 'only' %}⌫ Только снятые{% else %}⌫ Все, включая снятые{% endif %}
+        </button>
+        <input type="hidden" name="archived" id="archived-mode" value="{{ applied.archived }}">
+        <button type="button" onclick="window.cycleArchived()" id="archived-btn"
+                class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты">
+          {% if applied.archived == 'hide' %}📦 Архив HH ({{ archived_count }}){% elif applied.archived == 'only' %}📦 Только архив{% else %}📦 Все, включая архив{% endif %}
+        </button>
+        <button type="button" onclick="location.href = location.pathname"
+                class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Очистить все фильтры и вернуть дефолт">
+          Сбросить
+        </button>
       </div>
     </form>
   </div>
@@ -346,19 +320,43 @@
         <thead class="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-left text-neutral-600 dark:text-neutral-400 uppercase tracking-wide text-[11px] sticky-h">
           <tr>
             <th class="text-center w-8" title="Выбрать все для сравнения (макс 6)"><input type="checkbox" id="cmp-all" onchange="window.cmpAll(this)"></th>
-            <th class="text-center"><a href="#" data-sort="score" onclick="window.setSort('score'); return false" class="sort-h" title="Match-score (0-100) и predict %">Match · %</a></th>
-            <th>Статус</th>
-            <th><a href="#" data-sort="name" onclick="window.setSort('name'); return false" class="sort-h">Должность</a></th>
-            <th><a href="#" data-sort="company" onclick="window.setSort('company'); return false" class="sort-h">Компания</a></th>
-            <th><a href="#" data-sort="area" onclick="window.setSort('area'); return false" class="sort-h">Город</a></th>
-            <th class="text-right"><a href="#" data-sort="salary_rub" onclick="window.setSort('salary_rub'); return false" class="sort-h" title="ЗП в рублях (медиана вилки, минус НДФЛ если gross)">ЗП, ₽</a></th>
-            <th>Формат</th>
-            <th><a href="#" data-sort="level" onclick="window.setSort('level'); return false" class="sort-h">Уровень</a></th>
-            <th>Стек</th>
-            <th class="text-right"><a href="#" data-sort="total_responses" onclick="window.setSort('total_responses'); return false" class="sort-h" title="Сортировать по общему числу откликов на вакансию (Pro)">Откл.</a></th>
+            <th class="text-center"><a href="#" data-sort="score" onclick="window.setSort('score', event); return false" class="sort-h" title="Match-score (0-100) и predict %">Match · %</a></th>
+            <th>
+              Статус
+              <button type="button" class="th-filter-btn" data-popup="popup-status" title="Фильтр по локальному статусу (показать/скрыть)">▾</button>
+            </th>
+            <th>
+              <a href="#" data-sort="name" onclick="window.setSort('name', event); return false" class="sort-h">Должность</a>
+              <button type="button" class="th-filter-btn" data-popup="popup-name" title="Фильтр по подстроке в названии">▾</button>
+            </th>
+            <th>
+              <a href="#" data-sort="company" onclick="window.setSort('company', event); return false" class="sort-h">Компания</a>
+              <button type="button" class="th-filter-btn" data-popup="popup-company" title="Фильтр по подстроке в названии компании">▾</button>
+            </th>
+            <th><a href="#" data-sort="area" onclick="window.setSort('area', event); return false" class="sort-h">Город</a></th>
+            <th class="text-right">
+              <a href="#" data-sort="salary_rub" onclick="window.setSort('salary_rub', event); return false" class="sort-h" title="ЗП в рублях (медиана вилки, минус НДФЛ если gross)">ЗП, ₽</a>
+              <button type="button" class="th-filter-btn" data-popup="popup-salary" title="Минимальная ЗП">▾</button>
+            </th>
+            <th>
+              Формат
+              <button type="button" class="th-filter-btn" data-popup="popup-format" title="Удалёнка / Офис / Все">▾</button>
+            </th>
+            <th>
+              <a href="#" data-sort="level" onclick="window.setSort('level', event); return false" class="sort-h">Уровень</a>
+              <button type="button" class="th-filter-btn" data-popup="popup-level" title="junior/middle/senior/lead/intern">▾</button>
+            </th>
+            <th>
+              Стек
+              <button type="button" class="th-filter-btn" data-popup="popup-stack" title="Любой из выбранных">▾</button>
+            </th>
+            <th class="text-right"><a href="#" data-sort="total_responses" onclick="window.setSort('total_responses', event); return false" class="sort-h" title="Сортировать по общему числу откликов на вакансию (Pro)">Откл.</a></th>
             <th title="Откуда вакансия попала в БД: имя сохранённого поиска, «из откликов» (backfill) или «разовый сбор»">Источник</th>
-            <th>Отклик</th>
-            <th><a href="#" data-sort="updated_at" onclick="window.setSort('updated_at'); return false" class="sort-h">Обновлено</a></th>
+            <th>
+              Отклик
+              <button type="button" class="th-filter-btn" data-popup="popup-neg" title="Состояние моего отклика на HH (показать/скрыть)">▾</button>
+            </th>
+            <th><a href="#" data-sort="updated_at" onclick="window.setSort('updated_at', event); return false" class="sort-h">Обновлено</a></th>
           </tr>
         </thead>
         <tbody id="table-body">
@@ -369,15 +367,213 @@
   </div>
 </section>
 
-<!-- Floating compare button -->
+<!-- ===== Column-header filter popups ===== -->
+{# Все popup'ы — fixed-позиционируются JS'ом под триггером. Управляют hidden inputs в #filters. #}
+<div id="popup-status" class="th-popup" style="display:none">
+  <div class="th-popup-title">Статус — показать</div>
+  <div class="flex flex-wrap gap-1">
+    {% for s in statuses %}
+      <label class="chip-mini" title="Показать только {{ status_labels[s] }}">
+        <input type="checkbox" data-target="filter-status-{{s}}" {% if s in applied.status %}checked{% endif %}>
+        {{ status_labels[s] }}<span class="chip-count ml-1">{{ counts.by_status.get(s, 0) }}</span>
+      </label>
+    {% endfor %}
+  </div>
+  <div class="th-popup-title mt-2">Статус — скрыть</div>
+  <div class="flex flex-wrap gap-1">
+    {% for s in statuses %}
+      <label class="chip-mini chip-exclude-mini">
+        <input type="checkbox" data-target="filter-hide-{{s}}" {% if s in applied.hide_status %}checked{% endif %}>
+        {{ status_labels[s] }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="popup-salary" class="th-popup" style="display:none">
+  <div class="th-popup-title">ЗП от, ₽</div>
+  <input type="number" step="10000" data-target="filter-salary" value="{{ applied.salary_rub_min }}" placeholder="100 000"
+         class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full">
+  <div class="text-[10px] text-neutral-500 mt-1">оставь пустым чтобы убрать фильтр</div>
+</div>
+
+<div id="popup-format" class="th-popup" style="display:none">
+  <div class="th-popup-title">Формат</div>
+  <div class="flex flex-col gap-1">
+    {% for val, lbl in [('all','все'),('remote','только удалёнка'),('office','только офис')] %}
+      <label class="chip-mini">
+        <input type="radio" name="popup-format" data-target="filter-format" value="{{ val }}" {% if applied.format == val %}checked{% endif %}>
+        {{ lbl }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="popup-level" class="th-popup" style="display:none">
+  <div class="th-popup-title">Уровень</div>
+  <div class="flex flex-wrap gap-1">
+    <label class="chip-mini">
+      <input type="radio" name="popup-level" data-target="filter-level" value="" {% if not applied.level %}checked{% endif %}>
+      все
+    </label>
+    {% for lvl in ['junior','middle','senior','lead','intern'] %}
+      <label class="chip-mini">
+        <input type="radio" name="popup-level" data-target="filter-level" value="{{ lvl }}" {% if applied.level == lvl %}checked{% endif %}>
+        {{ lvl }}
+      </label>
+    {% endfor %}
+    <label class="chip-mini" title="Вакансии без указанного уровня (парсер не определил)">
+      <input type="radio" name="popup-level" data-target="filter-level" value="_empty" {% if applied.level == '_empty' %}checked{% endif %}>
+      — пусто
+    </label>
+  </div>
+</div>
+
+<div id="popup-name" class="th-popup" style="display:none">
+  <div class="th-popup-title">Должность содержит</div>
+  <input type="text" data-target="filter-name-q" value="{{ applied.name_q }}" placeholder="например: senior python"
+         class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full">
+  <div class="text-[10px] text-neutral-500 mt-1">регистронезависимо, server-side</div>
+</div>
+
+<div id="popup-company" class="th-popup" style="display:none">
+  <div class="th-popup-title">Компания содержит</div>
+  <input type="text" data-target="filter-company-q" value="{{ applied.company_q }}" placeholder="например: яндекс"
+         class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full">
+  <div class="text-[10px] text-neutral-500 mt-1">регистронезависимо, server-side</div>
+</div>
+
+<div id="popup-stack" class="th-popup th-popup-wide" style="display:none">
+  <div class="th-popup-title">Стек (any)</div>
+  <div class="flex flex-wrap gap-1">
+    {% for t in ['python','django','fastapi','flask','drf','postgresql','redis','kafka','rabbitmq','celery','sqlalchemy','asyncio','docker','kubernetes','aws','linux','nginx','elasticsearch','clickhouse','microservices','tests','ml'] %}
+      <label class="chip-mini">
+        <input type="checkbox" data-target="filter-stack-{{t}}" {% if t in applied.stack %}checked{% endif %}>
+        {{ t }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="popup-neg" class="th-popup" style="display:none">
+  <div class="th-popup-title">Отклик HH — показать</div>
+  <div class="flex flex-wrap gap-1">
+    {% for code, label in neg_kinds %}
+      <label class="chip-mini">
+        <input type="checkbox" data-target="filter-neg-{{code}}" {% if code in applied.neg %}checked{% endif %}>
+        {{ label }}
+      </label>
+    {% endfor %}
+  </div>
+  <div class="th-popup-title mt-2">Отклик HH — скрыть</div>
+  <div class="flex flex-wrap gap-1">
+    {% for code, label in neg_kinds %}
+      <label class="chip-mini chip-exclude-mini">
+        <input type="checkbox" data-target="filter-hideneg-{{code}}" {% if code in applied.hide_neg %}checked{% endif %}>
+        {{ label }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Floating bulk actions bar -->
 <div id="cmp-bar" style="position:fixed;bottom:20px;right:20px;display:none;z-index:50"
-     class="bg-neutral-900 text-white rounded-full px-5 py-3 shadow-lg flex items-center gap-3">
+     class="bg-neutral-900 text-white rounded-full px-5 py-3 shadow-lg flex items-center gap-3 flex-wrap max-w-[90vw]">
   <span>Выбрано: <span id="cmp-count" class="font-semibold">0</span></span>
-  <button onclick="window.cmpGo()" class="bg-white text-neutral-900 rounded-full px-3 py-1 text-sm font-medium hover:bg-neutral-100">Сравнить →</button>
-  <button onclick="window.cmpClear()" class="text-neutral-300 text-sm hover:text-white">×</button>
+  <div class="h-5 w-px bg-neutral-700"></div>
+  <button onclick="window.cmpGo()" title="Сравнить выбранные (макс 6)" class="bg-white text-neutral-900 rounded-full px-3 py-1 text-sm font-medium hover:bg-neutral-100">Сравнить →</button>
+  <div class="h-5 w-px bg-neutral-700"></div>
+  <span class="text-xs text-neutral-400">Поставить статус:</span>
+  <select id="bulk-status-select" class="bg-neutral-800 text-white rounded px-2 py-1 text-sm border-0">
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if s == 'skipped' %}selected{% endif %}>{{ status_labels[s] }}</option>
+    {% endfor %}
+  </select>
+  <button onclick="window.bulkSetStatus()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-full px-3 py-1 text-sm font-medium">Применить</button>
+  <button onclick="window.cmpClear()" title="Снять выделение" class="text-neutral-300 text-sm hover:text-white ml-1">×</button>
 </div>
 
 <script>
+  // === Колоночные фильтры (popup'ы в шапке таблицы) ===
+  // Каждый popup-input имеет data-target="filter-XXX" — id скрытого инпута внутри #filters.
+  // На change/input — копируем значение в hidden input и dispatch change → htmx submit'ит форму.
+  window.th_popup_open = null;
+  window.th_popup_toggle = (btn) => {
+    const popupId = btn.dataset.popup;
+    const popup = document.getElementById(popupId);
+    if (!popup) return;
+    if (window.th_popup_open === popup) {
+      popup.style.display = 'none';
+      window.th_popup_open = null;
+      return;
+    }
+    // закрыть прошлый
+    if (window.th_popup_open) window.th_popup_open.style.display = 'none';
+    // позиционируем под кнопкой
+    const r = btn.getBoundingClientRect();
+    popup.style.display = 'block';
+    // временно показать чтобы померить размеры
+    const pw = popup.offsetWidth;
+    let left = r.left;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    popup.style.left = Math.max(8, left) + 'px';
+    popup.style.top = (r.bottom + 4) + 'px';
+    window.th_popup_open = popup;
+  };
+  // Делегирование кликов по кнопкам ▾
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.th-filter-btn');
+    if (btn) { e.preventDefault(); e.stopPropagation(); window.th_popup_toggle(btn); return; }
+    // клик вне открытого popup — закрыть
+    if (window.th_popup_open && !window.th_popup_open.contains(e.target)) {
+      window.th_popup_open.style.display = 'none';
+      window.th_popup_open = null;
+    }
+  });
+  // Sync popup-инпутов в hidden inputs формы #filters
+  window.th_sync_input = (popupInput) => {
+    const targetId = popupInput.dataset.target;
+    const hidden = document.getElementById(targetId);
+    if (!hidden) return;
+    if (popupInput.type === 'checkbox') {
+      hidden.checked = popupInput.checked;
+    } else if (popupInput.type === 'radio') {
+      hidden.value = popupInput.value;
+    } else {
+      // text / number
+      hidden.value = popupInput.value;
+    }
+    // имитируем событие change на hidden чтобы htmx подобрал
+    hidden.dispatchEvent(new Event('change', {bubbles: true}));
+    window.th_refresh_indicators();
+  };
+  // Подсветка триггера ▾ если в popup'е что-то выбрано/задано
+  window.th_refresh_indicators = () => {
+    document.querySelectorAll('.th-filter-btn').forEach((btn) => {
+      const popup = document.getElementById(btn.dataset.popup);
+      if (!popup) return;
+      let active = false;
+      // checkbox любой checked
+      popup.querySelectorAll('input[type="checkbox"]').forEach((i) => { if (i.checked) active = true; });
+      // radio с непустым value (кроме «все»)
+      popup.querySelectorAll('input[type="radio"]:checked').forEach((i) => {
+        if (i.value && i.value !== 'all') active = true;
+      });
+      // number/text с непустым value
+      popup.querySelectorAll('input[type="number"], input[type="text"]').forEach((i) => {
+        if (i.value && String(i.value).trim()) active = true;
+      });
+      btn.classList.toggle('active', active);
+    });
+  };
+  // Навешиваем обработчики на popup-инпуты
+  document.querySelectorAll('.th-popup input').forEach((i) => {
+    const ev = (i.type === 'number' || i.type === 'text') ? 'input' : 'change';
+    i.addEventListener(ev, () => window.th_sync_input(i));
+  });
+  // Начальная подсветка
+  window.th_refresh_indicators();
+
   // === Compare state ===
   window.cmpSet = new Set();
   window.cmpRender = () => {
@@ -400,6 +596,25 @@
     document.querySelectorAll(".cmp-cb").forEach(c => c.checked = false);
     const all = document.getElementById("cmp-all"); if(all) all.checked = false;
     window.cmpRender();
+  };
+  window.bulkSetStatus = async () => {
+    const ids = Array.from(window.cmpSet);
+    if (ids.length === 0) { window.showToast('info', 'Ничего не выбрано'); return; }
+    const sel = document.getElementById('bulk-status-select');
+    const status = sel.value;
+    const label = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Поставить статус «${label}» для ${ids.length} вакансий?`)) return;
+    const fd = new FormData();
+    ids.forEach(i => fd.append('ids', String(i)));
+    fd.append('status', status);
+    const r = await fetch('/api/vacancies/bulk-status', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast('err', `Ошибка: ${d.reason}`); return; }
+    window.showToast('ok', `✓ Обновлено ${d.updated}, статус: ${label}`);
+    window.cmpClear();
+    // обновим таблицу htmx-рефрешем формы фильтров
+    const form = document.getElementById('filters');
+    if (form && typeof htmx !== 'undefined') htmx.trigger(form, 'refresh');
   };
 
   // === Очистка мусора ===
@@ -427,9 +642,13 @@
     const f = document.getElementById('save-form');
     f.classList.toggle('hidden');
   };
-  window.runSearch = async (sid, name) => {
-    window.showToast('info', `▶ ${name}: запускаю…`);
-    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST'});
+  window.runSearch = async (sid, name, evt) => {
+    const full = !!(evt && (evt.shiftKey || evt.altKey));
+    const tag = full ? '▶▶' : '▶';
+    window.showToast('info', `${tag} ${name}: запускаю${full ? ' (полный, без early-stop)' : '…'}`);
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST', body: fd});
     const d = await r.json();
     if (!d.ok) window.showToast('err', `${name}: ${d.reason || 'ошибка'}`);
   };
@@ -442,41 +661,160 @@
     await fetch(`/api/searches/${sid}/toggle`, {method: 'POST'});
     location.reload();
   };
-  window.syncAllSearches = async () => {
-    window.showToast('info', 'Запускаю синк всех поисков…');
-    const r = await fetch('/api/searches/sync-all', {method: 'POST'});
+  window.bulkMaxPages = async () => {
+    const v = prompt(
+      "Глубина для ВСЕХ активных поисков (страниц по 20 вак).\n" +
+      "Примеры: 5=100, 10=200, 50=1000, 200=до конца.\n" +
+      "(с early-stop безопасно — реально пройдёт меньше)",
+      "200",
+    );
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 1000) { alert("1..1000"); return; }
+    const fd = new FormData();
+    fd.append("max_pages", String(n));
+    const r = await fetch("/api/searches/bulk-max-pages", {method: "POST", body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast("err", `Ошибка: ${d.reason}`); return; }
+    window.showToast("ok", `Обновлено поисков: ${d.updated}, глубина: ${d.max_pages}`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.bulkEarlyStop = async () => {
+    const v = prompt(
+      "Early-stop порог для ВСЕХ активных поисков (K подряд seen → stop).\n" +
+      "0 = выключить (всегда полный прогон).\n" +
+      "3 — обычные поиски, 5 — рекомендации (порядок тасуется).",
+      "5",
+    );
+    if (v === null) return;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 0 || n > 100) { alert("0..100"); return; }
+    const fd = new FormData();
+    fd.append("early_stop_seen", String(n));
+    const r = await fetch("/api/searches/bulk-early-stop", {method: "POST", body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast("err", `Ошибка: ${d.reason}`); return; }
+    window.showToast("ok", `Обновлено поисков: ${d.updated}, early_stop: ${n}`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.editSearchPages = async (sid, name, current) => {
+    const v = prompt(
+      `Глубина «${name}» (страниц по 20 вак)\n` +
+      `Сейчас: ${current}. Введи новое (1..1000).\n` +
+      `Подсказка: 5=100, 10=200, 50=1000, 200=до конца`,
+      String(current),
+    );
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 1000) { alert('Должно быть 1..1000'); return; }
+    const fd = new FormData();
+    fd.append('max_pages', String(n));
+    const r = await fetch(`/api/searches/${sid}/max-pages`, {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast('err', `Ошибка: ${d.reason}`); return; }
+    window.showToast('ok', `«${name}»: глубина ${n} стр`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.syncAllSearches = async (evt) => {
+    const full = !!(evt && (evt.shiftKey || evt.altKey));
+    window.showToast('info', full ? '↻↻ Полный синк (без early-stop)…' : '↻ Синк всех поисков…');
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    const r = await fetch('/api/searches/sync-all', {method: 'POST', body: fd});
     const d = await r.json();
     if (!d.ok) window.showToast('err', `Sync: ${d.reason || 'ошибка'}`);
   };
-
-  // === Sort ===
-  window.setSort = (field) => {
-    const f = document.getElementById('sort-field');
-    const d = document.getElementById('sort-dir');
-    if (f.value === field) {
-      d.value = d.value === 'desc' ? 'asc' : 'desc';
-    } else {
-      f.value = field;
-      d.value = 'desc';
+  window.addRecommendations = async () => {
+    const r = await fetch('/api/searches/recommendations', {method: 'POST'});
+    const d = await r.json();
+    if (!d.ok) {
+      window.showToast('err', `Рекомендации: ${d.message || d.reason || 'ошибка'}`);
+      return;
     }
+    if (d.existed) {
+      window.showToast('info', '✨ Рекомендации уже подключены');
+    } else {
+      window.showToast('ok', '✨ Рекомендации подключены. Синкаю…');
+      await fetch(`/api/searches/${d.id}/run`, {method: 'POST'});
+    }
+    setTimeout(() => location.reload(), 600);
+  };
+
+  // === Multi-column sort ===
+  // Хранение: list of [field, dir]. Сериализуется в hidden #sort-field как CSV с префиксами:
+  //   [['score','desc'], ['name','asc']] → "-score,+name"
+  // Обычный клик — single (заменяет всё, цикл desc→asc→none).
+  // Shift+клик — добавление к multi (или смена направления, или удаление).
+  window._sortList = [];
+  window.parseSortStr = (s) => {
+    if (!s) return [];
+    return s.split(',').map(p => p.trim()).filter(Boolean).map(p => {
+      if (p.startsWith('-')) return [p.slice(1), 'desc'];
+      if (p.startsWith('+')) return [p.slice(1), 'asc'];
+      return [p, 'desc'];
+    });
+  };
+  window.serializeSort = (list) => {
+    return list.map(([f, d]) => (d === 'desc' ? '-' : '+') + f).join(',');
+  };
+  // Восстановим из hidden inputs при загрузке
+  (function _initSort() {
+    const f = document.getElementById('sort-field');
+    if (!f) return;
+    const raw = f.value || '';
+    // Поддержка старого формата: одно поле без префикса + отдельный dir
+    if (raw && !raw.includes(',') && !raw.startsWith('-') && !raw.startsWith('+')) {
+      const d = (document.getElementById('sort-dir')?.value || 'desc').toLowerCase();
+      window._sortList = [[raw, d]];
+    } else {
+      window._sortList = window.parseSortStr(raw);
+    }
+  })();
+  window.setSort = (field, ev) => {
+    ev = ev || window.event;
+    const shift = !!(ev && (ev.shiftKey || ev.metaKey));
+    const idx = window._sortList.findIndex(([f, _]) => f === field);
+    if (shift) {
+      // Shift+клик — добавление/смена направления/удаление в multi
+      if (idx === -1) {
+        window._sortList.push([field, 'desc']);
+      } else {
+        const [f, d] = window._sortList[idx];
+        if (d === 'desc') window._sortList[idx] = [f, 'asc'];
+        else window._sortList.splice(idx, 1);  // asc → удаление
+      }
+    } else {
+      // Single — заменяет всё
+      if (idx === -1 || window._sortList.length !== 1) {
+        window._sortList = [[field, 'desc']];
+      } else {
+        const d = window._sortList[0][1];
+        if (d === 'desc') window._sortList = [[field, 'asc']];
+        else window._sortList = [];  // asc → сброс
+      }
+    }
+    const sortField = document.getElementById('sort-field');
+    sortField.value = window.serializeSort(window._sortList);
+    // sort-dir больше не используется для multi — оставляем для legacy URL
+    document.getElementById('sort-dir').value = 'desc';
     window.renderSortIndicators();
     htmx.trigger('#filters', 'change');
   };
   window.renderSortIndicators = () => {
-    const cur = document.getElementById('sort-field').value;
-    const dir = document.getElementById('sort-dir').value;
     document.querySelectorAll('.sort-h').forEach(a => {
       a.classList.remove('active');
       a.removeAttribute('data-arrow');
     });
-    if (cur) {
-      const el = document.querySelector(`.sort-h[data-sort="${cur}"]`);
-      if (el) {
-        el.classList.add('active');
-        el.setAttribute('data-arrow', dir === 'desc' ? '↓' : '↑');
-      }
-    }
+    window._sortList.forEach(([f, d], i) => {
+      const el = document.querySelector(`.sort-h[data-sort="${f}"]`);
+      if (!el) return;
+      el.classList.add('active');
+      const arrow = d === 'desc' ? '↓' : '↑';
+      const num = window._sortList.length > 1 ? `${i + 1}` : '';
+      el.setAttribute('data-arrow', num + arrow);
+    });
   };
+  window.renderSortIndicators();
 
   // === Быстрый фильтр в таблице (на клиенте) ===
   window.quickFilter = (q) => {

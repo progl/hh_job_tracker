@@ -3,6 +3,7 @@
 Подключается к работающему uvicorn на http://127.0.0.1:8000, выкачивает HTML
 страницы и переписывает ссылки/удаляет HTMX-интерактив. Результат — в docs/site/.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -10,7 +11,7 @@ import sys
 from pathlib import Path
 
 import httpx
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 BASE_URL = "http://127.0.0.1:8000"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -32,7 +33,7 @@ HTMX_ATTR_EXACT = {"hx-ext"}
 
 BANNER_HTML = (
     '<div style="background:#fef3c7;color:#78350f;padding:8px 16px;'
-    'text-align:center;font-family:system-ui;font-size:14px;'
+    "text-align:center;font-family:system-ui;font-size:14px;"
     'border-bottom:1px solid #fbbf24">'
     "Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. "
     '<a href="https://github.com/progl/hh_job_tracker" '
@@ -76,7 +77,11 @@ def strip_htmx_attrs(soup: BeautifulSoup) -> int:
     for tag in soup.find_all(True):
         for attr in list(tag.attrs.keys()):
             low = attr.lower()
-            if any(low.startswith(p) for p in HTMX_ATTR_PREFIXES) or low in HTMX_ATTR_EXACT or low.startswith("hx-on"):
+            if (
+                any(low.startswith(p) for p in HTMX_ATTR_PREFIXES)
+                or low in HTMX_ATTR_EXACT
+                or low.startswith("hx-on")
+            ):
                 del tag.attrs[attr]
                 removed += 1
     return removed

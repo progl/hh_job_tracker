@@ -92,14 +92,17 @@ async def list_vacancies(
     neg_states: list[str] | None = None,
     neg_states_exclude: list[str] | None = None,
     only_remote: bool = False,
+    only_office: bool = False,
     text: str | None = None,
+    name_contains: str | None = None,
+    company_contains: str | None = None,
     stack_any: list[str] | None = None,
     level: str | None = None,
     salary_rub_min: int | None = None,
     sort_by: str | None = None,
     sort_dir: str = "desc",
     show_disappeared: str = "hide",  # hide | only | all
-    show_archived: str = "hide",     # hide | only | all
+    show_archived: str = "hide",  # hide | only | all
     limit: int = 200,
     offset: int = 0,
 ) -> list[dict]:
@@ -124,7 +127,9 @@ async def list_vacancies(
             if st == "none":
                 clauses.append("NOT EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id)")
             else:
-                clauses.append("EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id AND last_state = ?)")
+                clauses.append(
+                    "EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id AND last_state = ?)"
+                )
                 args.append(st)
         where.append("(" + " OR ".join(clauses) + ")")
     if neg_states_exclude:
@@ -132,16 +137,28 @@ async def list_vacancies(
             if st == "none":
                 where.append("EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id)")
             else:
-                where.append("NOT EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id AND last_state = ?)")
+                where.append(
+                    "NOT EXISTS (SELECT 1 FROM negotiations WHERE vacancy_id = v.id AND last_state = ?)"
+                )
                 args.append(st)
 
     if only_remote:
         where.append("(v.is_remote = 1 OR v.is_remote_text = 1)")
+    if only_office:
+        where.append("(COALESCE(v.is_remote, 0) = 0 AND COALESCE(v.is_remote_text, 0) = 0)")
 
     if text:
         where.append("(v.name LIKE ? OR v.description LIKE ? OR v.company_name LIKE ? OR v.area_name LIKE ?)")
         like = f"%{text}%"
         args.extend([like, like, like, like])
+
+    if name_contains:
+        where.append("v.name LIKE ?")
+        args.append(f"%{name_contains}%")
+
+    if company_contains:
+        where.append("v.company_name LIKE ?")
+        args.append(f"%{company_contains}%")
 
     if stack_any:
         sub = []
@@ -151,8 +168,12 @@ async def list_vacancies(
         where.append(f"({' OR '.join(sub)})")
 
     if level:
-        where.append("v.level = ?")
-        args.append(level)
+        if level == "_empty":
+            # вакансии без указанного уровня
+            where.append("(v.level IS NULL OR v.level = '')")
+        else:
+            where.append("v.level = ?")
+            args.append(level)
 
     if salary_rub_min:
         where.append("v.salary_rub >= ?")
@@ -168,11 +189,29 @@ async def list_vacancies(
     elif show_archived == "only":
         where.append("v.archived_at IS NOT NULL")
 
-    dir_sql = "DESC" if (sort_dir or "desc").lower() == "desc" else "ASC"
-    nulls_pos = "NULLS LAST" if dir_sql == "DESC" else "NULLS LAST"
-    order_sql_col = _SORT_COLUMNS.get(sort_by) if sort_by else None
-    if order_sql_col:
-        order_clause = f"ORDER BY {order_sql_col} {dir_sql} {nulls_pos}, v.id DESC"
+    # Multi-sort: sort_by может быть CSV "name,-salary_rub,score" — каждое поле опционально
+    # с префиксом '-' для DESC. Старый формат (одно поле + отдельный sort_dir) тоже работает.
+    order_parts: list[str] = []
+    if sort_by:
+        for raw in str(sort_by).split(","):
+            raw = raw.strip()
+            if not raw:
+                continue
+            this_dir = "DESC"
+            if raw.startswith("-"):
+                this_dir = "DESC"
+                raw = raw[1:]
+            elif raw.startswith("+"):
+                this_dir = "ASC"
+                raw = raw[1:]
+            else:
+                # без префикса — берём общий sort_dir (для обратной совместимости)
+                this_dir = "DESC" if (sort_dir or "desc").lower() == "desc" else "ASC"
+            col = _SORT_COLUMNS.get(raw)
+            if col:
+                order_parts.append(f"{col} {this_dir} NULLS LAST")
+    if order_parts:
+        order_clause = "ORDER BY " + ", ".join(order_parts) + ", v.id DESC"
     else:
         order_clause = "ORDER BY datetime(v.updated_at) DESC, v.id DESC"
 
@@ -188,7 +227,7 @@ async def list_vacancies(
            (SELECT 1 FROM negotiations n WHERE n.vacancy_id = v.id LIMIT 1) AS has_negotiation
       FROM vacancies v
  LEFT JOIN vacancy_status s ON s.vacancy_id = v.id
-     WHERE {' AND '.join(where)}
+     WHERE {" AND ".join(where)}
   {order_clause}
      LIMIT ? OFFSET ?
     """
@@ -225,9 +264,7 @@ async def count_vacancies(db: aiosqlite.Connection) -> dict[str, int]:
     out["total"] = (await cur.fetchone())[0]
     cur = await db.execute("SELECT COUNT(*) FROM vacancies WHERE is_remote=1 OR is_remote_text=1")
     out["remote"] = (await cur.fetchone())[0]
-    cur = await db.execute(
-        "SELECT COALESCE(status,'new'), COUNT(*) FROM vacancy_status GROUP BY 1"
-    )
+    cur = await db.execute("SELECT COALESCE(status,'new'), COUNT(*) FROM vacancy_status GROUP BY 1")
     out["by_status"] = {row[0]: row[1] for row in await cur.fetchall()}
     return out
 

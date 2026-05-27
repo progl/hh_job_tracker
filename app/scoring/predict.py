@@ -4,6 +4,7 @@
 1. Если обученная ML-модель есть (data/model.pkl) — используем её.
 2. Иначе — эвристика на основе match-score, индекса вежливости работодателя и конкуренции.
 """
+
 from typing import Any
 
 from app.scoring import ml as ml_module

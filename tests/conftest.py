@@ -25,6 +25,35 @@ def event_loop():
     loop.close()
 
 
+def pytest_sessionstart(session):
+    """До любого теста — глушим MODEL_PATH session-wide на /tmp/never.
+    Иначе если в data/model.pkl лежит реальная обученная модель, она грузится
+    через глобальный кэш _MODEL и тесты test_scoring_predict.* (которые ждут эвристику) flaky-падают."""
+    try:
+        from pathlib import Path
+
+        from app.scoring import ml
+
+        ml.MODEL_PATH = Path("/tmp/_pytest_never_exists.pkl")
+        ml._MODEL = None
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def _isolate_ml_model_path():
+    """Дополнительно перед каждым тестом — сбрасываем кэш модели
+    (если предыдущий тест monkeypatch'ил MODEL_PATH и что-то загрузил)."""
+    try:
+        from app.scoring import ml
+
+        ml._MODEL = None
+        yield
+        ml._MODEL = None
+    except ImportError:
+        yield
+
+
 @pytest_asyncio.fixture
 async def tmp_db(tmp_path, monkeypatch):
     """Изолированная пустая БД для каждого теста."""
@@ -32,8 +61,10 @@ async def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(db_path))
 
     from app.config import settings
+
     monkeypatch.setattr(settings, "DB_PATH", str(db_path))
     import app.db.db as dbm
+
     monkeypatch.setattr(dbm, "DB_PATH", db_path)
 
     await dbm.init_db()
