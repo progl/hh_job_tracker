@@ -210,7 +210,30 @@ def _filters_from_query(
     }
 
 
-PY_SORT_KEYS = {"score", "predict"}
+PY_SORT_KEYS = {"score", "predict", "status", "format", "stack", "source", "neg"}
+
+
+# Маппинг виртуальных полей сортировки на функции-extractor.
+# Для каждого ключа функция получает row (обогащённый _enrich_with_scoring)
+# и возвращает значение для сортировки. None означает «пусто в конец» (через _PY_SORT_KEY).
+_PY_SORT_EXTRACTORS = {
+    "score": lambda r: r.get("score"),
+    "predict": lambda r: r.get("predict"),
+    "status": lambda r: r.get("status") or "new",
+    # удалёнка > гибрид > офис: 3/2/1, остальные 0
+    "format": lambda r: (
+        3 if (r.get("is_remote") or r.get("is_remote_text")) else
+        (2 if "HYBRID" in [str(x).upper() for x in (r.get("work_formats") or [])] else
+         (1 if any(str(x).upper() in ("ON_SITE", "OFFICE") for x in (r.get("work_formats") or [])) else 0))
+    ),
+    "stack": lambda r: len(r.get("parsed_stack") or []),
+    # ✨ рекомендации сверху, потом backfill/обычные поиски
+    "source": lambda r: (
+        2 if any(str(s).startswith("✨") for s in (r.get("source_list") or [])) else
+        (1 if r.get("source_list") else 0)
+    ),
+    "neg": lambda r: r.get("neg_state") or "",
+}
 
 
 def _parse_sort(sort: str | None, dir_legacy: str = "desc") -> list[tuple[str, str]]:
@@ -234,10 +257,18 @@ def _parse_sort(sort: str | None, dir_legacy: str = "desc") -> list[tuple[str, s
 
 
 def _apply_py_sort(rows: list[dict], parsed: list[tuple[str, str]]) -> None:
-    """Multi-sort in-place. Применяем поля reversed (stable sort) — последнее становится primary key."""
+    """Multi-sort in-place. Применяем поля reversed (stable sort) — последнее становится primary key.
+    Для виртуальных PY-полей используем _PY_SORT_EXTRACTORS, иначе берём r.get(field) напрямую.
+    Ключ (is_none, value) — None всегда «больше» (в конец при ASC), типы внутри поля консистентны."""
     for field, d in reversed(parsed):
         reverse = d.lower() == "desc"
-        rows.sort(key=lambda r: (r.get(field) is None, r.get(field) or 0), reverse=reverse)
+        extractor = _PY_SORT_EXTRACTORS.get(field, lambda r, f=field: r.get(f))
+
+        def _key(r, ex=extractor):
+            v = ex(r)
+            return (v is None, v)
+
+        rows.sort(key=_key, reverse=reverse)
 
 
 @app.get("/", response_class=HTMLResponse)

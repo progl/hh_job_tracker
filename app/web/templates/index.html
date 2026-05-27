@@ -322,7 +322,7 @@
             <th class="text-center w-8" title="Выбрать все для сравнения (макс 6)"><input type="checkbox" id="cmp-all" onchange="window.cmpAll(this)"></th>
             <th class="text-center"><a href="#" data-sort="score" onclick="window.setSort('score', event); return false" class="sort-h" title="Match-score (0-100) и predict %">Match · %</a></th>
             <th>
-              Статус
+              <a href="#" data-sort="status" onclick="window.setSort('status', event); return false" class="sort-h">Статус</a>
               <button type="button" class="th-filter-btn" data-popup="popup-status" title="Фильтр по локальному статусу (показать/скрыть)">▾</button>
             </th>
             <th>
@@ -339,7 +339,7 @@
               <button type="button" class="th-filter-btn" data-popup="popup-salary" title="Минимальная ЗП">▾</button>
             </th>
             <th>
-              Формат
+              <a href="#" data-sort="format" onclick="window.setSort('format', event); return false" class="sort-h" title="Сортировка: удалёнка > гибрид > офис">Формат</a>
               <button type="button" class="th-filter-btn" data-popup="popup-format" title="Удалёнка / Офис / Все">▾</button>
             </th>
             <th>
@@ -347,13 +347,15 @@
               <button type="button" class="th-filter-btn" data-popup="popup-level" title="junior/middle/senior/lead/intern">▾</button>
             </th>
             <th>
-              Стек
+              <a href="#" data-sort="stack" onclick="window.setSort('stack', event); return false" class="sort-h" title="Сортировка по количеству распознанных технологий">Стек</a>
               <button type="button" class="th-filter-btn" data-popup="popup-stack" title="Любой из выбранных">▾</button>
             </th>
             <th class="text-right"><a href="#" data-sort="total_responses" onclick="window.setSort('total_responses', event); return false" class="sort-h" title="Сортировать по общему числу откликов на вакансию (Pro)">Откл.</a></th>
-            <th title="Откуда вакансия попала в БД: имя сохранённого поиска, «из откликов» (backfill) или «разовый сбор»">Источник</th>
             <th>
-              Отклик
+              <a href="#" data-sort="source" onclick="window.setSort('source', event); return false" class="sort-h" title="Сортировка: ✨ рекомендации сверху, потом сохранённые поиски, потом backfill/разовые">Источник</a>
+            </th>
+            <th>
+              <a href="#" data-sort="neg" onclick="window.setSort('neg', event); return false" class="sort-h" title="Сортировка по состоянию отклика на HH">Отклик</a>
               <button type="button" class="th-filter-btn" data-popup="popup-neg" title="Состояние моего отклика на HH (показать/скрыть)">▾</button>
             </th>
             <th><a href="#" data-sort="updated_at" onclick="window.setSort('updated_at', event); return false" class="sort-h">Обновлено</a></th>
