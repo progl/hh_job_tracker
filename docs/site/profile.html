@@ -104,10 +104,10 @@
 <div class="bg-white border border-neutral-200 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Из HH</div>
 <dl class="grid grid-cols-2 gap-y-1.5 text-sm">
-<dt class="text-neutral-500">HHID</dt><dd class="font-mono">15919662</dd>
-<dt class="text-neutral-500">Имя</dt><dd>Михаил Матвеев</dd>
-<dt class="text-neutral-500">Резюме ID</dt><dd class="font-mono">7fbb135bff010af1f00039ed1f687571546863</dd>
-<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-27 12:07:44</dd>
+<dt class="text-neutral-500">HHID</dt><dd class="font-mono">00000001</dd>
+<dt class="text-neutral-500">Имя</dt><dd>Иван Петров</dd>
+<dt class="text-neutral-500">Резюме ID</dt><dd class="font-mono">demo_resume_1</dd>
+<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-23 14:55:26</dd>
 </dl>
 <form class="mt-3" onsubmit="return false;">
 <button class="px-3 py-1.5 text-sm rounded bg-violet-700 text-white hover:bg-violet-600">Обновить из HH</button>
@@ -123,23 +123,23 @@
 <div class="grid grid-cols-2 gap-3">
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Опыт, лет</label>
-<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="years_experience" step="0.5" type="number" value="16.7"/>
+<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="years_experience" step="0.5" type="number" value="7.0"/>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Ожидание ЗП от</label>
 <div class="flex gap-2">
-<input class="grow border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_expected_from" step="10000" type="number" value="350000"/>
+<input class="grow border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_expected_from" step="10000" type="number" value="200000"/>
 <input class="w-20 border border-neutral-300 rounded px-2 py-1.5 text-sm" name="salary_currency" value="RUR"/>
 </div>
 </div>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Навыки (через запятую)</label>
-<textarea class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm font-mono" name="skills_csv" rows="3">REST API, Microservices, Celery, Redis, RabbitMQ, Async processing, Docker, Kubernetes, Helm, CI/CD (GitLab, Jenkins), Grafana, ELK, Sentry, Python, SQL, Oracle Pl/SQL, Bash, Pytest, Оптимизация кода, Agile, PostgreSQL, Clickhouse, SQLAlchemy, FastAPI, NoSQL, Flask, Django Framework, API, Linux, Git</textarea>
+<textarea class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm font-mono" name="skills_csv" rows="3">python, django, fastapi, postgresql, docker, kubernetes, redis, asyncio</textarea>
 </div>
 <div>
 <label class="block text-xs text-neutral-500 mb-1">Форматы (через запятую: REMOTE, HYBRID, OFFICE)</label>
-<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="formats_csv" value="REMOTE"/>
+<input class="w-full border border-neutral-300 rounded px-2 py-1.5 text-sm" name="formats_csv" value="REMOTE, HYBRID"/>
 </div>
 <div class="flex items-center gap-3">
 <button class="px-3 py-1.5 text-sm rounded bg-neutral-900 text-white hover:bg-neutral-700">Сохранить</button>
