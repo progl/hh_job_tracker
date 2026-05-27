@@ -49,6 +49,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
@@ -61,6 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
@@ -110,11 +134,11 @@
 </div>
 <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
 <div class="text-[11px] uppercase tracking-wide text-neutral-500">avg ms</div>
-<div class="text-xl font-semibold tabular-nums">256</div>
+<div class="text-xl font-semibold tabular-nums">284</div>
 </div>
 <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
 <div class="text-[11px] uppercase tracking-wide text-neutral-500">max ms</div>
-<div class="text-xl font-semibold tabular-nums">256</div>
+<div class="text-xl font-semibold tabular-nums">284</div>
 </div>
 </div>
 <!-- Фильтры -->
@@ -163,6 +187,33 @@
 </tr>
 </thead>
 <tbody>
+<tr class="border-b border-neutral-100 dark:border-neutral-800 align-top row-ok">
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-27 05:37:46</td>
+<td class="px-3 py-1.5 tabular-nums">
+<span class="font-mono">200</span>
+</td>
+<td class="px-3 py-1.5 text-neutral-600">GET</td>
+<td class="px-3 py-1.5 font-mono text-[12px] max-w-[280px] truncate" title="https://www.cbr-xml-daily.ru/daily_json.js">https://www.cbr-xml-daily.ru/daily_json.js</td>
+<td class="px-3 py-1.5 font-mono text-[11px] text-neutral-500 max-w-[200px] truncate" title="">—</td>
+<td class="px-3 py-1.5 text-right tabular-nums">284</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">7</td>
+<td class="px-3 py-1.5 text-[11px] text-neutral-500 max-w-[280px] truncate">
+</td>
+<td class="px-3 py-1.5">
+<button class="text-xs text-blue-600 hover:underline" onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')">▾</button>
+</td>
+</tr>
+<tr class="hidden">
+<td class="px-3 py-2" colspan="9">
+<div class="text-[12px] space-y-1 bg-neutral-50 dark:bg-neutral-800 rounded p-2 font-mono">
+<div><b>ID:</b> 2 <b>kind:</b> cbr</div>
+<div><b>path:</b> https://www.cbr-xml-daily.ru/daily_json.js</div>
+<div><b>params:</b> —</div>
+<div><b>referer:</b> —</div>
+<div><b>status:</b> 200 · <b>duration:</b> 284ms · <b>size:</b> 7597b</div>
+</div>
+</td>
+</tr>
 <tr class="border-b border-neutral-100 dark:border-neutral-800 align-top row-ok">
 <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-23 14:58:41</td>
 <td class="px-3 py-1.5 tabular-nums">

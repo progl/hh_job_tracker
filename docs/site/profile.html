@@ -49,6 +49,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
@@ -61,6 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
@@ -122,7 +146,105 @@
 <span class="text-sm text-emerald-700" id="save-result"></span>
 </div>
 </form>
+<div class="mt-6 bg-white dark:bg-neutral-900 border border-fuchsia-200 dark:border-fuchsia-900/40 rounded-lg p-4">
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">✨ LLM-пайплайн</div>
+<div class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
+      Модель по умолчанию для разбора требований. Можно переопределить в любом месте через селект.
+      На карточке вакансии и в крон-джобе используется эта.
+    </div>
+<div class="flex items-center gap-2">
+<label class="text-sm">Модель:</label>
+<select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 text-sm font-mono" id="llm-default-model">
+<option selected="" value="qwen3:14b">qwen3:14b</option>
+<option value="qwen2.5:14b">qwen2.5:14b</option>
+<option value="llama3.1:8b">llama3.1:8b</option>
+</select>
+<button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setLLMModel()">Сохранить</button>
+<span class="text-xs text-emerald-700" id="llm-save-result"></span>
 </div>
+<div class="text-[11px] text-neutral-500 mt-2">
+      Дефолт из .env: <span class="font-mono">qwen3:14b</span>.
+      <a class="text-blue-600 hover:underline" href="/llm-logs">→ посмотреть логи прогонов</a>
+</div>
+<div class="mt-4 pt-3 border-t border-fuchsia-200/50 dark:border-fuchsia-900/30">
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">Анализаторы</div>
+<div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+        Какие задачи прогонять автоматически в cron-джобе «LLM: разбор требований»
+        и какие включены по умолчанию на карточке вакансии.
+      </div>
+<div class="flex flex-wrap gap-3">
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="must / nice / plus × stack / exp / soft / edu / other">
+<input checked="" class="profile-analyzer-cb" type="checkbox" value="requirements"/>
+<span>
+<span>Требования</span>
+<span class="block text-[10px] text-neutral-500">requirements</span>
+</span>
+</label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Если HH не отдал salary в полях, ищем в описании">
+<input class="profile-analyzer-cb" type="checkbox" value="salary"/>
+<span>
+<span>Зарплата из текста</span>
+<span class="block text-[10px] text-neutral-500">salary</span>
+</span>
+</label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="product / outsource / bank / ecommerce / gamedev / startup / enterprise / gov / edu / other">
+<input class="profile-analyzer-cb" type="checkbox" value="company_kind"/>
+<span>
+<span>Тип компании</span>
+<span class="block text-[10px] text-neutral-500">company_kind</span>
+</span>
+</label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Очень короткое описание для быстрого скана таблицы">
+<input class="profile-analyzer-cb" type="checkbox" value="summary"/>
+<span>
+<span>Резюме 1-2 предл.</span>
+<span class="block text-[10px] text-neutral-500">summary</span>
+</span>
+</label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Подходит ли вакансия мне (score + matches/gaps + verdict) на основе profile.skills">
+<input class="profile-analyzer-cb" type="checkbox" value="match_essay"/>
+<span>
+<span>Match-эссе</span>
+<span class="block text-[10px] text-neutral-500">match_essay</span>
+</span>
+</label>
+<label class="flex items-start gap-1.5 text-sm cursor-pointer" title="Вероятные вопросы и темы к интервью + история откликов в эту компанию">
+<input class="profile-analyzer-cb" type="checkbox" value="interview_prep"/>
+<span>
+<span>Подготовка к собесу</span>
+<span class="block text-[10px] text-neutral-500">interview_prep</span>
+</span>
+</label>
+</div>
+<div class="mt-2 flex items-center gap-2">
+<button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.setEnabledAnalyzers()">Сохранить</button>
+<span class="text-xs text-emerald-700" id="llm-analyzers-save"></span>
+</div>
+</div>
+</div>
+</div>
+<script>
+window.setLLMModel = async () => {
+  const sel = document.getElementById('llm-default-model');
+  const fd = new FormData();
+  fd.append('model', sel.value);
+  const r = await fetch('/api/settings/llm-model', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('llm-save-result');
+  out.textContent = d.ok ? `✓ ${d.model}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+window.setEnabledAnalyzers = async () => {
+  const kinds = Array.from(document.querySelectorAll('.profile-analyzer-cb:checked')).map(c => c.value);
+  const fd = new FormData();
+  kinds.forEach(k => fd.append('kinds', k));
+  const r = await fetch('/api/llm/analyzers/enabled', {method: 'POST', body: fd});
+  const d = await r.json();
+  const out = document.getElementById('llm-analyzers-save');
+  out.textContent = d.ok ? `✓ ${d.enabled.join(', ') || '(пусто)'}` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2000);
+};
+</script>
 </main>
 <!-- Status panel -->
 <div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">

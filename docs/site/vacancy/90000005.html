@@ -49,6 +49,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
@@ -61,6 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="../funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="../profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="../logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
@@ -168,11 +192,85 @@
 </div>
 </div>
 </div>
+<div class="mt-6 border border-fuchsia-200 dark:border-fuchsia-900/40 rounded-lg p-4 bg-fuchsia-50/30 dark:bg-fuchsia-900/10">
+<div class="flex items-start justify-between mb-3 gap-3">
+<div>
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">✨ LLM-анализ</div>
+<div class="text-[11px] text-neutral-500 mt-0.5">
+          Выбери что прогнать. Дефолты включаются глобально в <a class="text-blue-600 hover:underline" href="../profile.html">/profile</a>.
+        </div>
+</div>
+<div class="flex items-center gap-2">
+<select class="text-xs border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-1 py-0.5" id="llm-model-select">
+<option value="">(default)</option>
+<option value="qwen3:14b">qwen3:14b</option>
+<option value="qwen2.5:14b">qwen2.5:14b</option>
+<option value="llama3.1:8b">llama3.1:8b</option>
+</select>
+<button class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600" onclick="window.runAnalyze(90000005)">
+          Анализировать выбранное
+        </button>
+</div>
+</div>
+<div class="flex flex-wrap gap-3 mb-4 pb-3 border-b border-fuchsia-200/50 dark:border-fuchsia-900/30">
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="must / nice / plus × stack / exp / soft / edu / other">
+<input checked="" class="analyzer-cb" type="checkbox" value="requirements"/>
+<span>Требования</span>
+</label>
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="Если HH не отдал salary в полях, ищем в описании">
+<input class="analyzer-cb" type="checkbox" value="salary"/>
+<span>Зарплата из текста</span>
+</label>
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="product / outsource / bank / ecommerce / gamedev / startup / enterprise / gov / edu / other">
+<input class="analyzer-cb" type="checkbox" value="company_kind"/>
+<span>Тип компании</span>
+</label>
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="Очень короткое описание для быстрого скана таблицы">
+<input class="analyzer-cb" type="checkbox" value="summary"/>
+<span>Резюме 1-2 предл.</span>
+</label>
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="Подходит ли вакансия мне (score + matches/gaps + verdict) на основе profile.skills">
+<input class="analyzer-cb" type="checkbox" value="match_essay"/>
+<span>Match-эссе</span>
+</label>
+<label class="flex items-center gap-1.5 text-xs cursor-pointer" title="Вероятные вопросы и темы к интервью + история откликов в эту компанию">
+<input class="analyzer-cb" type="checkbox" value="interview_prep"/>
+<span>Подготовка к собесу</span>
+</label>
+</div>
+<div class="text-sm text-neutral-500">
+        Пока ничего не анализировали. Отметь нужное и жми «Анализировать выбранное».
+      </div>
+</div>
 <div class="mt-6">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Описание</div>
 <div class="prose prose-sm max-w-none">Описание вакансии. Стек: python, fastapi, ml</div>
 </div>
 </article>
+<script>
+window.runAnalyze = async (vid) => {
+  const kinds = Array.from(document.querySelectorAll('.analyzer-cb:checked')).map(c => c.value);
+  if (!kinds.length) { alert('Отметь хотя бы один анализатор'); return; }
+  const sel = document.getElementById('llm-model-select');
+  const model = sel ? sel.value : '';
+  window.showToast('info', `✨ Анализирую: ${kinds.join(', ')}…`);
+  const fd = new FormData();
+  kinds.forEach(k => fd.append('kinds', k));
+  if (model) fd.append('model', model);
+  const r = await fetch(`/api/vacancy/${vid}/analyze`, {method: 'POST', body: fd});
+  const d = await r.json();
+  const ok = d.results.filter(x => x.ok).length;
+  const fail = d.results.length - ok;
+  if (fail) {
+    const errs = d.results.filter(x => !x.ok).map(x => `${x.kind}: ${x.error}`).join('; ');
+    window.showToast('err', `✗ ${fail}/${d.results.length} fail — ${errs}`);
+  } else {
+    const total_ms = d.results.reduce((s, x) => s + (x.latency_ms || 0), 0);
+    window.showToast('ok', `✓ ${ok}/${d.results.length} (${total_ms}ms)`);
+  }
+  setTimeout(() => location.reload(), 600);
+};
+</script>
 </main>
 <!-- Status panel -->
 <div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">

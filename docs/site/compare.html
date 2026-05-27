@@ -49,6 +49,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
@@ -61,6 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>

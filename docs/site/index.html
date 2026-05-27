@@ -49,6 +49,27 @@
     .dark .bg-neutral-900 { background-color: #171717; }
     .dark a { color: inherit; }
     .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
@@ -61,6 +82,9 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/jobs">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/llm-logs">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/analytics">📊 Аналитика</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
@@ -109,6 +133,39 @@
   .score-bar { height: 4px; border-radius: 2px; background: #e5e5e5; overflow: hidden; }
   .dark .score-bar { background: #262626; }
   .score-bar > div { height: 100%; }
+  /* Колоночные фильтры в <th> */
+  .th-filter-btn {
+    display: inline-block; margin-left: 4px;
+    font-size: 12px; line-height: 1; color: #737373;
+    padding: 2px 5px; border-radius: 4px; cursor: pointer;
+    border: 1px solid transparent; background: transparent; user-select: none;
+  }
+  .th-filter-btn:hover { background: #e5e5e5; color: #171717; }
+  .dark .th-filter-btn:hover { background: #404040; color: #fafafa; }
+  .th-filter-btn.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+  .dark .th-filter-btn.active { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+  .th-popup {
+    position: fixed; z-index: 60;
+    background: #fff; border: 1px solid #d4d4d4; border-radius: 8px;
+    padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 220px; max-width: 320px; max-height: 60vh; overflow-y: auto;
+  }
+  .th-popup-wide { min-width: 360px; max-width: 480px; }
+  .dark .th-popup { background: #171717; border-color: #404040; color: #e5e5e5; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .th-popup-title { font-size: 11px; text-transform: uppercase; color: #737373; margin-bottom: 6px; letter-spacing: 0.05em; }
+  .chip-mini {
+    cursor: pointer; padding: 3px 8px; font-size: 11px; border-radius: 9999px;
+    border: 1px solid #d4d4d4; background: #fff; color: #404040; user-select: none;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .chip-mini:hover { background: #fafafa; }
+  .chip-mini input { display: none; }
+  .chip-mini:has(input:checked) { background: #171717; color: #fff; border-color: #171717; }
+  .chip-mini.chip-exclude-mini:has(input:checked) { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .chip-mini.chip-exclude-mini:has(input:checked)::before { content: '✕ '; }
+  .dark .chip-mini { background: #262626; border-color: #525252; color: #d4d4d4; }
+  .dark .chip-mini:hover { background: #404040; }
+  .dark .chip-mini:has(input:checked) { background: #fafafa; color: #171717; border-color: #fafafa; }
 </style>
 <section class="space-y-4">
 <!-- Воронка откликов -->
@@ -188,13 +245,15 @@
 </select>
 </div>
 <div>
-<label class="block text-[11px] text-neutral-500" title="Сколько страниц по 20 вакансий пройти (макс. 5 = 100 вакансий, дольше = риск anti-bot)">Глубина</label>
-<select class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-32" name="max_pages">
+<label class="block text-[11px] text-neutral-500" title="Сколько страниц по 20 вакансий пройти. «До конца» — идём пока есть следующая страница (HH режет ~100 стр). С early-stop безопасно: следующий синк остановится на K подряд уже виденных.">Глубина</label>
+<select class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-44" name="max_pages">
 <option value="1">1 стр (20 вак)</option>
 <option value="3">3 стр (60 вак)</option>
 <option selected="" value="5">5 стр (100 вак)</option>
 <option value="10">10 стр (200 вак)</option>
-<option value="20">20 стр (макс)</option>
+<option value="20">20 стр (400 вак)</option>
+<option value="50">50 стр (1000 вак)</option>
+<option value="200">до конца (все)</option>
 </select>
 </div>
 <label class="flex items-center gap-2 text-sm pb-2" title="Добавить в HH-запрос фильтр schedule=remote">
@@ -216,7 +275,12 @@
 <div class="flex items-center justify-between">
 <div class="text-[11px] uppercase tracking-wide text-neutral-500">Сохранённые поиски (4)</div>
 <div class="flex items-center gap-2">
-<button class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" onclick="window.syncAllSearches()" title="Запустить все активные поиски сразу. Также автоматически каждые 4 часа.">↻ Синкать все</button>
+<button class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" onclick="window.syncAllSearches(event)" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.
+Shift+клик — полный прогон (без early-stop, тяжелее).">↻ Синкать все</button>
+<button class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.bulkMaxPages()" title="Задать глубину (max_pages) сразу всем активным поискам — например, 200 = «до конца»">🔧 Глубину всем</button>
+<button class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.bulkEarlyStop()" title="Задать early_stop_seen (K подряд seen → stop) всем активным. 0 = выключить early-stop.
+Типичные: 3 (обычные) / 5 (рекомендации).">⚡ Early-stop всем</button>
+<button class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" onclick="window.addRecommendations()" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨ Рекомендации</button>
 <button class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleSaveForm()">+ Сохранить новый</button>
 </div>
 </div>
@@ -226,7 +290,7 @@
 страниц: 5
 последний прогон: 2026-05-23 13:55:26
 найдено вакансий: 0">
-<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(4, 'Python ML')" title="Запустить сейчас">
+<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(4, 'Python ML', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Python ML
               </div>
@@ -234,6 +298,9 @@
                 «python ml» · 0 вак · 05-23 13:55
               </div>
 </button>
+<button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(4, 'Python ML', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
+              ✎5
+            </button>
 <button class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 dark:bg-neutral-800" onclick="window.toggleSearch(4)" title="Выключен. Клик — включить.">
               OFF
             </button>
@@ -244,7 +311,7 @@
 страниц: 5
 последний прогон: 2026-05-23 13:55:26
 найдено вакансий: 0">
-<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(3, 'FastAPI Backend')" title="Запустить сейчас">
+<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(3, 'FastAPI Backend', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>FastAPI Backend
               </div>
@@ -252,6 +319,9 @@
                 «fastapi backend» · 0 вак · 05-23 13:55
               </div>
 </button>
+<button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(3, 'FastAPI Backend', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
+              ✎5
+            </button>
 <button class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30" onclick="window.toggleSearch(3)" title="Активен (синкается). Клик — выключить.">
               ON
             </button>
@@ -262,7 +332,7 @@
 страниц: 5
 последний прогон: 2026-05-23 13:55:26
 найдено вакансий: 0">
-<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(2, 'Lead Python')" title="Запустить сейчас">
+<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(2, 'Lead Python', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Lead Python
               </div>
@@ -270,6 +340,9 @@
                 «lead python» · 0 вак · 05-23 13:55
               </div>
 </button>
+<button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(2, 'Lead Python', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
+              ✎5
+            </button>
 <button class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30" onclick="window.toggleSearch(2)" title="Активен (синкается). Клик — выключить.">
               ON
             </button>
@@ -280,7 +353,7 @@
 страниц: 5
 последний прогон: 2026-05-23 13:55:26
 найдено вакансий: 0">
-<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(1, 'Python Senior Remote')" title="Запустить сейчас">
+<button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(1, 'Python Senior Remote', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Python Senior Remote
               </div>
@@ -288,6 +361,9 @@
                 «python senior» · 0 вак · 05-23 13:55
               </div>
 </button>
+<button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(1, 'Python Senior Remote', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
+              ✎5
+            </button>
 <button class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30" onclick="window.toggleSearch(1)" title="Активен (синкается). Клик — выключить.">
               ON
             </button>
@@ -307,207 +383,75 @@
 <form class="space-y-3" id="filters" onsubmit="return false;">
 <input id="sort-field" name="sort" type="hidden" value=""/>
 <input id="sort-dir" name="dir" type="hidden" value="desc"/>
-<div class="flex flex-wrap gap-4 items-start">
-<div class="grow min-w-[260px]">
-<label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">Поиск</label>
-<input class="w-full border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm" name="q" placeholder="название, компания, описание…" value=""/>
-</div>
-<div>
-<label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">Формат</label>
-<label class="flex items-center gap-2 text-sm h-[34px]">
-<input class="rounded" name="only_remote" type="checkbox" value="true"/> только удалёнка
-          </label>
-</div>
-<div>
-<label class="block text-[11px] uppercase tracking-wide text-neutral-500 mb-1">ЗП от, ₽</label>
-<input class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 text-sm w-28" name="salary_rub_min" placeholder="100 000" step="10000" type="number" value=""/>
-</div>
-<div class="ml-auto self-end">
-<button class="px-3 py-1.5 text-sm rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="location.href = location.pathname" title="Очистить все фильтры и вернуть дефолт (скрыт «Скип»)" type="button">
-            Сбросить фильтры
-          </button>
-</div>
-</div>
-<div>
-<div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5" title="Локальный статус. Выбери в верхнем ряду — покажет только их. Выбери в нижнем — скроет их.">Статус — показать</div>
-<div class="flex flex-wrap gap-1.5">
-<input class="hidden" id="status-new" name="status" type="checkbox" value="new"/>
-<label class="chip" for="status-new" title="Показывать только: Ещё не открывал">
-              Новое<span class="chip-count">15</span>
-</label>
-<input class="hidden" id="status-viewed" name="status" type="checkbox" value="viewed"/>
-<label class="chip" for="status-viewed" title="Показывать только: Открывал карточку">
-              Просмотрел<span class="chip-count">0</span>
-</label>
-<input class="hidden" id="status-applied" name="status" type="checkbox" value="applied"/>
-<label class="chip" for="status-applied" title="Показывать только: Откликнулся (RESPONSE)">
-              Откликнулся<span class="chip-count">1</span>
-</label>
-<input class="hidden" id="status-interview" name="status" type="checkbox" value="interview"/>
-<label class="chip" for="status-interview" title="Показывать только: Приглашение/собес">
-              Собес<span class="chip-count">0</span>
-</label>
-<input class="hidden" id="status-rejected" name="status" type="checkbox" value="rejected"/>
-<label class="chip" for="status-rejected" title="Показывать только: Отказ (DISCARD)">
-              Отказ<span class="chip-count">0</span>
-</label>
-<input class="hidden" id="status-offer" name="status" type="checkbox" value="offer"/>
-<label class="chip" for="status-offer" title="Показывать только: Оффер">
-              Оффер<span class="chip-count">0</span>
-</label>
-<input class="hidden" id="status-skipped" name="status" type="checkbox" value="skipped"/>
-<label class="chip" for="status-skipped" title="Показывать только: Скип">
-              Скип<span class="chip-count">2</span>
-</label>
-</div>
-</div>
-<div>
-<div class="flex items-center justify-between mb-1.5">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500" title="Скрыть эти статусы из выдачи.">Статус — скрыть</div>
-<div class="flex items-center gap-1">
-<button class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archive-btn" onclick="window.toggleArchive()" title="Переключиться на просмотр только скрытых вакансий (status=skipped)" type="button">
-              📦 Только скрытые (2)
-            </button>
+<input id="filter-format" name="format" type="hidden" value="all"/>
+<input id="filter-salary" name="salary_rub_min" type="hidden" value=""/>
+<input id="filter-level" name="level" type="hidden" value=""/>
+<input id="filter-name-q" name="name_q" type="hidden" value=""/>
+<input id="filter-company-q" name="company_q" type="hidden" value=""/>
+<input class="hidden" id="filter-status-new" name="status" type="checkbox" value="new"/>
+<input class="hidden" id="filter-hide-new" name="hide_status" type="checkbox" value="new"/>
+<input class="hidden" id="filter-status-viewed" name="status" type="checkbox" value="viewed"/>
+<input class="hidden" id="filter-hide-viewed" name="hide_status" type="checkbox" value="viewed"/>
+<input class="hidden" id="filter-status-applied" name="status" type="checkbox" value="applied"/>
+<input class="hidden" id="filter-hide-applied" name="hide_status" type="checkbox" value="applied"/>
+<input class="hidden" id="filter-status-interview" name="status" type="checkbox" value="interview"/>
+<input class="hidden" id="filter-hide-interview" name="hide_status" type="checkbox" value="interview"/>
+<input class="hidden" id="filter-status-rejected" name="status" type="checkbox" value="rejected"/>
+<input class="hidden" id="filter-hide-rejected" name="hide_status" type="checkbox" value="rejected"/>
+<input class="hidden" id="filter-status-offer" name="status" type="checkbox" value="offer"/>
+<input class="hidden" id="filter-hide-offer" name="hide_status" type="checkbox" value="offer"/>
+<input class="hidden" id="filter-status-skipped" name="status" type="checkbox" value="skipped"/>
+<input checked="" class="hidden" id="filter-hide-skipped" name="hide_status" type="checkbox" value="skipped"/>
+<input class="hidden" id="filter-neg-RESPONSE" name="neg" type="checkbox" value="RESPONSE"/>
+<input class="hidden" id="filter-hideneg-RESPONSE" name="hide_neg" type="checkbox" value="RESPONSE"/>
+<input class="hidden" id="filter-neg-INVITATION" name="neg" type="checkbox" value="INVITATION"/>
+<input class="hidden" id="filter-hideneg-INVITATION" name="hide_neg" type="checkbox" value="INVITATION"/>
+<input class="hidden" id="filter-neg-INTERVIEW" name="neg" type="checkbox" value="INTERVIEW"/>
+<input class="hidden" id="filter-hideneg-INTERVIEW" name="hide_neg" type="checkbox" value="INTERVIEW"/>
+<input class="hidden" id="filter-neg-DISCARD" name="neg" type="checkbox" value="DISCARD"/>
+<input class="hidden" id="filter-hideneg-DISCARD" name="hide_neg" type="checkbox" value="DISCARD"/>
+<input class="hidden" id="filter-neg-HIRED" name="neg" type="checkbox" value="HIRED"/>
+<input class="hidden" id="filter-hideneg-HIRED" name="hide_neg" type="checkbox" value="HIRED"/>
+<input class="hidden" id="filter-neg-none" name="neg" type="checkbox" value="none"/>
+<input class="hidden" id="filter-hideneg-none" name="hide_neg" type="checkbox" value="none"/>
+<input class="hidden" id="filter-stack-python" name="stack" type="checkbox" value="python"/>
+<input class="hidden" id="filter-stack-django" name="stack" type="checkbox" value="django"/>
+<input class="hidden" id="filter-stack-fastapi" name="stack" type="checkbox" value="fastapi"/>
+<input class="hidden" id="filter-stack-flask" name="stack" type="checkbox" value="flask"/>
+<input class="hidden" id="filter-stack-drf" name="stack" type="checkbox" value="drf"/>
+<input class="hidden" id="filter-stack-postgresql" name="stack" type="checkbox" value="postgresql"/>
+<input class="hidden" id="filter-stack-redis" name="stack" type="checkbox" value="redis"/>
+<input class="hidden" id="filter-stack-kafka" name="stack" type="checkbox" value="kafka"/>
+<input class="hidden" id="filter-stack-rabbitmq" name="stack" type="checkbox" value="rabbitmq"/>
+<input class="hidden" id="filter-stack-celery" name="stack" type="checkbox" value="celery"/>
+<input class="hidden" id="filter-stack-sqlalchemy" name="stack" type="checkbox" value="sqlalchemy"/>
+<input class="hidden" id="filter-stack-asyncio" name="stack" type="checkbox" value="asyncio"/>
+<input class="hidden" id="filter-stack-docker" name="stack" type="checkbox" value="docker"/>
+<input class="hidden" id="filter-stack-kubernetes" name="stack" type="checkbox" value="kubernetes"/>
+<input class="hidden" id="filter-stack-aws" name="stack" type="checkbox" value="aws"/>
+<input class="hidden" id="filter-stack-linux" name="stack" type="checkbox" value="linux"/>
+<input class="hidden" id="filter-stack-nginx" name="stack" type="checkbox" value="nginx"/>
+<input class="hidden" id="filter-stack-elasticsearch" name="stack" type="checkbox" value="elasticsearch"/>
+<input class="hidden" id="filter-stack-clickhouse" name="stack" type="checkbox" value="clickhouse"/>
+<input class="hidden" id="filter-stack-microservices" name="stack" type="checkbox" value="microservices"/>
+<input class="hidden" id="filter-stack-tests" name="stack" type="checkbox" value="tests"/>
+<input class="hidden" id="filter-stack-ml" name="stack" type="checkbox" value="ml"/>
+<div class="flex flex-wrap gap-2 items-center">
+<input class="flex-1 min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm" name="q" placeholder="🔍 поиск по названию/компании/описанию…" value=""/>
+<button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archive-btn" onclick="window.toggleArchive()" title="Переключиться на просмотр только скрытых вакансий (status=skipped)" type="button">
+          📦 Только скрытые (2)
+        </button>
 <input id="disappeared-mode" name="disappeared" type="hidden" value="hide"/>
-<button class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="disappeared-btn" onclick="window.cycleDisappeared()" title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
-              ⌫ Снятые HH (2)
-            </button>
+<button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="disappeared-btn" onclick="window.cycleDisappeared()" title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
+          ⌫ Снятые HH (2)
+        </button>
 <input id="archived-mode" name="archived" type="hidden" value="hide"/>
-<button class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archived-btn" onclick="window.cycleArchived()" title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
-              📦 Архив HH (2)
-            </button>
-</div>
-</div>
-<div class="flex flex-wrap gap-1.5">
-<input class="hidden" id="hide-new" name="hide_status" type="checkbox" value="new"/>
-<label class="chip chip-exclude" for="hide-new" title="Скрыть Новое из выдачи">
-              Новое
-            </label>
-<input class="hidden" id="hide-viewed" name="hide_status" type="checkbox" value="viewed"/>
-<label class="chip chip-exclude" for="hide-viewed" title="Скрыть Просмотрел из выдачи">
-              Просмотрел
-            </label>
-<input class="hidden" id="hide-applied" name="hide_status" type="checkbox" value="applied"/>
-<label class="chip chip-exclude" for="hide-applied" title="Скрыть Откликнулся из выдачи">
-              Откликнулся
-            </label>
-<input class="hidden" id="hide-interview" name="hide_status" type="checkbox" value="interview"/>
-<label class="chip chip-exclude" for="hide-interview" title="Скрыть Собес из выдачи">
-              Собес
-            </label>
-<input class="hidden" id="hide-rejected" name="hide_status" type="checkbox" value="rejected"/>
-<label class="chip chip-exclude" for="hide-rejected" title="Скрыть Отказ из выдачи">
-              Отказ
-            </label>
-<input class="hidden" id="hide-offer" name="hide_status" type="checkbox" value="offer"/>
-<label class="chip chip-exclude" for="hide-offer" title="Скрыть Оффер из выдачи">
-              Оффер
-            </label>
-<input checked="" class="hidden" id="hide-skipped" name="hide_status" type="checkbox" value="skipped"/>
-<label class="chip chip-exclude" for="hide-skipped" title="Скрыть Скип из выдачи">
-              Скип
-            </label>
-</div>
-</div>
-<div>
-<div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5" title="Фильтр по состоянию отклика на HH (negotiation.last_state)">Отклик HH — показать</div>
-<div class="flex flex-wrap gap-1.5">
-<input class="hidden" id="neg-RESPONSE" name="neg" type="checkbox" value="RESPONSE"/>
-<label class="chip" for="neg-RESPONSE" title="Показать только: ждёт">ждёт</label>
-<input class="hidden" id="neg-INVITATION" name="neg" type="checkbox" value="INVITATION"/>
-<label class="chip" for="neg-INVITATION" title="Показать только: приглашение">приглашение</label>
-<input class="hidden" id="neg-INTERVIEW" name="neg" type="checkbox" value="INTERVIEW"/>
-<label class="chip" for="neg-INTERVIEW" title="Показать только: собес">собес</label>
-<input class="hidden" id="neg-DISCARD" name="neg" type="checkbox" value="DISCARD"/>
-<label class="chip" for="neg-DISCARD" title="Показать только: отказ">отказ</label>
-<input class="hidden" id="neg-HIRED" name="neg" type="checkbox" value="HIRED"/>
-<label class="chip" for="neg-HIRED" title="Показать только: оффер">оффер</label>
-<input class="hidden" id="neg-none" name="neg" type="checkbox" value="none"/>
-<label class="chip" for="neg-none" title="Показать только: нет отклика">нет отклика</label>
-</div>
-</div>
-<div>
-<div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Отклик HH — скрыть</div>
-<div class="flex flex-wrap gap-1.5">
-<input class="hidden" id="hideneg-RESPONSE" name="hide_neg" type="checkbox" value="RESPONSE"/>
-<label class="chip chip-exclude" for="hideneg-RESPONSE" title="Скрыть: ждёт">ждёт</label>
-<input class="hidden" id="hideneg-INVITATION" name="hide_neg" type="checkbox" value="INVITATION"/>
-<label class="chip chip-exclude" for="hideneg-INVITATION" title="Скрыть: приглашение">приглашение</label>
-<input class="hidden" id="hideneg-INTERVIEW" name="hide_neg" type="checkbox" value="INTERVIEW"/>
-<label class="chip chip-exclude" for="hideneg-INTERVIEW" title="Скрыть: собес">собес</label>
-<input class="hidden" id="hideneg-DISCARD" name="hide_neg" type="checkbox" value="DISCARD"/>
-<label class="chip chip-exclude" for="hideneg-DISCARD" title="Скрыть: отказ">отказ</label>
-<input class="hidden" id="hideneg-HIRED" name="hide_neg" type="checkbox" value="HIRED"/>
-<label class="chip chip-exclude" for="hideneg-HIRED" title="Скрыть: оффер">оффер</label>
-<input class="hidden" id="hideneg-none" name="hide_neg" type="checkbox" value="none"/>
-<label class="chip chip-exclude" for="hideneg-none" title="Скрыть: нет отклика">нет отклика</label>
-</div>
-</div>
-<div>
-<div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Уровень</div>
-<div class="flex flex-wrap gap-1.5">
-<input checked="" class="hidden" id="lvl-all" name="level" type="radio" value=""/>
-<label class="chip" for="lvl-all">все</label>
-<input class="hidden" id="lvl-junior" name="level" type="radio" value="junior"/>
-<label class="chip" for="lvl-junior">junior</label>
-<input class="hidden" id="lvl-middle" name="level" type="radio" value="middle"/>
-<label class="chip" for="lvl-middle">middle</label>
-<input class="hidden" id="lvl-senior" name="level" type="radio" value="senior"/>
-<label class="chip" for="lvl-senior">senior</label>
-<input class="hidden" id="lvl-lead" name="level" type="radio" value="lead"/>
-<label class="chip" for="lvl-lead">lead</label>
-<input class="hidden" id="lvl-intern" name="level" type="radio" value="intern"/>
-<label class="chip" for="lvl-intern">intern</label>
-</div>
-</div>
-<div>
-<div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-1.5">Стек (any)</div>
-<div class="flex flex-wrap gap-1.5">
-<input class="hidden" id="tech-python" name="stack" type="checkbox" value="python"/>
-<label class="chip" for="tech-python">python</label>
-<input class="hidden" id="tech-django" name="stack" type="checkbox" value="django"/>
-<label class="chip" for="tech-django">django</label>
-<input class="hidden" id="tech-fastapi" name="stack" type="checkbox" value="fastapi"/>
-<label class="chip" for="tech-fastapi">fastapi</label>
-<input class="hidden" id="tech-flask" name="stack" type="checkbox" value="flask"/>
-<label class="chip" for="tech-flask">flask</label>
-<input class="hidden" id="tech-drf" name="stack" type="checkbox" value="drf"/>
-<label class="chip" for="tech-drf">drf</label>
-<input class="hidden" id="tech-postgresql" name="stack" type="checkbox" value="postgresql"/>
-<label class="chip" for="tech-postgresql">postgresql</label>
-<input class="hidden" id="tech-redis" name="stack" type="checkbox" value="redis"/>
-<label class="chip" for="tech-redis">redis</label>
-<input class="hidden" id="tech-kafka" name="stack" type="checkbox" value="kafka"/>
-<label class="chip" for="tech-kafka">kafka</label>
-<input class="hidden" id="tech-rabbitmq" name="stack" type="checkbox" value="rabbitmq"/>
-<label class="chip" for="tech-rabbitmq">rabbitmq</label>
-<input class="hidden" id="tech-celery" name="stack" type="checkbox" value="celery"/>
-<label class="chip" for="tech-celery">celery</label>
-<input class="hidden" id="tech-sqlalchemy" name="stack" type="checkbox" value="sqlalchemy"/>
-<label class="chip" for="tech-sqlalchemy">sqlalchemy</label>
-<input class="hidden" id="tech-asyncio" name="stack" type="checkbox" value="asyncio"/>
-<label class="chip" for="tech-asyncio">asyncio</label>
-<input class="hidden" id="tech-docker" name="stack" type="checkbox" value="docker"/>
-<label class="chip" for="tech-docker">docker</label>
-<input class="hidden" id="tech-kubernetes" name="stack" type="checkbox" value="kubernetes"/>
-<label class="chip" for="tech-kubernetes">kubernetes</label>
-<input class="hidden" id="tech-aws" name="stack" type="checkbox" value="aws"/>
-<label class="chip" for="tech-aws">aws</label>
-<input class="hidden" id="tech-linux" name="stack" type="checkbox" value="linux"/>
-<label class="chip" for="tech-linux">linux</label>
-<input class="hidden" id="tech-nginx" name="stack" type="checkbox" value="nginx"/>
-<label class="chip" for="tech-nginx">nginx</label>
-<input class="hidden" id="tech-elasticsearch" name="stack" type="checkbox" value="elasticsearch"/>
-<label class="chip" for="tech-elasticsearch">elasticsearch</label>
-<input class="hidden" id="tech-clickhouse" name="stack" type="checkbox" value="clickhouse"/>
-<label class="chip" for="tech-clickhouse">clickhouse</label>
-<input class="hidden" id="tech-microservices" name="stack" type="checkbox" value="microservices"/>
-<label class="chip" for="tech-microservices">microservices</label>
-<input class="hidden" id="tech-tests" name="stack" type="checkbox" value="tests"/>
-<label class="chip" for="tech-tests">tests</label>
-<input class="hidden" id="tech-ml" name="stack" type="checkbox" value="ml"/>
-<label class="chip" for="tech-ml">ml</label>
-</div>
+<button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archived-btn" onclick="window.cycleArchived()" title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
+          📦 Архив HH (2)
+        </button>
+<button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="location.href = location.pathname" title="Очистить все фильтры и вернуть дефолт" type="button">
+          Сбросить
+        </button>
 </div>
 </form>
 </div>
@@ -527,19 +471,43 @@
 <thead class="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-left text-neutral-600 dark:text-neutral-400 uppercase tracking-wide text-[11px] sticky-h">
 <tr>
 <th class="text-center w-8" title="Выбрать все для сравнения (макс 6)"><input id="cmp-all" onchange="window.cmpAll(this)" type="checkbox"/></th>
-<th class="text-center"><a class="sort-h" data-sort="score" href="#" onclick="window.setSort('score'); return false" title="Match-score (0-100) и predict %">Match · %</a></th>
-<th>Статус</th>
-<th><a class="sort-h" data-sort="name" href="#" onclick="window.setSort('name'); return false">Должность</a></th>
-<th><a class="sort-h" data-sort="company" href="#" onclick="window.setSort('company'); return false">Компания</a></th>
-<th><a class="sort-h" data-sort="area" href="#" onclick="window.setSort('area'); return false">Город</a></th>
-<th class="text-right"><a class="sort-h" data-sort="salary_rub" href="#" onclick="window.setSort('salary_rub'); return false" title="ЗП в рублях (медиана вилки, минус НДФЛ если gross)">ЗП, ₽</a></th>
-<th>Формат</th>
-<th><a class="sort-h" data-sort="level" href="#" onclick="window.setSort('level'); return false">Уровень</a></th>
-<th>Стек</th>
-<th class="text-right"><a class="sort-h" data-sort="total_responses" href="#" onclick="window.setSort('total_responses'); return false" title="Сортировать по общему числу откликов на вакансию (Pro)">Откл.</a></th>
+<th class="text-center"><a class="sort-h" data-sort="score" href="#" onclick="window.setSort('score', event); return false" title="Match-score (0-100) и predict %">Match · %</a></th>
+<th>
+              Статус
+              <button class="th-filter-btn" data-popup="popup-status" title="Фильтр по локальному статусу (показать/скрыть)" type="button">▾</button>
+</th>
+<th>
+<a class="sort-h" data-sort="name" href="#" onclick="window.setSort('name', event); return false">Должность</a>
+<button class="th-filter-btn" data-popup="popup-name" title="Фильтр по подстроке в названии" type="button">▾</button>
+</th>
+<th>
+<a class="sort-h" data-sort="company" href="#" onclick="window.setSort('company', event); return false">Компания</a>
+<button class="th-filter-btn" data-popup="popup-company" title="Фильтр по подстроке в названии компании" type="button">▾</button>
+</th>
+<th><a class="sort-h" data-sort="area" href="#" onclick="window.setSort('area', event); return false">Город</a></th>
+<th class="text-right">
+<a class="sort-h" data-sort="salary_rub" href="#" onclick="window.setSort('salary_rub', event); return false" title="ЗП в рублях (медиана вилки, минус НДФЛ если gross)">ЗП, ₽</a>
+<button class="th-filter-btn" data-popup="popup-salary" title="Минимальная ЗП" type="button">▾</button>
+</th>
+<th>
+              Формат
+              <button class="th-filter-btn" data-popup="popup-format" title="Удалёнка / Офис / Все" type="button">▾</button>
+</th>
+<th>
+<a class="sort-h" data-sort="level" href="#" onclick="window.setSort('level', event); return false">Уровень</a>
+<button class="th-filter-btn" data-popup="popup-level" title="junior/middle/senior/lead/intern" type="button">▾</button>
+</th>
+<th>
+              Стек
+              <button class="th-filter-btn" data-popup="popup-stack" title="Любой из выбранных" type="button">▾</button>
+</th>
+<th class="text-right"><a class="sort-h" data-sort="total_responses" href="#" onclick="window.setSort('total_responses', event); return false" title="Сортировать по общему числу откликов на вакансию (Pro)">Откл.</a></th>
 <th title="Откуда вакансия попала в БД: имя сохранённого поиска, «из откликов» (backfill) или «разовый сбор»">Источник</th>
-<th>Отклик</th>
-<th><a class="sort-h" data-sort="updated_at" href="#" onclick="window.setSort('updated_at'); return false">Обновлено</a></th>
+<th>
+              Отклик
+              <button class="th-filter-btn" data-popup="popup-neg" title="Состояние моего отклика на HH (показать/скрыть)" type="button">▾</button>
+</th>
+<th><a class="sort-h" data-sort="updated_at" href="#" onclick="window.setSort('updated_at', event); return false">Обновлено</a></th>
 </tr>
 </thead>
 <tbody id="table-body">
@@ -584,7 +552,9 @@
     360К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -650,7 +620,9 @@
     290К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500" title="Не удалёнка (офис/гибрид/не указано)">офис</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -716,7 +688,9 @@
     335К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -780,7 +754,9 @@
     315К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -846,7 +822,9 @@
     400К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -911,7 +889,9 @@
     500К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500" title="Не удалёнка (офис/гибрид/не указано)">офис</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -978,7 +958,9 @@
     265К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1042,7 +1024,9 @@
     330К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1109,7 +1093,9 @@
     370К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1176,7 +1162,9 @@
     290К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1242,7 +1230,9 @@
     450К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1308,7 +1298,9 @@
     230К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500" title="Не удалёнка (офис/гибрид/не указано)">офис</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1374,7 +1366,9 @@
     350К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1441,7 +1435,9 @@
     315К
   </td>
 <td>
-<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700" title="Удалённый формат (schedule=remote или эвристика по тексту описания)">удалённо</span>
+<div class="flex flex-wrap gap-0.5">
+<span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
+</div>
 </td>
 <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
 <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
@@ -1473,13 +1469,385 @@
 </div>
 </div>
 </section>
-<!-- Floating compare button -->
-<div class="bg-neutral-900 text-white rounded-full px-5 py-3 shadow-lg flex items-center gap-3" id="cmp-bar" style="position:fixed;bottom:20px;right:20px;display:none;z-index:50">
+<!-- ===== Column-header filter popups ===== -->
+<div class="th-popup" id="popup-status" style="display:none">
+<div class="th-popup-title">Статус — показать</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini" title="Показать только Новое">
+<input data-target="filter-status-new" type="checkbox"/>
+        Новое<span class="chip-count ml-1">15</span>
+</label>
+<label class="chip-mini" title="Показать только Просмотрел">
+<input data-target="filter-status-viewed" type="checkbox"/>
+        Просмотрел<span class="chip-count ml-1">0</span>
+</label>
+<label class="chip-mini" title="Показать только Откликнулся">
+<input data-target="filter-status-applied" type="checkbox"/>
+        Откликнулся<span class="chip-count ml-1">1</span>
+</label>
+<label class="chip-mini" title="Показать только Собес">
+<input data-target="filter-status-interview" type="checkbox"/>
+        Собес<span class="chip-count ml-1">0</span>
+</label>
+<label class="chip-mini" title="Показать только Отказ">
+<input data-target="filter-status-rejected" type="checkbox"/>
+        Отказ<span class="chip-count ml-1">0</span>
+</label>
+<label class="chip-mini" title="Показать только Оффер">
+<input data-target="filter-status-offer" type="checkbox"/>
+        Оффер<span class="chip-count ml-1">0</span>
+</label>
+<label class="chip-mini" title="Показать только Скип">
+<input data-target="filter-status-skipped" type="checkbox"/>
+        Скип<span class="chip-count ml-1">2</span>
+</label>
+</div>
+<div class="th-popup-title mt-2">Статус — скрыть</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-new" type="checkbox"/>
+        Новое
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-viewed" type="checkbox"/>
+        Просмотрел
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-applied" type="checkbox"/>
+        Откликнулся
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-interview" type="checkbox"/>
+        Собес
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-rejected" type="checkbox"/>
+        Отказ
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hide-offer" type="checkbox"/>
+        Оффер
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input checked="" data-target="filter-hide-skipped" type="checkbox"/>
+        Скип
+      </label>
+</div>
+</div>
+<div class="th-popup" id="popup-salary" style="display:none">
+<div class="th-popup-title">ЗП от, ₽</div>
+<input class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full" data-target="filter-salary" placeholder="100 000" step="10000" type="number" value=""/>
+<div class="text-[10px] text-neutral-500 mt-1">оставь пустым чтобы убрать фильтр</div>
+</div>
+<div class="th-popup" id="popup-format" style="display:none">
+<div class="th-popup-title">Формат</div>
+<div class="flex flex-col gap-1">
+<label class="chip-mini">
+<input checked="" data-target="filter-format" name="popup-format" type="radio" value="all"/>
+        все
+      </label>
+<label class="chip-mini">
+<input data-target="filter-format" name="popup-format" type="radio" value="remote"/>
+        только удалёнка
+      </label>
+<label class="chip-mini">
+<input data-target="filter-format" name="popup-format" type="radio" value="office"/>
+        только офис
+      </label>
+</div>
+</div>
+<div class="th-popup" id="popup-level" style="display:none">
+<div class="th-popup-title">Уровень</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini">
+<input checked="" data-target="filter-level" name="popup-level" type="radio" value=""/>
+      все
+    </label>
+<label class="chip-mini">
+<input data-target="filter-level" name="popup-level" type="radio" value="junior"/>
+        junior
+      </label>
+<label class="chip-mini">
+<input data-target="filter-level" name="popup-level" type="radio" value="middle"/>
+        middle
+      </label>
+<label class="chip-mini">
+<input data-target="filter-level" name="popup-level" type="radio" value="senior"/>
+        senior
+      </label>
+<label class="chip-mini">
+<input data-target="filter-level" name="popup-level" type="radio" value="lead"/>
+        lead
+      </label>
+<label class="chip-mini">
+<input data-target="filter-level" name="popup-level" type="radio" value="intern"/>
+        intern
+      </label>
+<label class="chip-mini" title="Вакансии без указанного уровня (парсер не определил)">
+<input data-target="filter-level" name="popup-level" type="radio" value="_empty"/>
+      — пусто
+    </label>
+</div>
+</div>
+<div class="th-popup" id="popup-name" style="display:none">
+<div class="th-popup-title">Должность содержит</div>
+<input class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full" data-target="filter-name-q" placeholder="например: senior python" type="text" value=""/>
+<div class="text-[10px] text-neutral-500 mt-1">регистронезависимо, server-side</div>
+</div>
+<div class="th-popup" id="popup-company" style="display:none">
+<div class="th-popup-title">Компания содержит</div>
+<input class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm w-full" data-target="filter-company-q" placeholder="например: яндекс" type="text" value=""/>
+<div class="text-[10px] text-neutral-500 mt-1">регистронезависимо, server-side</div>
+</div>
+<div class="th-popup th-popup-wide" id="popup-stack" style="display:none">
+<div class="th-popup-title">Стек (any)</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini">
+<input data-target="filter-stack-python" type="checkbox"/>
+        python
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-django" type="checkbox"/>
+        django
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-fastapi" type="checkbox"/>
+        fastapi
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-flask" type="checkbox"/>
+        flask
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-drf" type="checkbox"/>
+        drf
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-postgresql" type="checkbox"/>
+        postgresql
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-redis" type="checkbox"/>
+        redis
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-kafka" type="checkbox"/>
+        kafka
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-rabbitmq" type="checkbox"/>
+        rabbitmq
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-celery" type="checkbox"/>
+        celery
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-sqlalchemy" type="checkbox"/>
+        sqlalchemy
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-asyncio" type="checkbox"/>
+        asyncio
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-docker" type="checkbox"/>
+        docker
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-kubernetes" type="checkbox"/>
+        kubernetes
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-aws" type="checkbox"/>
+        aws
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-linux" type="checkbox"/>
+        linux
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-nginx" type="checkbox"/>
+        nginx
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-elasticsearch" type="checkbox"/>
+        elasticsearch
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-clickhouse" type="checkbox"/>
+        clickhouse
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-microservices" type="checkbox"/>
+        microservices
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-tests" type="checkbox"/>
+        tests
+      </label>
+<label class="chip-mini">
+<input data-target="filter-stack-ml" type="checkbox"/>
+        ml
+      </label>
+</div>
+</div>
+<div class="th-popup" id="popup-neg" style="display:none">
+<div class="th-popup-title">Отклик HH — показать</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini">
+<input data-target="filter-neg-RESPONSE" type="checkbox"/>
+        ждёт
+      </label>
+<label class="chip-mini">
+<input data-target="filter-neg-INVITATION" type="checkbox"/>
+        приглашение
+      </label>
+<label class="chip-mini">
+<input data-target="filter-neg-INTERVIEW" type="checkbox"/>
+        собес
+      </label>
+<label class="chip-mini">
+<input data-target="filter-neg-DISCARD" type="checkbox"/>
+        отказ
+      </label>
+<label class="chip-mini">
+<input data-target="filter-neg-HIRED" type="checkbox"/>
+        оффер
+      </label>
+<label class="chip-mini">
+<input data-target="filter-neg-none" type="checkbox"/>
+        нет отклика
+      </label>
+</div>
+<div class="th-popup-title mt-2">Отклик HH — скрыть</div>
+<div class="flex flex-wrap gap-1">
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-RESPONSE" type="checkbox"/>
+        ждёт
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-INVITATION" type="checkbox"/>
+        приглашение
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-INTERVIEW" type="checkbox"/>
+        собес
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-DISCARD" type="checkbox"/>
+        отказ
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-HIRED" type="checkbox"/>
+        оффер
+      </label>
+<label class="chip-mini chip-exclude-mini">
+<input data-target="filter-hideneg-none" type="checkbox"/>
+        нет отклика
+      </label>
+</div>
+</div>
+<!-- Floating bulk actions bar -->
+<div class="bg-neutral-900 text-white rounded-full px-5 py-3 shadow-lg flex items-center gap-3 flex-wrap max-w-[90vw]" id="cmp-bar" style="position:fixed;bottom:20px;right:20px;display:none;z-index:50">
 <span>Выбрано: <span class="font-semibold" id="cmp-count">0</span></span>
-<button class="bg-white text-neutral-900 rounded-full px-3 py-1 text-sm font-medium hover:bg-neutral-100" onclick="window.cmpGo()">Сравнить →</button>
-<button class="text-neutral-300 text-sm hover:text-white" onclick="window.cmpClear()">×</button>
+<div class="h-5 w-px bg-neutral-700"></div>
+<button class="bg-white text-neutral-900 rounded-full px-3 py-1 text-sm font-medium hover:bg-neutral-100" onclick="window.cmpGo()" title="Сравнить выбранные (макс 6)">Сравнить →</button>
+<div class="h-5 w-px bg-neutral-700"></div>
+<span class="text-xs text-neutral-400">Поставить статус:</span>
+<select class="bg-neutral-800 text-white rounded px-2 py-1 text-sm border-0" id="bulk-status-select">
+<option value="new">Новое</option>
+<option value="viewed">Просмотрел</option>
+<option value="applied">Откликнулся</option>
+<option value="interview">Собес</option>
+<option value="rejected">Отказ</option>
+<option value="offer">Оффер</option>
+<option selected="" value="skipped">Скип</option>
+</select>
+<button class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-full px-3 py-1 text-sm font-medium" onclick="window.bulkSetStatus()">Применить</button>
+<button class="text-neutral-300 text-sm hover:text-white ml-1" onclick="window.cmpClear()" title="Снять выделение">×</button>
 </div>
 <script>
+  // === Колоночные фильтры (popup'ы в шапке таблицы) ===
+  // Каждый popup-input имеет data-target="filter-XXX" — id скрытого инпута внутри #filters.
+  // На change/input — копируем значение в hidden input и dispatch change → htmx submit'ит форму.
+  window.th_popup_open = null;
+  window.th_popup_toggle = (btn) => {
+    const popupId = btn.dataset.popup;
+    const popup = document.getElementById(popupId);
+    if (!popup) return;
+    if (window.th_popup_open === popup) {
+      popup.style.display = 'none';
+      window.th_popup_open = null;
+      return;
+    }
+    // закрыть прошлый
+    if (window.th_popup_open) window.th_popup_open.style.display = 'none';
+    // позиционируем под кнопкой
+    const r = btn.getBoundingClientRect();
+    popup.style.display = 'block';
+    // временно показать чтобы померить размеры
+    const pw = popup.offsetWidth;
+    let left = r.left;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    popup.style.left = Math.max(8, left) + 'px';
+    popup.style.top = (r.bottom + 4) + 'px';
+    window.th_popup_open = popup;
+  };
+  // Делегирование кликов по кнопкам ▾
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.th-filter-btn');
+    if (btn) { e.preventDefault(); e.stopPropagation(); window.th_popup_toggle(btn); return; }
+    // клик вне открытого popup — закрыть
+    if (window.th_popup_open && !window.th_popup_open.contains(e.target)) {
+      window.th_popup_open.style.display = 'none';
+      window.th_popup_open = null;
+    }
+  });
+  // Sync popup-инпутов в hidden inputs формы #filters
+  window.th_sync_input = (popupInput) => {
+    const targetId = popupInput.dataset.target;
+    const hidden = document.getElementById(targetId);
+    if (!hidden) return;
+    if (popupInput.type === 'checkbox') {
+      hidden.checked = popupInput.checked;
+    } else if (popupInput.type === 'radio') {
+      hidden.value = popupInput.value;
+    } else {
+      // text / number
+      hidden.value = popupInput.value;
+    }
+    // имитируем событие change на hidden чтобы htmx подобрал
+    hidden.dispatchEvent(new Event('change', {bubbles: true}));
+    window.th_refresh_indicators();
+  };
+  // Подсветка триггера ▾ если в popup'е что-то выбрано/задано
+  window.th_refresh_indicators = () => {
+    document.querySelectorAll('.th-filter-btn').forEach((btn) => {
+      const popup = document.getElementById(btn.dataset.popup);
+      if (!popup) return;
+      let active = false;
+      // checkbox любой checked
+      popup.querySelectorAll('input[type="checkbox"]').forEach((i) => { if (i.checked) active = true; });
+      // radio с непустым value (кроме «все»)
+      popup.querySelectorAll('input[type="radio"]:checked').forEach((i) => {
+        if (i.value && i.value !== 'all') active = true;
+      });
+      // number/text с непустым value
+      popup.querySelectorAll('input[type="number"], input[type="text"]').forEach((i) => {
+        if (i.value && String(i.value).trim()) active = true;
+      });
+      btn.classList.toggle('active', active);
+    });
+  };
+  // Навешиваем обработчики на popup-инпуты
+  document.querySelectorAll('.th-popup input').forEach((i) => {
+    const ev = (i.type === 'number' || i.type === 'text') ? 'input' : 'change';
+    i.addEventListener(ev, () => window.th_sync_input(i));
+  });
+  // Начальная подсветка
+  window.th_refresh_indicators();
+
   // === Compare state ===
   window.cmpSet = new Set();
   window.cmpRender = () => {
@@ -1502,6 +1870,25 @@
     document.querySelectorAll(".cmp-cb").forEach(c => c.checked = false);
     const all = document.getElementById("cmp-all"); if(all) all.checked = false;
     window.cmpRender();
+  };
+  window.bulkSetStatus = async () => {
+    const ids = Array.from(window.cmpSet);
+    if (ids.length === 0) { window.showToast('info', 'Ничего не выбрано'); return; }
+    const sel = document.getElementById('bulk-status-select');
+    const status = sel.value;
+    const label = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Поставить статус «${label}» для ${ids.length} вакансий?`)) return;
+    const fd = new FormData();
+    ids.forEach(i => fd.append('ids', String(i)));
+    fd.append('status', status);
+    const r = await fetch('/api/vacancies/bulk-status', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast('err', `Ошибка: ${d.reason}`); return; }
+    window.showToast('ok', `✓ Обновлено ${d.updated}, статус: ${label}`);
+    window.cmpClear();
+    // обновим таблицу htmx-рефрешем формы фильтров
+    const form = document.getElementById('filters');
+    if (form && typeof htmx !== 'undefined') htmx.trigger(form, 'refresh');
   };
 
   // === Очистка мусора ===
@@ -1529,9 +1916,13 @@
     const f = document.getElementById('save-form');
     f.classList.toggle('hidden');
   };
-  window.runSearch = async (sid, name) => {
-    window.showToast('info', `▶ ${name}: запускаю…`);
-    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST'});
+  window.runSearch = async (sid, name, evt) => {
+    const full = !!(evt && (evt.shiftKey || evt.altKey));
+    const tag = full ? '▶▶' : '▶';
+    window.showToast('info', `${tag} ${name}: запускаю${full ? ' (полный, без early-stop)' : '…'}`);
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST', body: fd});
     const d = await r.json();
     if (!d.ok) window.showToast('err', `${name}: ${d.reason || 'ошибка'}`);
   };
@@ -1544,41 +1935,160 @@
     await fetch(`/api/searches/${sid}/toggle`, {method: 'POST'});
     location.reload();
   };
-  window.syncAllSearches = async () => {
-    window.showToast('info', 'Запускаю синк всех поисков…');
-    const r = await fetch('/api/searches/sync-all', {method: 'POST'});
+  window.bulkMaxPages = async () => {
+    const v = prompt(
+      "Глубина для ВСЕХ активных поисков (страниц по 20 вак).\n" +
+      "Примеры: 5=100, 10=200, 50=1000, 200=до конца.\n" +
+      "(с early-stop безопасно — реально пройдёт меньше)",
+      "200",
+    );
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 1000) { alert("1..1000"); return; }
+    const fd = new FormData();
+    fd.append("max_pages", String(n));
+    const r = await fetch("/api/searches/bulk-max-pages", {method: "POST", body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast("err", `Ошибка: ${d.reason}`); return; }
+    window.showToast("ok", `Обновлено поисков: ${d.updated}, глубина: ${d.max_pages}`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.bulkEarlyStop = async () => {
+    const v = prompt(
+      "Early-stop порог для ВСЕХ активных поисков (K подряд seen → stop).\n" +
+      "0 = выключить (всегда полный прогон).\n" +
+      "3 — обычные поиски, 5 — рекомендации (порядок тасуется).",
+      "5",
+    );
+    if (v === null) return;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 0 || n > 100) { alert("0..100"); return; }
+    const fd = new FormData();
+    fd.append("early_stop_seen", String(n));
+    const r = await fetch("/api/searches/bulk-early-stop", {method: "POST", body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast("err", `Ошибка: ${d.reason}`); return; }
+    window.showToast("ok", `Обновлено поисков: ${d.updated}, early_stop: ${n}`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.editSearchPages = async (sid, name, current) => {
+    const v = prompt(
+      `Глубина «${name}» (страниц по 20 вак)\n` +
+      `Сейчас: ${current}. Введи новое (1..1000).\n` +
+      `Подсказка: 5=100, 10=200, 50=1000, 200=до конца`,
+      String(current),
+    );
+    if (!v) return;
+    const n = parseInt(v, 10);
+    if (!n || n < 1 || n > 1000) { alert('Должно быть 1..1000'); return; }
+    const fd = new FormData();
+    fd.append('max_pages', String(n));
+    const r = await fetch(`/api/searches/${sid}/max-pages`, {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!d.ok) { window.showToast('err', `Ошибка: ${d.reason}`); return; }
+    window.showToast('ok', `«${name}»: глубина ${n} стр`);
+    setTimeout(() => location.reload(), 400);
+  };
+  window.syncAllSearches = async (evt) => {
+    const full = !!(evt && (evt.shiftKey || evt.altKey));
+    window.showToast('info', full ? '↻↻ Полный синк (без early-stop)…' : '↻ Синк всех поисков…');
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    const r = await fetch('/api/searches/sync-all', {method: 'POST', body: fd});
     const d = await r.json();
     if (!d.ok) window.showToast('err', `Sync: ${d.reason || 'ошибка'}`);
   };
-
-  // === Sort ===
-  window.setSort = (field) => {
-    const f = document.getElementById('sort-field');
-    const d = document.getElementById('sort-dir');
-    if (f.value === field) {
-      d.value = d.value === 'desc' ? 'asc' : 'desc';
-    } else {
-      f.value = field;
-      d.value = 'desc';
+  window.addRecommendations = async () => {
+    const r = await fetch('/api/searches/recommendations', {method: 'POST'});
+    const d = await r.json();
+    if (!d.ok) {
+      window.showToast('err', `Рекомендации: ${d.message || d.reason || 'ошибка'}`);
+      return;
     }
+    if (d.existed) {
+      window.showToast('info', '✨ Рекомендации уже подключены');
+    } else {
+      window.showToast('ok', '✨ Рекомендации подключены. Синкаю…');
+      await fetch(`/api/searches/${d.id}/run`, {method: 'POST'});
+    }
+    setTimeout(() => location.reload(), 600);
+  };
+
+  // === Multi-column sort ===
+  // Хранение: list of [field, dir]. Сериализуется в hidden #sort-field как CSV с префиксами:
+  //   [['score','desc'], ['name','asc']] → "-score,+name"
+  // Обычный клик — single (заменяет всё, цикл desc→asc→none).
+  // Shift+клик — добавление к multi (или смена направления, или удаление).
+  window._sortList = [];
+  window.parseSortStr = (s) => {
+    if (!s) return [];
+    return s.split(',').map(p => p.trim()).filter(Boolean).map(p => {
+      if (p.startsWith('-')) return [p.slice(1), 'desc'];
+      if (p.startsWith('+')) return [p.slice(1), 'asc'];
+      return [p, 'desc'];
+    });
+  };
+  window.serializeSort = (list) => {
+    return list.map(([f, d]) => (d === 'desc' ? '-' : '+') + f).join(',');
+  };
+  // Восстановим из hidden inputs при загрузке
+  (function _initSort() {
+    const f = document.getElementById('sort-field');
+    if (!f) return;
+    const raw = f.value || '';
+    // Поддержка старого формата: одно поле без префикса + отдельный dir
+    if (raw && !raw.includes(',') && !raw.startsWith('-') && !raw.startsWith('+')) {
+      const d = (document.getElementById('sort-dir')?.value || 'desc').toLowerCase();
+      window._sortList = [[raw, d]];
+    } else {
+      window._sortList = window.parseSortStr(raw);
+    }
+  })();
+  window.setSort = (field, ev) => {
+    ev = ev || window.event;
+    const shift = !!(ev && (ev.shiftKey || ev.metaKey));
+    const idx = window._sortList.findIndex(([f, _]) => f === field);
+    if (shift) {
+      // Shift+клик — добавление/смена направления/удаление в multi
+      if (idx === -1) {
+        window._sortList.push([field, 'desc']);
+      } else {
+        const [f, d] = window._sortList[idx];
+        if (d === 'desc') window._sortList[idx] = [f, 'asc'];
+        else window._sortList.splice(idx, 1);  // asc → удаление
+      }
+    } else {
+      // Single — заменяет всё
+      if (idx === -1 || window._sortList.length !== 1) {
+        window._sortList = [[field, 'desc']];
+      } else {
+        const d = window._sortList[0][1];
+        if (d === 'desc') window._sortList = [[field, 'asc']];
+        else window._sortList = [];  // asc → сброс
+      }
+    }
+    const sortField = document.getElementById('sort-field');
+    sortField.value = window.serializeSort(window._sortList);
+    // sort-dir больше не используется для multi — оставляем для legacy URL
+    document.getElementById('sort-dir').value = 'desc';
     window.renderSortIndicators();
     htmx.trigger('#filters', 'change');
   };
   window.renderSortIndicators = () => {
-    const cur = document.getElementById('sort-field').value;
-    const dir = document.getElementById('sort-dir').value;
     document.querySelectorAll('.sort-h').forEach(a => {
       a.classList.remove('active');
       a.removeAttribute('data-arrow');
     });
-    if (cur) {
-      const el = document.querySelector(`.sort-h[data-sort="${cur}"]`);
-      if (el) {
-        el.classList.add('active');
-        el.setAttribute('data-arrow', dir === 'desc' ? '↓' : '↑');
-      }
-    }
+    window._sortList.forEach(([f, d], i) => {
+      const el = document.querySelector(`.sort-h[data-sort="${f}"]`);
+      if (!el) return;
+      el.classList.add('active');
+      const arrow = d === 'desc' ? '↓' : '↑';
+      const num = window._sortList.length > 1 ? `${i + 1}` : '';
+      el.setAttribute('data-arrow', num + arrow);
+    });
   };
+  window.renderSortIndicators();
 
   // === Быстрый фильтр в таблице (на клиенте) ===
   window.quickFilter = (q) => {
