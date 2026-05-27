@@ -662,9 +662,21 @@ async def cancel_task(kind: str):
 
 @app.get("/api/tasks/stream")
 async def tasks_stream():
+    """SSE-стрим задач. Сам завершается через 60 сек — EventSource переподключится автоматом.
+    Это убирает зависания uvicorn --reload (без таймаута SSE мешали graceful shutdown)."""
+
     async def gen():
-        async for chunk in task_mod.subscribe():
-            yield chunk
+        import time as _time
+
+        deadline = _time.monotonic() + 60.0
+        try:
+            sub = task_mod.subscribe()
+            async for chunk in sub:
+                yield chunk
+                if _time.monotonic() >= deadline:
+                    break
+        except asyncio.CancelledError:
+            return
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
@@ -1051,11 +1063,15 @@ async def status_endpoint():
 @app.get("/api/status/stream")
 async def status_stream():
     """SSE-стрим client+scheduler. Шлёт снапшот каждые 10 сек.
-    При дисконнекте клиента ASGI бросит CancelledError в генератор — он выйдет."""
+    Сам завершается через 60 сек — EventSource в браузере переподключается автоматом.
+    Это убирает зависания при uvicorn --reload (долгоживущие SSE мешают graceful shutdown)."""
 
     async def gen():
+        import time as _time
+
+        deadline = _time.monotonic() + 60.0
         try:
-            while True:
+            while _time.monotonic() < deadline:
                 payload = {
                     "client": hh_client.status,
                     "scheduler": scheduler_mod.status(),
