@@ -397,6 +397,65 @@ async def _analyzer_soft_skills_employer(db, vacancy_id, model) -> AnalysisResul
     )
 
 
+async def _analyzer_cover_letter(db, vacancy_id, model) -> AnalysisResult:
+    """Генерация персонального сопроводительного письма на основе моего резюме и вакансии.
+    Подчёркивает 3-5 конкретных совпадений опыта с требованиями. ~150-250 слов на русском."""
+    loaded = await _load_vacancy_for_analysis(db, vacancy_id, "cover_letter", model)
+    if isinstance(loaded, AnalysisResult):
+        return loaded
+    v, desc = loaded
+    profile = await profile_repo.get_profile(db) or {}
+    raw_resume = profile.get("raw_resume") or ""
+    if not raw_resume:
+        return _error_result("cover_letter", model, "no_resume")
+
+    title = profile.get("title") or ""
+    years = profile.get("years_experience")
+    skills = profile.get("skills") or []
+    salary_from = profile.get("salary_expected_from")
+
+    # Резюме может быть огромным JSON — обрезаем до 12k символов, чтобы влезло в контекст
+    resume_text = raw_resume if len(raw_resume) <= 12000 else raw_resume[:12000] + " […обрезано]"
+
+    system = (
+        "Ты пишешь персональное сопроводительное письмо. "
+        "Возвращай ТОЛЬКО валидный JSON без пояснений."
+    )
+    user = (
+        "На основе резюме кандидата и описания вакансии напиши деловое, но человечное "
+        "сопроводительное письмо (150-250 слов, на русском). Подчеркни 3-5 КОНКРЕТНЫХ "
+        "совпадений опыта/навыков кандидата с требованиями вакансии. Никаких шаблонных "
+        "фраз («заинтересовала вакансия», «являюсь командным игроком» и т.п.). Тон — как "
+        "будто пишешь живому человеку, не HR-роботу. Не используй markdown.\n\n"
+        "Формат:\n"
+        "{\n"
+        '  "letter": "Полный текст письма, готовый к отправке",\n'
+        '  "highlights": ["конкретное совпадение 1", "совпадение 2", ...],   // те, что упомянуты в письме\n'
+        '  "tone_note": "как звучит письмо: уверенно/энтузиастично/сдержанно"\n'
+        "}\n\n"
+        f"=== ПРОФИЛЬ КАНДИДАТА ===\n"
+        f"Должность: {title}\n"
+        f"Опыт: {years} лет\n"
+        f"Ключевые навыки: {', '.join(skills[:40])}\n"
+        f"Зарплатные ожидания: от {salary_from} {profile.get('salary_currency') or ''}\n\n"
+        f"Полное резюме (JSON):\n{resume_text}\n\n"
+        f"=== ВАКАНСИЯ ===\n"
+        f"Должность: {v.get('name')}\n"
+        f"Компания: {v.get('company_name') or '?'}\n"
+        f"ЗП: {v.get('salary_rub') or '?'} руб\n\n"
+        f"Описание:\n---\n{desc}\n---"
+    )
+    return await _run_simple_analysis(
+        db,
+        vacancy_id,
+        kind="cover_letter",
+        model=model,
+        prompt_version="cover_letter_v1",
+        system_prompt=system,
+        user_prompt=user,
+    )
+
+
 @dataclass
 class Analyzer:
     kind: str
@@ -465,6 +524,14 @@ ANALYZERS: dict[str, Analyzer] = {
         default_enabled=False,
         fn=_analyzer_soft_skills_employer,
         fast=True,
+    ),
+    "cover_letter": Analyzer(
+        kind="cover_letter",
+        label="Сопроводительное письмо",
+        description="Персональное письмо к вакансии на основе моего резюме (profile.raw_resume) с подсветкой релевантных совпадений",
+        default_enabled=False,
+        fn=_analyzer_cover_letter,
+        fast=False,  # нужна тяжёлая модель — текст 150-250 слов + конкретные привязки
     ),
 }
 

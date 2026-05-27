@@ -51,11 +51,15 @@ async def test_registry_has_expected_analyzers():
     assert "match_essay" in reg.ANALYZERS
     assert "interview_prep" in reg.ANALYZERS
     assert "soft_skills_employer" in reg.ANALYZERS
+    assert "cover_letter" in reg.ANALYZERS
     assert reg.ANALYZERS["requirements"].default_enabled is True
     assert reg.ANALYZERS["salary"].default_enabled is False
     assert reg.ANALYZERS["match_essay"].default_enabled is False
     assert reg.ANALYZERS["interview_prep"].default_enabled is False
     assert reg.ANALYZERS["soft_skills_employer"].default_enabled is False
+    assert reg.ANALYZERS["cover_letter"].default_enabled is False
+    # cover_letter — тяжёлая задача, fast=False
+    assert reg.ANALYZERS["cover_letter"].fast is False
 
 
 @pytest.mark.asyncio
@@ -488,3 +492,80 @@ async def test_analyze_match_essay_without_profile(tmp_db, monkeypatch):
 
     res = await reg.analyze_one(tmp_db, 40, ["match_essay"])
     assert res[0].ok is True
+
+
+@pytest.mark.asyncio
+async def test_analyze_cover_letter_uses_resume(tmp_db, monkeypatch):
+    """cover_letter подмешивает в промпт profile.raw_resume и описание вакансии."""
+    await tmp_db.execute(
+        "INSERT INTO vacancies(id, name, description, company_name, salary_rub) "
+        "VALUES (50, 'Senior Py', 'Python+Django, опыт highload', 'Acme', 250000)"
+    )
+    await tmp_db.execute(
+        "INSERT INTO profile(id, title, years_experience, salary_expected_from, salary_currency, "
+        "skills, raw_resume) VALUES (1, 'Senior Python', 7.0, 200000, 'RUR', "
+        '\'["Python","Django","PostgreSQL"]\', \'{"work": [{"company": "Acme prev", "tech": "Python+Django"}]}\')'
+    )
+    await tmp_db.commit()
+
+    captured: dict = {}
+
+    async def _fake(**kwargs):
+        captured.update(kwargs)
+        return _FakeResp(
+            parsed={
+                "letter": "Здравствуйте, ...",
+                "highlights": ["7 лет Python", "Django в проде"],
+                "tone_note": "уверенный",
+            }
+        )
+
+    from app.llm import client as llm_client
+
+    monkeypatch.setattr(llm_client, "generate", _fake)
+    monkeypatch.setattr(reg.llm_client, "generate", _fake)
+
+    res = await reg.analyze_one(tmp_db, 50, ["cover_letter"])
+    assert res[0].ok is True
+    user_prompt = captured["prompt"]
+    # резюме попало в контекст
+    assert "Acme prev" in user_prompt
+    assert "Python+Django" in user_prompt
+    # профиль тоже
+    assert "Senior Python" in user_prompt
+    assert "7" in user_prompt
+    # вакансия
+    assert "Senior Py" in user_prompt
+    assert "highload" in user_prompt
+    # данные сохранены
+    from app.db import llm_repo
+
+    a = await llm_repo.get_analysis(tmp_db, 50, "cover_letter")
+    assert a["data"]["letter"].startswith("Здравствуйте")
+    assert "7 лет Python" in a["data"]["highlights"]
+
+
+@pytest.mark.asyncio
+async def test_analyze_cover_letter_no_resume(tmp_db, monkeypatch):
+    """Если в profile нет raw_resume — возвращаем no_resume error, БЕЗ вызова LLM."""
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (51, 'v', 'desc')")
+    # профиль без raw_resume
+    await tmp_db.execute("INSERT INTO profile(id, title) VALUES (1, 'Junior')")
+    await tmp_db.commit()
+
+    called: dict = {"n": 0}
+
+    async def _fake(**kwargs):
+        called["n"] += 1
+        return _FakeResp(parsed={"letter": "should-not-happen"})
+
+    from app.llm import client as llm_client
+
+    monkeypatch.setattr(llm_client, "generate", _fake)
+    monkeypatch.setattr(reg.llm_client, "generate", _fake)
+
+    res = await reg.analyze_one(tmp_db, 51, ["cover_letter"])
+    assert res[0].ok is False
+    assert res[0].error == "no_resume"
+    # LLM не должен был вызываться
+    assert called["n"] == 0

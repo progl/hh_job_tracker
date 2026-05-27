@@ -202,6 +202,38 @@
         </div>
       </div>
     {% endif %}
+    {% if analyses.cover_letter %}
+      <div class="mb-3">
+        <div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1 flex items-center gap-2">
+          ✉️ Сопроводительное письмо
+          {% if analyses.cover_letter.llm_run_id %}
+            <a href="/llm-logs?run={{ analyses.cover_letter.llm_run_id }}" class="text-blue-600 hover:underline normal-case font-normal">→</a>
+          {% endif %}
+          {% set cl = analyses.cover_letter.data %}
+          {% if cl.tone_note %}
+            <span class="text-[11px] text-neutral-500 normal-case font-normal italic">тон: {{ cl.tone_note }}</span>
+          {% endif %}
+        </div>
+        {% if cl.letter %}
+          <div class="bg-white dark:bg-neutral-900 border border-fuchsia-300 dark:border-fuchsia-800 rounded p-3 text-sm whitespace-pre-wrap" id="cover-letter-text-{{ v.id }}">{{ cl.letter }}</div>
+          <div class="mt-2 flex items-center gap-2">
+            <button onclick="window.copyCoverLetter({{ v.id }})"
+                    class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600">
+              📋 Скопировать
+            </button>
+            <span id="cover-letter-copied-{{ v.id }}" class="text-xs text-emerald-700"></span>
+          </div>
+        {% endif %}
+        {% if cl.highlights %}
+          <div class="mt-2 text-xs">
+            <span class="text-neutral-500 uppercase text-[10px]">упомянуты совпадения:</span>
+            <ul class="ml-3 list-disc text-neutral-700 dark:text-neutral-300">
+              {% for h in cl.highlights %}<li>{{ h }}</li>{% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
     {% if analyses.match_essay %}
       <div class="mb-3">
         <div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1">
@@ -330,6 +362,21 @@
   {% endif %}
 </article>
 <script>
+window.copyCoverLetter = (vid) => {
+  const el = document.getElementById('cover-letter-text-' + vid);
+  if (!el) return;
+  const text = el.textContent || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const out = document.getElementById('cover-letter-copied-' + vid);
+    if (out) {
+      out.textContent = '✓ скопировано';
+      setTimeout(() => out.textContent = '', 2000);
+    }
+    if (window.showToast) window.showToast('ok', '✓ Сопроводительное скопировано');
+  }).catch((e) => {
+    if (window.showToast) window.showToast('err', 'Не удалось скопировать: ' + e);
+  });
+};
 window.runAnalyze = async (vid) => {
   const kinds = Array.from(document.querySelectorAll('.analyzer-cb:checked')).map(c => c.value);
   if (!kinds.length) { alert('Отметь хотя бы один анализатор'); return; }
