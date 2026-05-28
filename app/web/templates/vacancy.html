@@ -354,6 +354,23 @@
     {% endif %}
   </div>
 
+  {% if similar_vacancies %}
+  <div class="mt-6">
+    <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">🧲 Похожие вакансии (RAG)</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {% for s in similar_vacancies %}
+        <a href="/vacancy/{{ s.id }}" class="block border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-medium text-sm">{{ s.name }}</div>
+            <div class="text-[11px] tabular-nums text-fuchsia-700 dark:text-fuchsia-300">{{ (s.score * 100) | round | int }}%</div>
+          </div>
+          <div class="text-xs text-neutral-500">{{ s.company or '' }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if v.description %}
   <div class="mt-6">
     <div class="text-xs uppercase tracking-wide text-neutral-500 mb-1">Описание</div>

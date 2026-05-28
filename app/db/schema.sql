@@ -220,3 +220,14 @@ CREATE TABLE IF NOT EXISTS vacancy_requirements (
 );
 CREATE INDEX IF NOT EXISTS idx_vacancy_requirements_vid ON vacancy_requirements(vacancy_id);
 CREATE INDEX IF NOT EXISTS idx_vacancy_requirements_cat ON vacancy_requirements(category, kind);
+
+-- RAG: мета-данные эмбеддингов (сам вектор — в vec0-таблице vec_vacancies, создаётся
+-- лениво модулем RAG, т.к. требует загруженного расширения sqlite-vec).
+-- Эта таблица — обычная, безопасна без расширения; даёт coverage-статистику и dedup по source_hash.
+CREATE TABLE IF NOT EXISTS vacancy_embeddings (
+    vacancy_id   INTEGER PRIMARY KEY,
+    model        TEXT NOT NULL,
+    dim          INTEGER NOT NULL,
+    source_hash  TEXT NOT NULL,                            -- sha1 эмбеддённого текста — для пере-эмбеддинга при изменении
+    created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -375,6 +375,44 @@ async def test_job_generate_cover_letters_no_pending(tmp_db, sched_mod):
     assert res == {"processed": 0, "skipped": "no_pending"}
 
 
+# ----- _job_embed_vacancies (RAG) ----
+
+
+@pytest.mark.asyncio
+async def test_job_embed_vacancies_skips_when_rag_disabled(tmp_db, sched_mod, monkeypatch):
+    from app.llm import rag
+
+    monkeypatch.setattr(rag, "is_available", lambda: False)
+    res = await sched_mod._job_embed_vacancies()
+    assert res == {"processed": 0, "skipped": "rag_disabled"}
+
+
+@pytest.mark.asyncio
+async def test_job_embed_vacancies_embeds_missing(tmp_db, sched_mod, monkeypatch):
+    pytest.importorskip("sqlite_vec")
+    from app.config import settings
+    from app.llm import client as llm_client
+    from app.llm import rag
+
+    monkeypatch.setattr(rag, "is_available", lambda: True)
+
+    for vid in (1, 2):
+        await tmp_db.execute(
+            "INSERT INTO vacancies(id, name, description) VALUES (?, ?, ?)", (vid, f"v{vid}", "d" * 200)
+        )
+    await tmp_db.commit()
+
+    async def fake_embed(texts, *, model, base_url=None, timeout=None):
+        return llm_client.EmbedResponse(
+            ok=True, vectors=[[1.0] + [0.0] * (settings.EMBED_DIM - 1)], error=None, model=model, latency_ms=1
+        )
+
+    monkeypatch.setattr(llm_client, "embed", fake_embed)
+
+    res = await sched_mod._job_embed_vacancies()
+    assert res == {"processed": 2, "ok": 2}
+
+
 # ----- start ----
 
 
@@ -389,6 +427,6 @@ def test_start_creates_scheduler_and_idempotent(sched_mod, monkeypatch):
     assert s1 is not None
     s2 = sched_mod.start(cli)
     assert s2 is s1
-    # 9 джобов: 7 базовых + llm_parse_requirements + cover_letter_generate
-    assert len(s1.get_jobs()) == 9
+    # 10 джобов: 7 базовых + llm_parse_requirements + cover_letter_generate + embed_vacancies
+    assert len(s1.get_jobs()) == 10
     sched_mod._scheduler = None

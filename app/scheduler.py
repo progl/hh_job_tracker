@@ -294,6 +294,36 @@ async def _job_llm_parse_requirements() -> dict:
         await db.close()
 
 
+@_record("embed_vacancies")
+async def _job_embed_vacancies() -> dict:
+    """RAG-индексация: эмбедит N вакансий без эмбеддинга. No-op, если RAG не включён
+    (нет sqlite-vec). Требует Ollama с embed-моделью."""
+    from app.llm import rag
+
+    if not rag.is_available():
+        return {"processed": 0, "skipped": "rag_disabled"}
+    batch = 25
+    db = await get_db()
+    try:
+        from app.db import embeddings_repo
+
+        await embeddings_repo.ensure_ready(db)
+        ids = await embeddings_repo.missing_vacancy_ids(db, batch)
+        if not ids:
+            return {"processed": 0, "skipped": "no_missing"}
+        ok = 0
+        for vid in ids:
+            try:
+                res = await rag.embed_vacancy(db, vid)
+                if res.get("ok"):
+                    ok += 1
+            except Exception as e:
+                log.warning("embed_vacancies: vid=%s failed: %s", vid, e)
+        return {"processed": len(ids), "ok": ok}
+    finally:
+        await db.close()
+
+
 @_record("cover_letter_generate")
 async def _job_generate_cover_letters() -> dict:
     """Генерирует сопроводительные письма для вакансий «в пайплайне» (есть отклик
@@ -442,6 +472,12 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
         id="cover_letter_generate",
         replace_existing=True,
     )
+    _scheduler.add_job(
+        _job_embed_vacancies,
+        IntervalTrigger(minutes=30),
+        id="embed_vacancies",
+        replace_existing=True,
+    )
     _scheduler.start()
     import time as _t
 
@@ -485,6 +521,7 @@ _JOB_LABELS = {
     "dedup_vacancies": "Дедуп вакансий",
     "llm_parse_requirements": "LLM: разбор требований",
     "cover_letter_generate": "LLM: сопроводительные письма",
+    "embed_vacancies": "RAG: индексация вакансий",
 }
 
 

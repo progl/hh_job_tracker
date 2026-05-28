@@ -12,6 +12,7 @@ from app.config import settings
 
 _KEY_REQUIREMENTS_MODEL = "llm.model.requirements"
 _KEY_FAST_MODEL = "llm.model.fast"
+_KEY_EMBED_MODEL = "llm.model.embed"
 
 
 async def get_requirements_model(db: aiosqlite.Connection) -> str:
@@ -45,5 +46,23 @@ async def set_fast_model(db: aiosqlite.Connection, model: str) -> None:
         "INSERT INTO cookie_store(key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP",
         (_KEY_FAST_MODEL, model),
+    )
+    await db.commit()
+
+
+async def get_embed_model(db: aiosqlite.Connection) -> str:
+    """Модель эмбеддингов для RAG (по умолчанию nomic-embed-text)."""
+    cur = await db.execute("SELECT value FROM cookie_store WHERE key = ?", (_KEY_EMBED_MODEL,))
+    row = await cur.fetchone()
+    if row and row[0]:
+        return row[0]
+    return settings.LLM_MODEL_EMBED
+
+
+async def set_embed_model(db: aiosqlite.Connection, model: str) -> None:
+    await db.execute(
+        "INSERT INTO cookie_store(key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP",
+        (_KEY_EMBED_MODEL, model),
     )
     await db.commit()

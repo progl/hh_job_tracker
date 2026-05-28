@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Семантический поиск{% endblock %}
+{% block content %}
+<div class="max-w-[1000px] mx-auto">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">🧲 Семантический поиск + RAG</h2>
+    <a href="/" class="text-xs text-neutral-500 hover:underline">← Список</a>
+  </div>
+
+  {% if not rag_available %}
+    <div class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 text-sm">
+      RAG не включён. Поставь расширение и перезапусти:
+      <code class="px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 font-mono">uv sync --extra rag</code>
+      (нужен <code class="font-mono">sqlite-vec</code> и локальная Ollama с моделью эмбеддингов).
+    </div>
+  {% else %}
+    <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+      <span>Проиндексировано: <span class="font-mono font-semibold">{{ embedded }}</span> / {{ total }} вакансий</span>
+      {% if embedded < total %}
+        <button onclick="window.runEmbedCorpus()"
+                class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600"
+                title="Прогнать эмбеддинги по вакансиям без индекса. Cron делает это каждые 30 минут.">
+          ⚙️ Индексировать корпус
+        </button>
+      {% endif %}
+    </div>
+
+    <form onsubmit="return false" class="flex flex-wrap gap-2 mb-4">
+      <input id="rag-q" type="text" placeholder="Например: удалённый Python с FastAPI и высокой нагрузкой"
+             class="flex-1 min-w-[280px] border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-3 py-2 text-sm"
+             onkeydown="if(event.key==='Enter'){window.ragSearch();}">
+      <button onclick="window.ragSearch()" class="px-3 py-2 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white text-sm">🔍 Найти</button>
+      <button onclick="window.ragAsk()" class="px-3 py-2 rounded border border-fuchsia-400 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 text-sm" title="Найти релевантные вакансии и ответить на вопрос с ссылками на них">💬 Спросить (RAG)</button>
+    </form>
+
+    <div id="rag-answer" class="mb-4"></div>
+    <div id="rag-results" class="space-y-2"></div>
+  {% endif %}
+</div>
+
+<script>
+  window.runEmbedCorpus = async () => {
+    window.showToast('info', '⚙️ Запускаю индексацию — следи в /jobs');
+    const r = await fetch('/api/scheduler/embed_vacancies/run-now', {method: 'POST'});
+    const d = await r.json();
+    if (d.ok) window.showToast('ok', '✓ Индексация запущена');
+    else window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+  };
+
+  window._ragCard = (x) => `
+    <a href="${x.url}" class="block border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-medium text-sm">${x.name || '—'}</div>
+        <div class="text-[11px] tabular-nums text-fuchsia-700 dark:text-fuchsia-300">${Math.round((x.score||0)*100)}%</div>
+      </div>
+      <div class="text-xs text-neutral-500">${x.company || ''}</div>
+    </a>`;
+
+  window.ragSearch = async () => {
+    const q = document.getElementById('rag-q').value.trim();
+    if (!q) return;
+    document.getElementById('rag-answer').innerHTML = '';
+    document.getElementById('rag-results').innerHTML = '<div class="text-neutral-500 text-sm">ищу…</div>';
+    const fd = new FormData(); fd.append('q', q);
+    try {
+      const r = await fetch('/api/rag/search', {method: 'POST', body: fd});
+      const d = await r.json();
+      if (!d.ok) { document.getElementById('rag-results').innerHTML = `<div class="text-red-600 text-sm">${d.reason || 'ошибка'}</div>`; return; }
+      const html = (d.results || []).map(window._ragCard).join('');
+      document.getElementById('rag-results').innerHTML = html || '<div class="text-neutral-500 text-sm">Ничего не найдено.</div>';
+    } catch(e) {
+      document.getElementById('rag-results').innerHTML = `<div class="text-red-600 text-sm">${e.message}</div>`;
+    }
+  };
+
+  window.ragAsk = async () => {
+    const q = document.getElementById('rag-q').value.trim();
+    if (!q) return;
+    document.getElementById('rag-answer').innerHTML = '<div class="text-neutral-500 text-sm">думаю…</div>';
+    document.getElementById('rag-results').innerHTML = '';
+    const fd = new FormData(); fd.append('q', q);
+    try {
+      const r = await fetch('/api/rag/ask', {method: 'POST', body: fd});
+      const d = await r.json();
+      if (!d.ok) {
+        document.getElementById('rag-answer').innerHTML = `<div class="text-red-600 text-sm">${d.reason || d.error || 'ошибка'}</div>`;
+        return;
+      }
+      const ans = `<div class="border border-fuchsia-300 dark:border-fuchsia-800 rounded-lg p-3 bg-white dark:bg-neutral-900 text-sm whitespace-pre-wrap">${(d.answer||'').replace(/</g,'&lt;')}</div>`;
+      document.getElementById('rag-answer').innerHTML = `<div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1">Ответ (на основе найденных вакансий)</div>${ans}`;
+      document.getElementById('rag-results').innerHTML = `<div class="text-[11px] uppercase text-neutral-500 mt-2 mb-1">Источники</div>` + (d.sources || []).map(window._ragCard).join('');
+    } catch(e) {
+      document.getElementById('rag-answer').innerHTML = `<div class="text-red-600 text-sm">${e.message}</div>`;
+    }
+  };
+</script>
+{% endblock %}

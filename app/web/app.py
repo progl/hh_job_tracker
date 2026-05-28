@@ -1061,6 +1061,54 @@ async def stop_job_run(run_id: int):
     return await scheduler_mod.cancel_run(run_id)
 
 
+# ---------- RAG (опционально, extra `rag`) ----------
+
+
+@app.post("/api/rag/search")
+async def rag_search(q: str = Form(...), k: int = Form(5)):
+    """Семантический поиск по корпусу вакансий (retrieval)."""
+    from app.llm import rag as rag_mod
+
+    if not rag_mod.is_available():
+        return {"ok": False, "reason": "rag_disabled"}
+    if not q.strip():
+        return {"ok": True, "results": []}
+    db = await get_db()
+    try:
+        results = []
+        for vid, score in await rag_mod.semantic_search(db, q, k):
+            v = await vacancies_repo.get_vacancy(db, vid)
+            if v:
+                results.append(
+                    {
+                        "id": vid,
+                        "name": v.get("name"),
+                        "company": v.get("company_name"),
+                        "score": round(score, 3),
+                        "url": f"/vacancy/{vid}",
+                    }
+                )
+        return {"ok": True, "results": results}
+    finally:
+        await db.close()
+
+
+@app.post("/api/rag/ask")
+async def rag_ask(q: str = Form(...), k: int = Form(5)):
+    """Полный RAG: находит релевантные вакансии и отвечает на вопрос с ссылками на них."""
+    from app.llm import rag as rag_mod
+
+    if not rag_mod.is_available():
+        return {"ok": False, "reason": "rag_disabled"}
+    if not q.strip():
+        return {"ok": False, "reason": "empty_query"}
+    db = await get_db()
+    try:
+        return await rag_mod.ask(db, q, k)
+    finally:
+        await db.close()
+
+
 @app.post("/api/client/unpause")
 async def client_unpause():
     return {"ok": True, **hh_client.unpause()}
@@ -1226,9 +1274,27 @@ async def vacancy_detail(request: Request, vid: int):
         analyses: dict = {}
         analyzers_list: list = []
         enabled_kinds: list[str] = []
+        similar_vacancies: list = []
         if v_enriched:
             from app.db import llm_repo
+            from app.llm import rag as rag_mod
             from app.llm.registry import ANALYZERS, get_enabled_analyzers
+
+            if rag_mod.is_available():
+                try:
+                    for svid, score in await rag_mod.similar(db, vid):
+                        sv = await vacancies_repo.get_vacancy(db, svid)
+                        if sv:
+                            similar_vacancies.append(
+                                {
+                                    "id": svid,
+                                    "name": sv.get("name"),
+                                    "company": sv.get("company_name"),
+                                    "score": score,
+                                }
+                            )
+                except Exception as e:
+                    log.warning("similar vacancies failed vid=%s: %s", vid, e)
 
             reqs = await llm_repo.get_requirements(db, vid)
             runs = await llm_repo.list_runs(
@@ -1261,6 +1327,7 @@ async def vacancy_detail(request: Request, vid: int):
         last_llm_run=last_run,
         analyzers=analyzers_list,
         analyses=analyses,
+        similar_vacancies=similar_vacancies,
     )
 
 
@@ -1536,6 +1603,30 @@ async def analytics_page(
         llm_by_model=llm_by_model,
         llm_by_task=llm_by_task,
         filters={"kind": kind or "", "category": category or "", "top": top},
+    )
+
+
+@app.get("/search", response_class=HTMLResponse)
+async def search_page(request: Request):
+    """Семантический поиск + RAG Q&A по корпусу вакансий."""
+    from app.llm import rag as rag_mod
+
+    available = rag_mod.is_available()
+    embedded = total = 0
+    if available:
+        db = await get_db()
+        try:
+            from app.db import embeddings_repo
+
+            embedded, total = await embeddings_repo.coverage(db)
+        finally:
+            await db.close()
+    return render(
+        "search.html",
+        request=request,
+        rag_available=available,
+        embedded=embedded,
+        total=total,
     )
 
 

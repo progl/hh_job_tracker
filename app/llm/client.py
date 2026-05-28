@@ -31,6 +31,55 @@ class LLMResponse:
     response_tokens: int | None
 
 
+@dataclass
+class EmbedResponse:
+    ok: bool
+    vectors: list[list[float]]  # по одному вектору на входной текст
+    error: str | None
+    model: str
+    latency_ms: int
+
+
+async def embed(
+    texts: list[str],
+    *,
+    model: str,
+    base_url: str | None = None,
+    timeout: float | None = None,
+) -> EmbedResponse:
+    """Эмбеддинги через Ollama /api/embed (батч). Возвращает по вектору на каждый текст."""
+    url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/") + "/api/embed"
+    to = settings.LLM_TIMEOUT_SECONDS if timeout is None else timeout
+    body = {"model": model, "input": texts}
+    t0 = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=to) as cli:
+            r = await cli.post(url, json=body)
+    except httpx.HTTPError as e:
+        dt = int((time.monotonic() - t0) * 1000)
+        log.warning("embed: network error model=%s in %sms: %s", model, dt, e)
+        return EmbedResponse(ok=False, vectors=[], error=f"network: {e}", model=model, latency_ms=dt)
+
+    dt = int((time.monotonic() - t0) * 1000)
+    if r.status_code != 200:
+        return EmbedResponse(
+            ok=False, vectors=[], error=f"http {r.status_code}: {r.text[:200]}", model=model, latency_ms=dt
+        )
+    try:
+        data = r.json()
+    except ValueError as e:
+        return EmbedResponse(ok=False, vectors=[], error=f"non-json: {e}", model=model, latency_ms=dt)
+
+    vectors = data.get("embeddings") or []
+    return EmbedResponse(
+        ok=bool(vectors),
+        vectors=vectors,
+        error=None if vectors else "no embeddings in response",
+        model=data.get("model") or model,
+        latency_ms=dt,
+    )
+
+
 async def generate(
     *,
     model: str,

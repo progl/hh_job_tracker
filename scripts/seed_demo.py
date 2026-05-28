@@ -605,6 +605,44 @@ async def _seed_llm(conn) -> dict[str, int]:
     return counts
 
 
+def _demo_vector(tokens: list[str], dim: int) -> list[float]:
+    """Детерминированный псевдо-эмбеддинг из токенов (для демо без Ollama).
+    Вакансии с общим стеком получаются близкими по косинусу."""
+    import hashlib
+    import math
+
+    v = [0.0] * dim
+    for t in tokens:
+        if not t:
+            continue
+        h = int(hashlib.sha1(t.lower().encode("utf-8")).hexdigest(), 16)
+        v[h % dim] += 1.0
+        v[(h // dim) % dim] += 0.5
+    norm = math.sqrt(sum(x * x for x in v)) or 1.0
+    return [x / norm for x in v]
+
+
+async def _seed_embeddings(conn) -> int:
+    """Сеет детерминированные эмбеддинги в vec_vacancies (если RAG доступен)."""
+    import hashlib
+
+    from app.config import settings
+    from app.db import embeddings_repo
+    from app.llm import rag
+
+    if not rag.is_available():
+        return 0
+    await embeddings_repo.ensure_ready(conn)
+    n = 0
+    for vid, name, _eid, _area, _sf, _st, _rem, lvl, stack, _arch, _dis in VACANCIES:
+        tokens = [*stack, lvl, *name.lower().replace("(", " ").replace(")", " ").split()]
+        vec = _demo_vector(tokens, settings.EMBED_DIM)
+        text = name + " " + " ".join(stack)
+        await embeddings_repo.upsert(conn, vid, "demo-hash", vec, hashlib.sha1(text.encode()).hexdigest())
+        n += 1
+    return n
+
+
 async def seed(force: bool) -> None:
     _assert_not_real_db()
     DEMO_DB.parent.mkdir(parents=True, exist_ok=True)
@@ -653,6 +691,16 @@ async def seed(force: bool) -> None:
 
     # vacancies
     for vid, name, eid, area, sf, st, rem, lvl, stack, archived, disappeared in VACANCIES:
+        company_name = next(e["name"] for e in EMPLOYERS if e["id"] == eid)
+        description = (
+            f"Компания «{company_name}» ищет разработчика уровня {lvl}. "
+            f"Основной стек: {', '.join(stack)}. "
+            f"Задачи: проектирование и разработка backend-сервисов, code review, поддержка и развитие "
+            f"highload-систем, работа с базами данных и очередями. "
+            f"Требования: уверенный {stack[0]}, опыт коммерческой разработки, умение писать тесты и "
+            f"работать в команде. Формат: {'удалённо' if rem else 'офис, ' + area}. "
+            f"Мы предлагаем интересные задачи, современный стек и адекватную команду."
+        )
         await conn.execute(
             """INSERT OR REPLACE INTO vacancies
                (id, name, company_id, company_name, area_id, area_name,
@@ -667,7 +715,7 @@ async def seed(force: bool) -> None:
                        ?, 'FULL', '[]',
                        ?, ?, ?, ?,
                        ?, ?, ?,
-                       'Описание вакансии. Стек: ' || ?, '{}', ?,
+                       ?, '{}', ?,
                        CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
                        CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
@@ -675,7 +723,7 @@ async def seed(force: bool) -> None:
                 vid,
                 name,
                 eid,
-                next(e["name"] for e in EMPLOYERS if e["id"] == eid),
+                company_name,
                 area,
                 sf,
                 st,
@@ -688,7 +736,7 @@ async def seed(force: bool) -> None:
                 10 + vid % 30,
                 50 + vid % 200,
                 vid % 8,
-                ", ".join(stack),
+                description,
                 f"https://hh.ru/vacancy/{vid}",
                 1 if archived else 0,
                 1 if disappeared else 0,
@@ -731,6 +779,9 @@ async def seed(force: bool) -> None:
     # LLM-данные (требования, анализаторы, llm_runs) — для /analytics и LLM-секций
     llm_counts = await _seed_llm(conn)
 
+    # RAG-эмбеддинги (детерминированные) — для «похожих вакансий» в снапшоте
+    embed_count = await _seed_embeddings(conn)
+
     await conn.commit()
     await conn.close()
 
@@ -742,6 +793,10 @@ async def seed(force: bool) -> None:
     print(
         f"  LLM: requirements: {llm_counts['requirements']}, "
         f"analyses: {llm_counts['analyses']}, llm_runs: {llm_counts['llm_runs']}"
+    )
+    print(
+        f"  RAG: эмбеддингов посеяно: {embed_count}"
+        + ("" if embed_count else " (sqlite-vec не доступен — пропущено)")
     )
     print(
         f"\n  Запуск сервера: DB_PATH={DEMO_DB.relative_to(Path.cwd()) if DEMO_DB.is_relative_to(Path.cwd()) else DEMO_DB} make run"

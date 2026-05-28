@@ -20,6 +20,14 @@ dependencies = [
     "sqlalchemy>=2.0",
 ]
 
+[project.optional-dependencies]
+# RAG (похожие вакансии / семантический поиск / Q&A). Опционально — без него
+# приложение работает как раньше, RAG-фичи просто выключены.
+# Включить: uv sync --extra rag
+rag = [
+    "sqlite-vec>=0.1.6",
+]
+
 [tool.uv]
 package = false
 

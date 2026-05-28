@@ -131,12 +131,25 @@ Ollama — внешняя зависимость, опциональная. Ес
 | `fx_refresh` | 03:30 ежедневно | курсы валют ЦБ (56 валют) |
 | `ml_retrain` | 04:00 ежедневно | переобучает LogisticRegression если ≥5 positives и ≥5 negatives (cross-val AUC + StratifiedKFold в логах) |
 | `llm_parse_requirements` | каждый час | прогоняет включённые анализаторы по 20 необработанным вакансиям через Ollama |
+| `cover_letter_generate` | каждые 2 ч | генерит сопроводительные письма для вакансий «в пайплайне» (есть отклик или статус interested/applied) без письма |
+| `embed_vacancies` | каждые 30 мин | RAG-индексация: эмбедит вакансии без вектора (no-op, если extra `rag` не установлен) |
 
 **Под капотом:**
 - `MemoryJobStore` (не SQLAlchemy) — потому что `hh_client` с httpx.AsyncClient не picklable. Расписание восстанавливается из кода при старте, история прогонов хранится в таблице `job_runs`
-- декоратор `@_record(job_id)` оборачивает каждый джоб — пишет в `job_runs` start/finish/error
+- декоратор `@_record(job_id)` оборачивает каждый джоб — пишет в `job_runs` start/finish/error и регистрирует asyncio-таск в `_running` (для остановки из UI)
 - защита от двойного запуска: `task_mod.TaskAlreadyRunning` — если джоб уже идёт (ручной или плановый), повторный запуск отклоняется
 - защита от anti-bot: джобы которым нужен `hh_client` (`backfill_pending`, `personal_refresh`, `sync_searches`) проверяют `client.status.paused_now` и пропускают тик, если клиент на паузе
-- `llm_parse_requirements` от `hh_client` не зависит — работает даже когда HH на паузе
+- LLM/RAG-джобы от `hh_client` не зависят — работают даже когда HH на паузе
 
-**Ручной запуск.** Каждый джоб видно в правой панели «Статус» → раздел «Расписание» → кнопка **▶**. Прогресс идёт через SSE-канал `/api/status/stream` (раньше был polling), виден в реальном времени. Полная история прогонов с фильтрами и развёрткой JSON-результата — `/jobs`. Если клиент на паузе из-за anti-bot — кнопка вернёт «клиент HH на паузе ещё ~Nм».
+**Ручной запуск и остановка.** Каждый джоб видно в правой панели «Статус» → раздел «Расписание» → кнопка **▶**. Прогресс идёт через SSE-канал `/api/status/stream`, виден в реальном времени. Полная история прогонов с фильтрами, сортировкой и **кнопкой ⏹ стоп** (отменяет любой running-прогон через `cancel_run` → `CancelledError` → статус `cancelled`) — `/jobs`. Если клиент на паузе из-за anti-bot — кнопка вернёт «клиент HH на паузе ещё ~Nм».
+
+## RAG (`app/llm/rag.py`, опционально)
+
+RAG включается отдельным extra `rag` (ставит `sqlite-vec`); без него `rag.is_available()` → False и все RAG-точки аккуратно выключены.
+
+- **Хранение.** Вектор — в vec0-таблице `vec_vacancies` (sqlite-vec, `distance_metric=cosine`), создаётся лениво. Мета (модель, dim, `source_hash` для пере-эмбеддинга) — в обычной таблице `vacancy_embeddings` (даёт coverage даже без расширения).
+- **Загрузка расширения.** `rag.load_vec(conn)` грузит sqlite-vec в каждое aiosqlite-соединение, которое обращается к vec0 (идемпотентно). Общий `get_db()` не трогаем — не-RAG путь без оверхеда.
+- **Эмбеддинги.** `llm_client.embed()` → Ollama `/api/embed` (`nomic-embed-text`, dim 768). Джоб `embed_vacancies` индексирует вакансии без вектора; каждый вызов логируется в `llm_runs` (task_kind=`embed`).
+- **Retrieval.** `similar(vid)` — KNN по вектору вакансии (блок «Похожие вакансии» на `/vacancy`); `semantic_search(query)` — эмбеддинг запроса → KNN (`/api/rag/search`).
+- **Generation (полный RAG).** `ask(query)` = semantic_search → собирает контекст топ-k вакансий → `llm_client.generate` с требованием ссылаться на `[#id]` → ответ + источники (`/api/rag/ask`, страница `/search`). Лог в `llm_runs` (task_kind=`rag_answer`).
+- **Ограничение.** dim vec0-таблицы фиксирован (768 под nomic). Смена embed-модели с другим dim требует пересоздания `vec_vacancies`.

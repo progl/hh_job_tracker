@@ -32,5 +32,10 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_DESCRIPTION_CHARS: int = 16000  # обрезать длинные описания, чтобы не разносить context window
 
+    # --- RAG (опционально, extra `rag`: sqlite-vec) ---
+    LLM_MODEL_EMBED: str = "nomic-embed-text"
+    EMBED_DIM: int = 768  # размерность nomic-embed-text; vec0-таблица фиксирована под неё
+    RAG_TOP_K: int = 5
+
 
 settings = Settings()
