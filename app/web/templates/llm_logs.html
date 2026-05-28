@@ -62,14 +62,14 @@
     <table class="w-full text-xs">
       <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
         <tr>
-          <th class="px-3 py-2 w-16">id</th>
-          <th class="px-3 py-2">когда</th>
-          <th class="px-3 py-2">task</th>
-          <th class="px-3 py-2">модель</th>
-          <th class="px-3 py-2">target</th>
-          <th class="px-3 py-2 text-right">ms</th>
-          <th class="px-3 py-2 text-right">in/out</th>
-          <th class="px-3 py-2 text-center">ok</th>
+          <th class="px-3 py-2 w-16 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">id</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">когда</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">task</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">модель</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">target</th>
+          <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">ms</th>
+          <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">in/out</th>
+          <th class="px-3 py-2 text-center cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">ok</th>
           <th class="px-3 py-2">error</th>
         </tr>
       </thead>

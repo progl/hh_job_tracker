@@ -467,6 +467,75 @@
       if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
       else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
     };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
+    };
   </script>
 </body>
 </html>

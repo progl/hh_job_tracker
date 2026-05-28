@@ -54,19 +54,23 @@ async def finish(
         await db.close()
 
 
-async def list_runs(job_id: str | None = None, limit: int = 100) -> list[dict]:
+async def list_runs(job_id: str | None = None, status: str | None = None, limit: int = 100) -> list[dict]:
+    where: list[str] = []
+    params: list[Any] = []
+    if job_id:
+        where.append("job_id = ?")
+        params.append(job_id)
+    if status:
+        where.append("status = ?")
+        params.append(status)
+    clause = (" WHERE " + " AND ".join(where)) if where else ""
+    params.append(limit)
     db = await get_db()
     try:
-        if job_id:
-            cur = await db.execute(
-                "SELECT * FROM job_runs WHERE job_id = ? ORDER BY id DESC LIMIT ?",
-                (job_id, limit),
-            )
-        else:
-            cur = await db.execute(
-                "SELECT * FROM job_runs ORDER BY id DESC LIMIT ?",
-                (limit,),
-            )
+        cur = await db.execute(
+            f"SELECT * FROM job_runs{clause} ORDER BY id DESC LIMIT ?",
+            params,
+        )
         return [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()

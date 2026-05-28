@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Pre-commit hook: ruff format + ruff check --fix по staged Python-файлам.
+# Авто-фиксит и добавляет исправленное обратно в коммит. Блокирует коммит
+# только если остались неустранимые ошибки линтера.
+#
+# Установка: make hooks-install
+set -euo pipefail
+
+# staged *.py (Added/Copied/Modified — без удалённых).
+# while-read вместо mapfile — работает и в bash 3.2 (системный на macOS).
+files=()
+while IFS= read -r line; do
+  [ -n "$line" ] && files+=("$line")
+done < <(git diff --cached --name-only --diff-filter=ACM -- '*.py')
+
+if [ ${#files[@]} -eq 0 ]; then
+  exit 0
+fi
+
+echo "pre-commit: ruff format + check --fix по ${#files[@]} файл(ам)…"
+
+uv run ruff format "${files[@]}"
+# --fix чинит что может; код возврата != 0 — остались неустранимые ошибки
+fix_status=0
+uv run ruff check --fix "${files[@]}" || fix_status=$?
+
+# вернуть исправленное в индекс (форматирование/авто-фиксы)
+git add -- "${files[@]}"
+
+if [ "$fix_status" -ne 0 ]; then
+  echo "pre-commit: ruff нашёл неустранимые автоматически ошибки — коммит остановлен." >&2
+  exit "$fix_status"
+fi
+
+exit 0

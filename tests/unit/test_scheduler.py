@@ -228,3 +228,38 @@ async def test_record_decorator_cancelled(tmp_db):
     runs = await job_runs_repo.list_runs(job_id="cancel_job")
     assert len(runs) == 1
     assert runs[0]["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_not_running():
+    res = await sched_mod.cancel_run(999999)
+    assert res == {"ok": False, "reason": "not_running", "run_id": 999999}
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_cancels_running_job(tmp_db):
+    from app.db import job_runs_repo
+
+    started = asyncio.Event()
+
+    @sched_mod._record("long_job")
+    async def my_coro():
+        started.set()
+        await asyncio.sleep(10)
+
+    task = asyncio.create_task(my_coro())
+    await started.wait()
+    # wrapper уже зарегистрировал таск в _running по run_id
+    assert len(sched_mod._running) == 1
+    run_id = next(iter(sched_mod._running))
+
+    res = await sched_mod.cancel_run(run_id)
+    assert res == {"ok": True, "run_id": run_id}
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    # _record поймал CancelledError → записал 'cancelled' и почистил реестр
+    runs = await job_runs_repo.list_runs(job_id="long_job")
+    assert runs[0]["status"] == "cancelled"
+    assert sched_mod._running == {}

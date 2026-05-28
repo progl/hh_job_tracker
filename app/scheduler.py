@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 
 _scheduler: AsyncIOScheduler | None = None
 _state: dict[str, Any] = {"jobs": {}, "started_at": None}
+# run_id (job_runs.id) -> asyncio.Task текущего прогона — для остановки из UI (/jobs)
+_running: dict[int, asyncio.Task] = {}
 
 
 def _record(job_id: str):
@@ -35,6 +37,9 @@ def _record(job_id: str):
         @functools.wraps(coro_func)
         async def wrapper(*args, **kwargs):
             run_id = await job_runs_repo.start(job_id)
+            cur_task = asyncio.current_task()
+            if cur_task is not None:
+                _running[run_id] = cur_task
             t0 = time.monotonic()
             try:
                 res = await coro_func(*args, **kwargs)
@@ -48,10 +53,25 @@ def _record(job_id: str):
                 await job_runs_repo.finish(run_id, "error", error=str(e), started_mono=t0)
                 _state["jobs"][job_id] = {"ok": False, "error": str(e)}
                 raise
+            finally:
+                _running.pop(run_id, None)
 
         return wrapper
 
     return decorator
+
+
+async def cancel_run(run_id: int) -> dict[str, Any]:
+    """Останавливает выполняющийся прогон джоба по job_runs.id.
+
+    Работает для любого running-прогона (cron или ручной): декоратор _record ловит
+    CancelledError и записывает статус 'cancelled'.
+    """
+    task = _running.get(run_id)
+    if task is None or task.done():
+        return {"ok": False, "reason": "not_running", "run_id": run_id}
+    task.cancel()
+    return {"ok": True, "run_id": run_id}
 
 
 @_record("personal_refresh")

@@ -13,6 +13,7 @@
 import argparse
 import asyncio
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -417,6 +418,192 @@ VACANCY_STATUSES = {
     90000011: ("interested", None),
 }
 
+# --- LLM-демо-данные (чтобы снапшот показывал /analytics и LLM-секции вакансий) ---
+
+LLM_MODELS = ["qwen3:14b", "llama3.1:8b"]
+
+# тип компании по работодателю: (kind, confidence, reasoning)
+COMPANY_KIND_BY_EMPLOYER = {
+    1001: ("outsource", 0.78, "Проекты на заказ для внешних клиентов."),
+    1002: ("product", 0.9, "Собственный продукт, продуктовая разработка."),
+    1003: ("outsource", 0.7, "Аутсорс-студия, проектная работа."),
+    1004: ("ecommerce", 0.85, "Крупный маркетплейс, e-commerce."),
+    1005: ("bank", 0.88, "Финтех/банковская сфера."),
+    1006: ("product", 0.82, "SaaS-продукт, облачная платформа."),
+    1007: ("gamedev", 0.75, "Разработка игр."),
+    1008: ("edu", 0.84, "EdTech-платформа, онлайн-образование."),
+}
+
+# Общий пул вопросов/тем — повторяются между вакансиями, чтобы /analytics агрегировал
+INTERVIEW_QUESTIONS = [
+    ("Расскажите про GIL и его влияние на многопоточность", "Python core"),
+    ("Как устроены индексы в PostgreSQL: когда B-tree, когда GIN", "БД"),
+    ("В чём разница между WSGI и ASGI", "Web"),
+    ("Как работает event loop в asyncio", "asyncio"),
+    ("Чем процесс отличается от потока, что такое корутина", "Concurrency"),
+    ("Как бы вы масштабировали сервис под высокой нагрузкой", "System design"),
+    ("Что такое ACID и уровни изоляции транзакций", "БД"),
+    ("Как организовать кеширование и инвалидацию в Redis", "Кеш"),
+]
+INTERVIEW_TOPICS = ["Python", "PostgreSQL", "asyncio", "Docker", "Kubernetes", "System Design", "Redis"]
+
+PROFILE_SKILLS = {"python", "django", "fastapi", "postgresql", "docker", "kubernetes", "redis", "asyncio"}
+YEARS_BY_LEVEL = {"intern": 0, "junior": 1, "middle": 3, "senior": 5, "lead": 8}
+
+# подмножества вакансий с «дорогими» анализаторами
+INTERVIEW_VIDS = {90000001, 90000002, 90000004, 90000008, 90000009, 90000011, 90000014, 90000018}
+MATCH_VIDS = {90000001, 90000002, 90000004, 90000005, 90000008, 90000009, 90000011, 90000018}
+COVER_VIDS = {90000001, 90000002, 90000004, 90000006, 90000014}
+
+
+def _build_requirements(stack: list[str], level: str) -> list[tuple[str, str, str]]:
+    """(kind, category, text) — must=стек+опыт, nice=soft/edu, plus=бонусы."""
+    years = YEARS_BY_LEVEL.get(level, 3)
+    reqs: list[tuple[str, str, str]] = [("must", "stack", s) for s in stack]
+    reqs.append(("must", "exp", f"Опыт коммерческой разработки от {years}+ лет"))
+    reqs.append(("nice", "soft", "Опыт код-ревью и менторинга"))
+    reqs.append(("nice", "edu", "Английский — чтение технической документации"))
+    if level in ("senior", "lead"):
+        reqs.append(("plus", "soft", "Опыт лидирования команды"))
+    reqs.append(("plus", "stack", "Опыт настройки CI/CD"))
+    return reqs
+
+
+def _build_match_essay(stack: list[str], level: str) -> dict:
+    overlap = [s for s in stack if s in PROFILE_SKILLS]
+    gaps = [s for s in stack if s not in PROFILE_SKILLS]
+    score = min(95, 45 + len(overlap) * 10)
+    verdict = "match" if score >= 75 else ("stretch" if score >= 55 else "skip")
+    return {
+        "score": score,
+        "verdict": verdict,
+        "matches": [f"Совпадает по стеку: {s}" for s in overlap[:4]] or ["Базовый Python-стек совпадает"],
+        "gaps": [f"Нужно подтянуть: {s}" for s in gaps[:3]],
+        "reasoning": f"Уровень {level}, пересечение по стеку {len(overlap)} из {len(stack)} пунктов.",
+    }
+
+
+def _build_interview_prep(vid: int) -> dict:
+    qs = [INTERVIEW_QUESTIONS[(vid + i) % len(INTERVIEW_QUESTIONS)] for i in range(4)]
+    topics = [INTERVIEW_TOPICS[(vid + i) % len(INTERVIEW_TOPICS)] for i in range(3)]
+    return {
+        "likely_questions": [{"q": q, "why": why} for q, why in qs],
+        "topics": list(dict.fromkeys(topics)),
+        "code_tasks": ["Реализовать LRU-кеш", "Найти дубликаты в массиве за O(n)"],
+        "red_flags": ["Уточнить про переработки", "Спросить про процесс код-ревью"],
+    }
+
+
+def _build_cover_letter(role: str, company: str) -> dict:
+    letter = (
+        f"Здравствуйте!\n\nУвидел вакансию «{role}» в компании «{company}» и хочу откликнуться. "
+        "Последние годы пишу backend на Python (Django/FastAPI), проектирую сервисы на PostgreSQL "
+        "и поддерживаю их в Docker/Kubernetes. Близок продуктовый подход и работа с высокой нагрузкой.\n\n"
+        "Буду рад обсудить, чем могу быть полезен команде. Спасибо!"
+    )
+    return {
+        "letter": letter,
+        "highlights": ["Python + FastAPI/Django", "PostgreSQL и оптимизация запросов", "Docker/Kubernetes"],
+        "tone_note": "дружелюбно-деловой",
+    }
+
+
+def _build_summary(role: str, level: str, stack: list[str], rem: int, area: str) -> dict:
+    where = "удалёнка" if rem else f"офис, {area}"
+    return {"summary": f"{role}: уровень {level}, стек {', '.join(stack[:4])}. {where.capitalize()}."}
+
+
+async def _add_llm_run(conn, task_kind: str, vid: int, model: str, parsed: dict) -> int:
+    payload = json.dumps(parsed, ensure_ascii=False)
+    cur = await conn.execute(
+        """INSERT INTO llm_runs
+           (task_kind, target_kind, target_id, model, prompt_version,
+            user_prompt, response_raw, parsed_json, ok, latency_ms,
+            prompt_tokens, response_tokens, created_at)
+           VALUES (?, 'vacancy', ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, datetime('now', '-' || ? || ' hours'))""",
+        (
+            task_kind,
+            str(vid),
+            model,
+            f"{task_kind}_v1",
+            f"<demo-промпт {task_kind} для вакансии {vid}>",
+            payload,
+            payload,
+            random.randint(800, 4500),
+            random.randint(600, 1800),
+            random.randint(200, 900),
+            vid % 48,
+        ),
+    )
+    return cur.lastrowid
+
+
+async def _add_analysis(conn, vid: int, kind: str, data: dict, run_id: int) -> None:
+    await conn.execute(
+        "INSERT OR REPLACE INTO vacancy_analysis (vacancy_id, kind, data_json, llm_run_id) VALUES (?, ?, ?, ?)",
+        (vid, kind, json.dumps(data, ensure_ascii=False), run_id),
+    )
+
+
+async def _seed_llm(conn) -> dict[str, int]:
+    """Сеет requirements + анализаторы + llm_runs. Возвращает счётчики для отчёта."""
+    random.seed(42)
+    counts = {"requirements": 0, "analyses": 0, "llm_runs": 0}
+    for vid, name, eid, _area, _sf, _st, rem, lvl, stack, _arch, _dis in VACANCIES:
+        model = LLM_MODELS[vid % len(LLM_MODELS)]
+        company = next(e["name"] for e in EMPLOYERS if e["id"] == eid)
+
+        # requirements (отдельная таблица) + один llm_run на разбор
+        reqs = _build_requirements(stack, lvl)
+        req_run = await _add_llm_run(
+            conn,
+            "requirements",
+            vid,
+            model,
+            {"requirements": [{"kind": k, "category": c, "text": t} for k, c, t in reqs]},
+        )
+        counts["llm_runs"] += 1
+        for k, c, t in reqs:
+            await conn.execute(
+                """INSERT OR IGNORE INTO vacancy_requirements
+                   (vacancy_id, kind, category, text, source, llm_run_id)
+                   VALUES (?, ?, ?, ?, 'llm', ?)""",
+                (vid, k, c, t, req_run),
+            )
+            counts["requirements"] += 1
+
+        # summary + company_kind — на всех вакансиях
+        summ = _build_summary(name, lvl, stack, rem, _area)
+        run = await _add_llm_run(conn, "summary", vid, model, summ)
+        await _add_analysis(conn, vid, "summary", summ, run)
+
+        ck = COMPANY_KIND_BY_EMPLOYER[eid]
+        ckd = {"kind": ck[0], "confidence": ck[1], "reasoning": ck[2]}
+        run = await _add_llm_run(conn, "company_kind", vid, model, ckd)
+        await _add_analysis(conn, vid, "company_kind", ckd, run)
+        counts["analyses"] += 2
+        counts["llm_runs"] += 2
+
+        if vid in MATCH_VIDS:
+            me = _build_match_essay(stack, lvl)
+            run = await _add_llm_run(conn, "match_essay", vid, model, me)
+            await _add_analysis(conn, vid, "match_essay", me, run)
+            counts["analyses"] += 1
+            counts["llm_runs"] += 1
+        if vid in INTERVIEW_VIDS:
+            ip = _build_interview_prep(vid)
+            run = await _add_llm_run(conn, "interview_prep", vid, model, ip)
+            await _add_analysis(conn, vid, "interview_prep", ip, run)
+            counts["analyses"] += 1
+            counts["llm_runs"] += 1
+        if vid in COVER_VIDS:
+            cl = _build_cover_letter(name, company)
+            run = await _add_llm_run(conn, "cover_letter", vid, model, cl)
+            await _add_analysis(conn, vid, "cover_letter", cl, run)
+            counts["analyses"] += 1
+            counts["llm_runs"] += 1
+    return counts
+
 
 async def seed(force: bool) -> None:
     _assert_not_real_db()
@@ -541,6 +728,9 @@ async def seed(force: bool) -> None:
             (name, json.dumps(params, ensure_ascii=False), active),
         )
 
+    # LLM-данные (требования, анализаторы, llm_runs) — для /analytics и LLM-секций
+    llm_counts = await _seed_llm(conn)
+
     await conn.commit()
     await conn.close()
 
@@ -548,6 +738,10 @@ async def seed(force: bool) -> None:
     print(
         f"  profile: 1, employers: {len(EMPLOYERS)}, vacancies: {len(VACANCIES)}, "
         f"negotiations: {len(NEGOTIATIONS)}, searches: {len(SEARCHES)}"
+    )
+    print(
+        f"  LLM: requirements: {llm_counts['requirements']}, "
+        f"analyses: {llm_counts['analyses']}, llm_runs: {llm_counts['llm_runs']}"
     )
     print(
         f"\n  Запуск сервера: DB_PATH={DEMO_DB.relative_to(Path.cwd()) if DEMO_DB.is_relative_to(Path.cwd()) else DEMO_DB} make run"

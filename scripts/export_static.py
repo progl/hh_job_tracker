@@ -1,19 +1,27 @@
 """Экспортирует статический снапшот UI приложения для GitHub Pages.
 
-Подключается к работающему uvicorn на http://127.0.0.1:8000, выкачивает HTML
-страницы и переписывает ссылки/удаляет HTMX-интерактив. Результат — в docs/site/.
+Подключается к работающему demo-uvicorn на http://127.0.0.1:8099 (make demo-run),
+выкачивает HTML страницы и переписывает ссылки/удаляет HTMX-интерактив.
+Результат — в docs/site/. Порт 8099 (а не 8000) — чтобы не конфликтовать с
+реальным `make run`.
 """
 
 from __future__ import annotations
 
+import argparse
+import os
 import sqlite3
+import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8099"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = PROJECT_ROOT / "docs" / "site"
 DB_PATH = PROJECT_ROOT / "data" / "hh_demo.db"
@@ -152,7 +160,55 @@ def write_page(client: httpx.Client, route: str, out_rel: str) -> dict:
     return {"route": route, "out": str(out_path.relative_to(PROJECT_ROOT)), **stats, "bytes": len(html)}
 
 
-def main() -> int:
+@contextmanager
+def _demo_server():
+    """Поднимает demo-uvicorn на BASE_URL с DB_PATH=demo, гасит на выходе."""
+    parsed = urlparse(BASE_URL)
+    host, port = parsed.hostname or "127.0.0.1", parsed.port or 8099
+    env = {**os.environ, "DB_PATH": str(DB_PATH)}
+    print(f"[serve] поднимаю demo-сервер на {BASE_URL} (DB={DB_PATH.name})…")
+    proc = subprocess.Popen(
+        [
+            "uv",
+            "run",
+            "uvicorn",
+            "app.web.app:app",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--timeout-graceful-shutdown",
+            "3",
+        ],
+        env=env,
+        cwd=str(PROJECT_ROOT),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + 40
+        while time.monotonic() < deadline:
+            try:
+                with httpx.Client(base_url=BASE_URL, timeout=2) as probe:
+                    probe.get("/").raise_for_status()
+                break
+            except Exception:
+                if proc.poll() is not None:
+                    raise RuntimeError("demo-сервер упал при старте") from None
+                time.sleep(0.5)
+        else:
+            raise RuntimeError(f"demo-сервер не поднялся на {BASE_URL} за 40с")
+        yield
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        print("[serve] demo-сервер остановлен")
+
+
+def _export() -> int:
     # проверяем uvicorn
     try:
         with httpx.Client(base_url=BASE_URL, timeout=10) as probe:
@@ -182,5 +238,19 @@ def main() -> int:
     return 0
 
 
+def main(serve: bool = False) -> int:
+    if serve:
+        with _demo_server():
+            return _export()
+    return _export()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    ap = argparse.ArgumentParser(description="Экспорт статического снапшота UI в docs/site/.")
+    ap.add_argument(
+        "--serve",
+        action="store_true",
+        help="самому поднять demo-uvicorn на 8099 (иначе подключается к уже запущенному)",
+    )
+    args = ap.parse_args()
+    raise SystemExit(main(serve=args.serve))

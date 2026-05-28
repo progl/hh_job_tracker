@@ -9,10 +9,10 @@ async def top_employers(
     only: str | None = None,  # discard | interview | waiting | None=все
 ) -> list[dict]:
     """only:
-      'discard'   — только работодатели с хотя бы одним отказом (DISCARD*)
-      'interview' — только с INVITATION/INTERVIEW
-      'waiting'   — только с активным RESPONSE
-      None        — все
+    'discard'   — только работодатели с хотя бы одним отказом (DISCARD*)
+    'interview' — только с INVITATION/INTERVIEW
+    'waiting'   — только с активным RESPONSE
+    None        — все
     """
     having = ""
     if only == "discard":

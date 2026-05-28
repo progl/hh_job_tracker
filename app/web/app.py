@@ -222,15 +222,24 @@ _PY_SORT_EXTRACTORS = {
     "status": lambda r: r.get("status") or "new",
     # удалёнка > гибрид > офис: 3/2/1, остальные 0
     "format": lambda r: (
-        3 if (r.get("is_remote") or r.get("is_remote_text")) else
-        (2 if "HYBRID" in [str(x).upper() for x in (r.get("work_formats") or [])] else
-         (1 if any(str(x).upper() in ("ON_SITE", "OFFICE") for x in (r.get("work_formats") or [])) else 0))
+        3
+        if (r.get("is_remote") or r.get("is_remote_text"))
+        else (
+            2
+            if "HYBRID" in [str(x).upper() for x in (r.get("work_formats") or [])]
+            else (
+                1
+                if any(str(x).upper() in ("ON_SITE", "OFFICE") for x in (r.get("work_formats") or []))
+                else 0
+            )
+        )
     ),
     "stack": lambda r: len(r.get("parsed_stack") or []),
     # ✨ рекомендации сверху, потом backfill/обычные поиски
     "source": lambda r: (
-        2 if any(str(s).startswith("✨") for s in (r.get("source_list") or [])) else
-        (1 if r.get("source_list") else 0)
+        2
+        if any(str(s).startswith("✨") for s in (r.get("source_list") or []))
+        else (1 if r.get("source_list") else 0)
     ),
     "neg": lambda r: r.get("neg_state") or "",
 }
@@ -1046,6 +1055,12 @@ async def scheduler_run_now(job_id: str):
     return await scheduler_mod.run_now(job_id)
 
 
+@app.post("/api/jobs/{run_id}/stop")
+async def stop_job_run(run_id: int):
+    """Останавливает выполняющийся прогон джоба по job_runs.id."""
+    return await scheduler_mod.cancel_run(run_id)
+
+
 @app.post("/api/client/unpause")
 async def client_unpause():
     return {"ok": True, **hh_client.unpause()}
@@ -1426,7 +1441,7 @@ async def analytics_page(
                AND json_extract(value, '$.q') IS NOT NULL
           GROUP BY json_extract(value, '$.q')
           ORDER BY cnt DESC, q
-             LIMIT 30
+             LIMIT 200
             """
         )
         top_questions = [dict(r) for r in await cur.fetchall()]
@@ -1440,7 +1455,7 @@ async def analytics_page(
              WHERE kind = 'interview_prep' AND value IS NOT NULL AND value != ''
           GROUP BY value
           ORDER BY cnt DESC
-             LIMIT 20
+             LIMIT 200
             """
         )
         top_topics = [dict(r) for r in await cur.fetchall()]
@@ -1464,9 +1479,16 @@ async def analytics_page(
             """
         )
         row = await cur.fetchone()
-        llm_total = dict(row) if row else {
-            "cnt": 0, "prompt_tokens": 0, "response_tokens": 0, "avg_latency_ms": 0,
-        }
+        llm_total = (
+            dict(row)
+            if row
+            else {
+                "cnt": 0,
+                "prompt_tokens": 0,
+                "response_tokens": 0,
+                "avg_latency_ms": 0,
+            }
+        )
 
         cur = await db.execute(
             """
@@ -1527,9 +1549,7 @@ async def jobs_page(
     """История прогонов фоновых джобов (job_runs)."""
     from app.db import job_runs_repo
 
-    runs = await job_runs_repo.list_runs(job_id=job_id, limit=limit)
-    if status_filter:
-        runs = [r for r in runs if r.get("status") == status_filter]
+    runs = await job_runs_repo.list_runs(job_id=job_id, status=status_filter or None, limit=limit)
     # для красивого ярлыка джоба — реальные label'ы из scheduler
     labels = scheduler_mod._JOB_LABELS if hasattr(scheduler_mod, "_JOB_LABELS") else {}
     # уникальные job_id для селектора фильтра

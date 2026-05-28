@@ -198,7 +198,7 @@ async def _seed_llm_runs():
             ("requirements", "qwen3:14b", "requirements_v1", 1, 1200, 500, 200),
             ("requirements", "qwen3:14b", "requirements_v1", 1, 800, 450, 180),
             ("requirements", "qwen3:14b", "requirements_v1", 0, 1500, 480, 0),
-            ("salary",       "qwen3:14b", "salary_v1",       1, 600, 200, 50),
+            ("salary", "qwen3:14b", "salary_v1", 1, 600, 200, 50),
             ("company_kind", "llama3:8b", "company_kind_v1", 1, 400, 150, 30),
             ("company_kind", "llama3:8b", "company_kind_v1", 0, 700, 160, 0),
             ("interview_prep", "llama3:8b", "interview_prep_v1", 1, 2000, 800, 400),

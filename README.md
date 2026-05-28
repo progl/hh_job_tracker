@@ -193,9 +193,10 @@ docs/images/       — скрины UI на demo-данных
 Отдельная БД `data/hh_demo.db` с вымышленными данными — UI без своих откликов и компаний. Реальная `data/hh.db` не трогается.
 
 ```bash
-make demo-seed    # создать/пересоздать demo (1 профиль, 8 компаний, 20 вакансий, 15 откликов)
-make demo-run     # запустить uvicorn на demo-БД
+make demo-seed    # создать/пересоздать demo (профиль, 8 компаний, 20 вакансий, 15 откликов + LLM-разбор)
+make demo-run     # запустить uvicorn на demo-БД (порт 8099 — чтобы не мешать `make run` на 8000)
 make demo-clean   # удалить demo-БД
+make snapshot     # одной командой: пересеять demo + поднять сервер + выгрузить статику в docs/site/
 ```
 
 В demo включены оба пограничных случая: 2 архивных вакансии и 2 снятых с HH — для проверки бейджей и работы фильтров.
@@ -212,6 +213,7 @@ make coverage   # + HTML отчёт в htmlcov/index.html
 make lint       # ruff check
 make format     # ruff format
 make check      # lint + format check + pytest (для CI/pre-commit)
+make hooks-install  # поставить git pre-commit хук (ruff format + check --fix по staged-файлам)
 ```
 
 Слои: **unit** (парсеры, скоринг, ML, tasks, scheduler, rate-limit, llm-клиент) + **integration** (репозитории включая llm_repo, cookies, cbr, дедуп, collector, resume-token, реестр анализаторов) + **e2e** (FastAPI через `httpx.ASGITransport` с заглушенным lifespan — /api, /llm-logs, /analytics, /jobs, рекомендации, статус-стрим).

@@ -121,18 +121,22 @@
           {% set max_q = (top_questions | map(attribute='cnt') | list | max) or 1 %}
           <div class="space-y-2">
             {% for r in top_questions %}
-              <div class="text-xs">
+              <div class="text-xs{% if loop.index > 30 %} q-extra hidden{% endif %}">
                 {# Текст вопроса целиком, может переноситься на несколько строк #}
                 <div class="text-neutral-800 dark:text-neutral-200 leading-snug">{{ r.q }}</div>
                 <div class="flex items-center gap-2 mt-0.5">
                   <div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
                     <div class="bg-fuchsia-500 h-full" style="width: {{ (r.cnt / max_q * 100) | round }}%"></div>
                   </div>
-                  <div class="w-8 text-right tabular-nums text-neutral-500">{{ r.cnt }}</div>
+                  <div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в {{ r.cnt }} из {{ interview_prep_count }} разобранных">{{ r.cnt }}/{{ interview_prep_count }}</div>
                 </div>
               </div>
             {% endfor %}
           </div>
+          {% if top_questions | length > 30 %}
+            <button onclick="window.toggleExtra(this, 'q-extra', {{ top_questions | length }})"
+                    class="mt-2 text-[11px] text-blue-600 hover:underline">показать все ({{ top_questions | length }})</button>
+          {% endif %}
         {% else %}
           <div class="text-neutral-500 text-sm">Включи «interview_prep» в /profile и прогони корпус.</div>
         {% endif %}
@@ -141,22 +145,27 @@
       <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
         <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">
           📚 Топ-тем для подготовки
+          <span class="text-neutral-500 normal-case font-normal">(из {{ interview_prep_count }} разобранных)</span>
         </div>
         {% if top_topics %}
           {% set max_t = (top_topics | map(attribute='cnt') | list | max) or 1 %}
           <div class="space-y-2">
             {% for r in top_topics %}
-              <div class="text-xs">
+              <div class="text-xs{% if loop.index > 30 %} t-extra hidden{% endif %}">
                 <div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">{{ r.t }}</div>
                 <div class="flex items-center gap-2 mt-0.5">
                   <div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
                     <div class="bg-emerald-500 h-full" style="width: {{ (r.cnt / max_t * 100) | round }}%"></div>
                   </div>
-                  <div class="w-8 text-right tabular-nums text-neutral-500">{{ r.cnt }}</div>
+                  <div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в {{ r.cnt }} из {{ interview_prep_count }} разобранных">{{ r.cnt }}/{{ interview_prep_count }}</div>
                 </div>
               </div>
             {% endfor %}
           </div>
+          {% if top_topics | length > 30 %}
+            <button onclick="window.toggleExtra(this, 't-extra', {{ top_topics | length }})"
+                    class="mt-2 text-[11px] text-blue-600 hover:underline">показать все ({{ top_topics | length }})</button>
+          {% endif %}
         {% else %}
           <div class="text-neutral-500 text-sm">—</div>
         {% endif %}
@@ -198,11 +207,11 @@
             <table class="w-full text-xs">
               <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
                 <tr>
-                  <th class="px-2 py-1">model</th>
-                  <th class="px-2 py-1 text-right">cnt</th>
-                  <th class="px-2 py-1 text-right">Σ prompt</th>
-                  <th class="px-2 py-1 text-right">Σ resp</th>
-                  <th class="px-2 py-1 text-right">avg ms</th>
+                  <th class="px-2 py-1 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">model</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">cnt</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">Σ prompt</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">Σ resp</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">avg ms</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,12 +238,12 @@
             <table class="w-full text-xs">
               <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
                 <tr>
-                  <th class="px-2 py-1">task_kind</th>
-                  <th class="px-2 py-1 text-right">cnt</th>
-                  <th class="px-2 py-1 text-right">
+                  <th class="px-2 py-1 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">task_kind</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">cnt</th>
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">
                     <span class="text-emerald-600 dark:text-emerald-400">ok</span>
                   </th>
-                  <th class="px-2 py-1 text-right">
+                  <th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">
                     <span class="text-rose-600 dark:text-rose-400">fail</span>
                   </th>
                 </tr>
@@ -269,10 +278,10 @@
       <thead class="bg-neutral-50 dark:bg-neutral-800 text-left text-xs">
         <tr>
           <th class="px-3 py-1.5">#</th>
-          <th class="px-3 py-1.5">Текст</th>
-          <th class="px-3 py-1.5">kind</th>
-          <th class="px-3 py-1.5">category</th>
-          <th class="px-3 py-1.5 text-right">вакансий</th>
+          <th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">Текст</th>
+          <th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">kind</th>
+          <th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">category</th>
+          <th class="px-3 py-1.5 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">вакансий</th>
         </tr>
       </thead>
       <tbody>
@@ -292,6 +301,14 @@
   </div>
 </div>
 <script>
+// Раскрыть/свернуть строки сверх первых 30 (вопросы/темы).
+window.toggleExtra = (btn, cls, total) => {
+  const rows = document.querySelectorAll('.' + cls);
+  const hide = !rows[0].classList.contains('hidden');
+  rows.forEach(r => r.classList.toggle('hidden', hide));
+  btn.textContent = hide ? `показать все (${total})` : 'свернуть';
+};
+
 window.runParseCorpus = async () => {
   const limit = prompt('Сколько вакансий разобрать за один прогон? (Cron делает 20)', '20');
   if (!limit) return;

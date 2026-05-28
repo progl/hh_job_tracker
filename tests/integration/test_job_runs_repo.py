@@ -72,6 +72,23 @@ async def test_list_runs_filters_by_job_id(tmp_db):
 
 
 @pytest.mark.asyncio
+async def test_list_runs_filters_by_status(tmp_db):
+    a = await job_runs_repo.start("job_a")  # останется running
+    b = await job_runs_repo.start("job_b")
+    c = await job_runs_repo.start("job_a")
+    await job_runs_repo.finish(b, "ok")
+    await job_runs_repo.finish(c, "error", error="x")
+
+    running = await job_runs_repo.list_runs(status="running")
+    assert {r["id"] for r in running} == {a}
+
+    # статус + job_id вместе
+    a_ok = await job_runs_repo.list_runs(job_id="job_a", status="running")
+    assert {r["id"] for r in a_ok} == {a}
+    assert await job_runs_repo.list_runs(job_id="job_b", status="error") == []
+
+
+@pytest.mark.asyncio
 async def test_list_runs_respects_limit(tmp_db):
     for _ in range(5):
         rid = await job_runs_repo.start("job_x")

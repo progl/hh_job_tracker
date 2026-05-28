@@ -33,19 +33,23 @@
     </div>
     <button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
     <a href="/jobs" class="px-2 py-1 text-neutral-500 hover:underline">сброс</a>
+    <label class="ml-2 flex items-center gap-1 text-neutral-600 dark:text-neutral-400 cursor-pointer select-none" title="Перезагружать страницу каждые 5с">
+      <input type="checkbox" id="jobs-autorefresh" onchange="window.toggleJobsAutoRefresh(this.checked)">
+      авто-обновление
+    </label>
   </form>
 
   <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
     <table class="w-full text-xs">
       <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
         <tr>
-          <th class="px-3 py-2 w-16">id</th>
-          <th class="px-3 py-2">джоб</th>
-          <th class="px-3 py-2">старт</th>
-          <th class="px-3 py-2">финиш</th>
-          <th class="px-3 py-2 text-right">мс</th>
-          <th class="px-3 py-2 text-center">статус</th>
-          <th class="px-3 py-2">триггер</th>
+          <th class="px-3 py-2 w-16 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" data-dir="desc" onclick="window.sortHtmlTable(this)">id</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">джоб</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">старт</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">финиш</th>
+          <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">мс</th>
+          <th class="px-3 py-2 text-center cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">статус</th>
+          <th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">триггер</th>
           <th class="px-3 py-2">результат / ошибка</th>
         </tr>
       </thead>
@@ -61,8 +65,12 @@
             <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">{{ (r.started_at or '')[:19] }}</td>
             <td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">{{ (r.finished_at or '—')[:19] }}</td>
             <td class="px-3 py-1.5 text-right tabular-nums">{{ r.duration_ms or '—' }}</td>
-            <td class="px-3 py-1.5 text-center">
+            <td class="px-3 py-1.5 text-center whitespace-nowrap">
               <span class="text-[10px] px-1.5 py-0.5 rounded bg-{{ status_color }}-100 text-{{ status_color }}-700 dark:bg-{{ status_color }}-900/30 dark:text-{{ status_color }}-300">{{ r.status }}</span>
+              {% if r.status == 'running' %}
+                <button onclick="window.stopJobRun({{ r.id }})" title="Остановить прогон"
+                        class="ml-1 text-[10px] px-1.5 py-0.5 rounded border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30">⏹ стоп</button>
+              {% endif %}
             </td>
             <td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">{{ r.trigger or '—' }}</td>
             <td class="px-3 py-1.5 max-w-[500px]">
@@ -85,4 +93,22 @@
     </table>
   </div>
 </div>
+<script>
+  // Авто-обновление журнала: дефолт — включено, если есть выполняющийся прогон.
+  window._jobsRefreshTimer = null;
+  window.toggleJobsAutoRefresh = (on) => {
+    try { localStorage.setItem('jobsAutoRefresh', on ? '1' : '0'); } catch(e) {}
+    if (window._jobsRefreshTimer) { clearInterval(window._jobsRefreshTimer); window._jobsRefreshTimer = null; }
+    if (on) window._jobsRefreshTimer = setInterval(() => location.reload(), 5000);
+  };
+  (function() {
+    const hasRunning = !!document.querySelector('button[onclick^="window.stopJobRun"]');
+    let stored = null;
+    try { stored = localStorage.getItem('jobsAutoRefresh'); } catch(e) {}
+    const on = stored === null ? hasRunning : stored === '1';
+    const box = document.getElementById('jobs-autorefresh');
+    if (box) box.checked = on;
+    window.toggleJobsAutoRefresh(on);
+  })();
+</script>
 {% endblock %}

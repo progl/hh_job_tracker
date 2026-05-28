@@ -46,14 +46,19 @@ async def send(title: str, message: str, subtitle: str | None = None) -> None:
     if sys.platform != "darwin":
         log.debug("notify: skipped (not macOS)")
         return
-    parts = [f'display notification "{_escape_apple_string(message)}"', f'with title "{_escape_apple_string(title)}"']
+    parts = [
+        f'display notification "{_escape_apple_string(message)}"',
+        f'with title "{_escape_apple_string(title)}"',
+    ]
     if subtitle:
         parts.append(f'subtitle "{_escape_apple_string(subtitle)}"')
     script = " ".join(parts)
     try:
         # subprocess в фоне — не ждём
         proc = await asyncio.create_subprocess_exec(
-            "osascript", "-e", script,
+            "osascript",
+            "-e",
+            script,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )

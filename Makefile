@@ -1,4 +1,4 @@
-.PHONY: sync run db-init clean demo-seed demo-run demo-clean test coverage lint lint-fix format check
+.PHONY: sync run db-init clean demo-seed demo-run demo-clean test coverage lint lint-fix format check hooks-install snapshot
 
 sync:
 	uv sync
@@ -18,10 +18,16 @@ demo-seed:
 	uv run python -m scripts.seed_demo --force
 
 demo-run:
-	DB_PATH=data/hh_demo.db uv run uvicorn app.web.app:app --reload --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 3
+	DB_PATH=data/hh_demo.db uv run uvicorn app.web.app:app --reload --host 127.0.0.1 --port 8099 --timeout-graceful-shutdown 3
 
 demo-clean:
 	rm -rf data/hh_demo.db data/hh_demo.db-wal data/hh_demo.db-shm
+
+# Регенерация GitHub Pages снапшота одной командой:
+# пересеять demo-БД, поднять demo-сервер на 8099, выкачать статику в docs/site/.
+snapshot: demo-seed
+	uv run python -m scripts.export_static --serve
+	@echo "Снапшот обновлён в docs/site/ — закоммить его вручную."
 
 test:
 	uv run pytest tests/ -v
@@ -42,3 +48,9 @@ format:
 check: lint
 	uv run ruff format --check app tests scripts
 	uv run pytest tests/ -q
+
+# Установить git pre-commit хук (ruff format + check --fix по staged-файлам).
+hooks-install:
+	cp scripts/hooks/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	@echo "pre-commit хук установлен в .git/hooks/pre-commit"
