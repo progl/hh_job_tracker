@@ -106,8 +106,6 @@
 <label class="block text-[10px] uppercase text-neutral-500">Джоб</label>
 <select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1" name="job_id">
 <option value="">все</option>
-<option value="backfill_pending">Дотянуть вакансии (backfill_pending)</option>
-<option value="dedup_vacancies">Дедуп вакансий (dedup_vacancies)</option>
 </select>
 </div>
 <div>
@@ -125,306 +123,49 @@
 </div>
 <button class="px-3 py-1 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Фильтр</button>
 <a class="px-2 py-1 text-neutral-500 hover:underline" href="jobs.html">сброс</a>
+<label class="ml-2 flex items-center gap-1 text-neutral-600 dark:text-neutral-400 cursor-pointer select-none" title="Перезагружать страницу каждые 5с">
+<input id="jobs-autorefresh" onchange="window.toggleJobsAutoRefresh(this.checked)" type="checkbox"/>
+      авто-обновление
+    </label>
 </form>
 <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 <table class="w-full text-xs">
 <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
 <tr>
-<th class="px-3 py-2 w-16">id</th>
-<th class="px-3 py-2">джоб</th>
-<th class="px-3 py-2">старт</th>
-<th class="px-3 py-2">финиш</th>
-<th class="px-3 py-2 text-right">мс</th>
-<th class="px-3 py-2 text-center">статус</th>
-<th class="px-3 py-2">триггер</th>
+<th class="px-3 py-2 w-16 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-dir="desc" data-type="number" onclick="window.sortHtmlTable(this)">id</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">джоб</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">старт</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">финиш</th>
+<th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">мс</th>
+<th class="px-3 py-2 text-center cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">статус</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">триггер</th>
 <th class="px-3 py-2">результат / ошибка</th>
 </tr>
 </thead>
 <tbody>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">14</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-24 10:37:37</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-24 10:37:37</td>
-<td class="px-3 py-1.5 text-right tabular-nums">1</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">13</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дедуп вакансий</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">dedup_vacancies</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-24 10:11:14</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-24 10:11:14</td>
-<td class="px-3 py-1.5 text-right tabular-nums">1</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"groups": 0, "marked": 0}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"groups": 0, "marked": 0}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">12</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 19:01:13</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 19:01:13</td>
-<td class="px-3 py-1.5 text-right tabular-nums">5</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">11</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 18:41:13</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 18:41:13</td>
-<td class="px-3 py-1.5 text-right tabular-nums">8</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">10</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 18:18:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 18:18:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">2</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">9</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:58:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:58:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">7</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">8</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:38:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:38:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">8</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">7</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:18:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 17:18:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">3</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">6</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:58:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:58:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">8</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">5</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:38:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:38:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">5</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">4</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:18:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 16:18:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">4</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">3</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:58:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:58:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">3</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">2</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:38:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:38:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">3</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
-<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
-<td class="px-3 py-1.5 tabular-nums text-neutral-500">1</td>
-<td class="px-3 py-1.5">
-<span class="font-medium">Дотянуть вакансии</span>
-<span class="text-[10px] text-neutral-500 ml-1 font-mono">backfill_pending</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:18:41</td>
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-23 15:18:41</td>
-<td class="px-3 py-1.5 text-right tabular-nums">2</td>
-<td class="px-3 py-1.5 text-center">
-<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ok</span>
-</td>
-<td class="px-3 py-1.5 text-[10px] font-mono text-neutral-500">cron</td>
-<td class="px-3 py-1.5 max-w-[500px]">
-<details>
-<summary class="cursor-pointer text-[11px] text-neutral-500 hover:text-blue-600">{"remaining": 0, "skipped": true}</summary>
-<pre class="text-[10px] bg-neutral-100 dark:bg-neutral-900 p-2 rounded mt-1 whitespace-pre-wrap overflow-x-auto max-h-48">{"remaining": 0, "skipped": true}</pre>
-</details>
-</td>
-</tr>
+<tr><td class="px-3 py-4 text-center text-neutral-500" colspan="8">Пусто.</td></tr>
 </tbody>
 </table>
 </div>
 </div>
+<script>
+  // Авто-обновление журнала: дефолт — включено, если есть выполняющийся прогон.
+  window._jobsRefreshTimer = null;
+  window.toggleJobsAutoRefresh = (on) => {
+    try { localStorage.setItem('jobsAutoRefresh', on ? '1' : '0'); } catch(e) {}
+    if (window._jobsRefreshTimer) { clearInterval(window._jobsRefreshTimer); window._jobsRefreshTimer = null; }
+    if (on) window._jobsRefreshTimer = setInterval(() => location.reload(), 5000);
+  };
+  (function() {
+    const hasRunning = !!document.querySelector('button[onclick^="window.stopJobRun"]');
+    let stored = null;
+    try { stored = localStorage.getItem('jobsAutoRefresh'); } catch(e) {}
+    const on = stored === null ? hasRunning : stored === '1';
+    const box = document.getElementById('jobs-autorefresh');
+    if (box) box.checked = on;
+    window.toggleJobsAutoRefresh(on);
+  })();
+</script>
 </main>
 <!-- Status panel -->
 <div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
@@ -459,6 +200,75 @@
       const cur = document.documentElement.classList.contains('dark');
       if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
       else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
     };
   </script>
 </body>

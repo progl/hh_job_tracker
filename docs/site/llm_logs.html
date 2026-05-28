@@ -111,19 +111,1233 @@
 <table class="w-full text-xs">
 <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
 <tr>
-<th class="px-3 py-2 w-16">id</th>
-<th class="px-3 py-2">когда</th>
-<th class="px-3 py-2">task</th>
-<th class="px-3 py-2">модель</th>
-<th class="px-3 py-2">target</th>
-<th class="px-3 py-2 text-right">ms</th>
-<th class="px-3 py-2 text-right">in/out</th>
-<th class="px-3 py-2 text-center">ok</th>
+<th class="px-3 py-2 w-16 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">id</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">когда</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">task</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">модель</th>
+<th class="px-3 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">target</th>
+<th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">ms</th>
+<th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">in/out</th>
+<th class="px-3 py-2 text-center cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">ok</th>
 <th class="px-3 py-2">error</th>
 </tr>
 </thead>
 <tbody>
-<tr><td class="px-3 py-4 text-center text-neutral-500" colspan="9">Пока ничего нет. Жми «Разобрать» на странице вакансии.</td></tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=81">81</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000020.html">vac/90000020</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3008</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">870/784</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=80">80</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000020.html">vac/90000020</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1940</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1594/419</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=79">79</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 11:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000020.html">vac/90000020</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1090</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1652/443</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=78">78</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000019.html">vac/90000019</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1076</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">664/538</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=77">77</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000019.html">vac/90000019</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1090</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">720/434</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=76">76</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 12:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000019.html">vac/90000019</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3210</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1051/207</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=75">75</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000018.html">vac/90000018</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3209</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1734/435</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=74">74</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000018.html">vac/90000018</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1062</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1292/221</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=73">73</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000018.html">vac/90000018</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1295</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1107/430</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=72">72</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000018.html">vac/90000018</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4484</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1659/662</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=71">71</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 13:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000018.html">vac/90000018</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2434</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1364/648</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=70">70</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000017.html">vac/90000017</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3008</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1011/519</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=69">69</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000017.html">vac/90000017</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4373</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1466/416</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=68">68</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 14:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000017.html">vac/90000017</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1476</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1142/740</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=67">67</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 15:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000016.html">vac/90000016</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3502</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1573/762</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=66">66</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 15:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000016.html">vac/90000016</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3936</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">857/331</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=65">65</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 15:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000016.html">vac/90000016</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4142</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">741/745</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=64">64</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 16:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000015.html">vac/90000015</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1122</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">775/697</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=63">63</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 16:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000015.html">vac/90000015</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1037</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1093/780</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=62">62</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 16:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000015.html">vac/90000015</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4399</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1229/445</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=61">61</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 17:39:36</td>
+<td class="px-3 py-1.5">cover_letter</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000014.html">vac/90000014</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">879</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">829/571</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=60">60</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 17:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000014.html">vac/90000014</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3253</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1263/700</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=59">59</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 17:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000014.html">vac/90000014</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3989</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1686/200</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=58">58</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 17:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000014.html">vac/90000014</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2331</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">930/752</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=57">57</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 17:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000014.html">vac/90000014</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2879</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1007/356</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=56">56</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 18:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000013.html">vac/90000013</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1235</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1211/854</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=55">55</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 18:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000013.html">vac/90000013</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2850</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">965/719</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=54">54</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 18:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000013.html">vac/90000013</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2658</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">606/469</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=53">53</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 19:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000012.html">vac/90000012</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2002</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1490/361</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=52">52</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 19:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000012.html">vac/90000012</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3948</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1296/314</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=51">51</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 19:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000012.html">vac/90000012</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4424</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1699/473</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=50">50</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 20:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000011.html">vac/90000011</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3586</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">834/898</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=49">49</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 20:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000011.html">vac/90000011</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1829</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1733/211</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=48">48</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 20:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000011.html">vac/90000011</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2363</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1558/741</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=47">47</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 20:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000011.html">vac/90000011</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2529</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">730/594</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=46">46</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 20:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000011.html">vac/90000011</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1426</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">927/896</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=45">45</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 21:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000010.html">vac/90000010</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3895</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">696/312</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=44">44</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 21:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000010.html">vac/90000010</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2887</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1610/293</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=43">43</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 21:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000010.html">vac/90000010</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2282</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1049/341</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=42">42</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 22:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000009.html">vac/90000009</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4477</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1795/608</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=41">41</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 22:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000009.html">vac/90000009</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1876</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1797/638</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=40">40</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 22:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000009.html">vac/90000009</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3851</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1749/751</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=39">39</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 22:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000009.html">vac/90000009</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1884</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">885/452</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=38">38</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 22:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000009.html">vac/90000009</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4423</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1539/346</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=37">37</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 23:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000008.html">vac/90000008</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1670</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1622/605</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=36">36</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 23:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000008.html">vac/90000008</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1664</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1761/522</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=35">35</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 23:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000008.html">vac/90000008</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2443</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1148/267</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=34">34</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 23:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000008.html">vac/90000008</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1738</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">665/523</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=33">33</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-27 23:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000008.html">vac/90000008</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3604</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1264/257</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=32">32</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 00:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000007.html">vac/90000007</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3421</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1740/424</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=31">31</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 00:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000007.html">vac/90000007</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2693</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1377/476</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=30">30</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 00:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000007.html">vac/90000007</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3786</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1101/367</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=29">29</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 01:39:36</td>
+<td class="px-3 py-1.5">cover_letter</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000006.html">vac/90000006</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3400</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">950/746</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=28">28</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 01:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000006.html">vac/90000006</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3454</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">746/823</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=27">27</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 01:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000006.html">vac/90000006</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3545</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1146/899</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=26">26</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 01:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000006.html">vac/90000006</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2316</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1327/414</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=25">25</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 02:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000005.html">vac/90000005</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3403</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1347/366</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=24">24</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 02:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000005.html">vac/90000005</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2356</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1169/664</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=23">23</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 02:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000005.html">vac/90000005</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1126</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1076/303</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=22">22</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 02:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000005.html">vac/90000005</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3508</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1066/496</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=21">21</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">cover_letter</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1587</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">742/246</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=20">20</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">4197</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1340/791</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=19">19</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1122</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1730/500</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=18">18</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2996</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">855/587</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=17">17</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1883</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">688/670</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=16">16</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 03:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000004.html">vac/90000004</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">2270</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1304/818</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=15">15</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 04:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000003.html">vac/90000003</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1179</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1378/299</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=14">14</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 04:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000003.html">vac/90000003</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3927</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1289/304</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=13">13</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 04:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000003.html">vac/90000003</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1938</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">918/420</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=12">12</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">cover_letter</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3659</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1465/548</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=11">11</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1939</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">613/363</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=10">10</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1702</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1519/803</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=9">9</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3732</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1716/629</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=8">8</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">908</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1749/403</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=7">7</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 05:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">qwen3:14b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000002.html">vac/90000002</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1752</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1634/816</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=6">6</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">cover_letter</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">922</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">791/423</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=5">5</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">interview_prep</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3218</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1464/232</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=4">4</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">match_essay</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3571</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1716/289</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=3">3</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">company_kind</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">1714</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">885/304</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=2">2</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">summary</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3837</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">1163/450</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+<td class="px-3 py-1.5 tabular-nums"><a class="text-blue-600 hover:underline" href="/llm-logs?run=1">1</a></td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 06:39:36</td>
+<td class="px-3 py-1.5">requirements</td>
+<td class="px-3 py-1.5 font-mono">llama3.1:8b</td>
+<td class="px-3 py-1.5">
+<a class="text-blue-600 hover:underline" href="vacancy/90000001.html">vac/90000001</a>
+</td>
+<td class="px-3 py-1.5 text-right tabular-nums">3419</td>
+<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">828/225</td>
+<td class="px-3 py-1.5 text-center">
+<span class="text-emerald-600">✓</span>
+</td>
+<td class="px-3 py-1.5 text-red-600 max-w-[300px] truncate" title=""></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -162,6 +1376,75 @@
       const cur = document.documentElement.classList.contains('dark');
       if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
       else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
     };
   </script>
 </body>

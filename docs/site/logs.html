@@ -134,11 +134,11 @@
 </div>
 <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
 <div class="text-[11px] uppercase tracking-wide text-neutral-500">avg ms</div>
-<div class="text-xl font-semibold tabular-nums">284</div>
+<div class="text-xl font-semibold tabular-nums">280</div>
 </div>
 <div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
 <div class="text-[11px] uppercase tracking-wide text-neutral-500">max ms</div>
-<div class="text-xl font-semibold tabular-nums">284</div>
+<div class="text-xl font-semibold tabular-nums">280</div>
 </div>
 </div>
 <!-- Фильтры -->
@@ -188,41 +188,14 @@
 </thead>
 <tbody>
 <tr class="border-b border-neutral-100 dark:border-neutral-800 align-top row-ok">
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-27 05:37:46</td>
+<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-28 07:39:39</td>
 <td class="px-3 py-1.5 tabular-nums">
 <span class="font-mono">200</span>
 </td>
 <td class="px-3 py-1.5 text-neutral-600">GET</td>
 <td class="px-3 py-1.5 font-mono text-[12px] max-w-[280px] truncate" title="https://www.cbr-xml-daily.ru/daily_json.js">https://www.cbr-xml-daily.ru/daily_json.js</td>
 <td class="px-3 py-1.5 font-mono text-[11px] text-neutral-500 max-w-[200px] truncate" title="">—</td>
-<td class="px-3 py-1.5 text-right tabular-nums">284</td>
-<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">7</td>
-<td class="px-3 py-1.5 text-[11px] text-neutral-500 max-w-[280px] truncate">
-</td>
-<td class="px-3 py-1.5">
-<button class="text-xs text-blue-600 hover:underline" onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')">▾</button>
-</td>
-</tr>
-<tr class="hidden">
-<td class="px-3 py-2" colspan="9">
-<div class="text-[12px] space-y-1 bg-neutral-50 dark:bg-neutral-800 rounded p-2 font-mono">
-<div><b>ID:</b> 2 <b>kind:</b> cbr</div>
-<div><b>path:</b> https://www.cbr-xml-daily.ru/daily_json.js</div>
-<div><b>params:</b> —</div>
-<div><b>referer:</b> —</div>
-<div><b>status:</b> 200 · <b>duration:</b> 284ms · <b>size:</b> 7597b</div>
-</div>
-</td>
-</tr>
-<tr class="border-b border-neutral-100 dark:border-neutral-800 align-top row-ok">
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-23 14:58:41</td>
-<td class="px-3 py-1.5 tabular-nums">
-<span class="font-mono">200</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-600">GET</td>
-<td class="px-3 py-1.5 font-mono text-[12px] max-w-[280px] truncate" title="https://www.cbr-xml-daily.ru/daily_json.js">https://www.cbr-xml-daily.ru/daily_json.js</td>
-<td class="px-3 py-1.5 font-mono text-[11px] text-neutral-500 max-w-[200px] truncate" title="">—</td>
-<td class="px-3 py-1.5 text-right tabular-nums">256</td>
+<td class="px-3 py-1.5 text-right tabular-nums">280</td>
 <td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">7</td>
 <td class="px-3 py-1.5 text-[11px] text-neutral-500 max-w-[280px] truncate">
 </td>
@@ -237,7 +210,7 @@
 <div><b>path:</b> https://www.cbr-xml-daily.ru/daily_json.js</div>
 <div><b>params:</b> —</div>
 <div><b>referer:</b> —</div>
-<div><b>status:</b> 200 · <b>duration:</b> 256ms · <b>size:</b> 7598b</div>
+<div><b>status:</b> 200 · <b>duration:</b> 280ms · <b>size:</b> 7594b</div>
 </div>
 </td>
 </tr>
@@ -288,6 +261,75 @@
       const cur = document.documentElement.classList.contains('dark');
       if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
       else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
     };
   </script>
 </body>

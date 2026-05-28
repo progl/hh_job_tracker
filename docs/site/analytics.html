@@ -101,12 +101,11 @@
 <h2 class="text-lg font-semibold">📊 Аналитика корпуса</h2>
 <a class="text-xs text-neutral-500 hover:underline" href="index.html">← Список</a>
 </div>
-<div class="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
-    Разобрано LLM: <span class="font-mono font-semibold">0</span> / 20 вакансий.
-    
-      <span class="text-amber-700 dark:text-amber-400">
-        Чтобы добить корпус — на /profile включи нужные анализаторы, потом «Прогнать корпус» в API или ждите cron каждый час.
-      </span>
+<div class="mb-4 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+<span title="vacancy_requirements (анализатор 'requirements'). По остальным анализаторам — vacancy_analysis с kind=...">
+      Разобрано LLM: <span class="font-mono font-semibold">20</span> / 20 вакансий
+    </span>
+<a class="text-xs text-blue-600 hover:underline" href="profile.html">→ что включено в /profile</a>
 </div>
 <form class="flex flex-wrap gap-2 mb-4 text-xs" method="get" onsubmit="return false;">
 <select class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1" name="kind">
@@ -130,20 +129,377 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 <div class="lg:col-span-2 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Топ-стек (category=stack)</div>
-<div class="text-neutral-500 text-sm">Нет данных. Включи анализатор «Требования» и прогони корпус.</div>
+<div class="space-y-1">
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">Опыт настройки CI/CD</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">20</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">python</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">20</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">postgresql</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 50.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">10</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">django</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 35.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">7</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">redis</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 25.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">5</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">kubernetes</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 25.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">5</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">microservices</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 20.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">4</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">fastapi</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 20.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">4</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">docker</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 20.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">4</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">kafka</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 15.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">3</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">rabbitmq</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">ml</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">flask</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">celery</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">aws</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">asyncio</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 10.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">2</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">tests</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">nginx</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">linux</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">elasticsearch</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">drf</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="min-w-[8rem] font-mono break-words">clickhouse</div>
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-3 overflow-hidden min-w-[40px]">
+<div class="bg-fuchsia-500 h-full" style="width: 5.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums">1</div>
+</div>
+</div>
 </div>
 <div class="space-y-4">
 <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">По строгости</div>
-<div class="text-neutral-500 text-sm">—</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">must</span>
+<span class="tabular-nums text-neutral-500">100</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">nice</span>
+<span class="tabular-nums text-neutral-500">40</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">plus</span>
+<span class="tabular-nums text-neutral-500">33</span>
+</div>
 </div>
 <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">По категории</div>
-<div class="text-neutral-500 text-sm">—</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">stack</span>
+<span class="tabular-nums text-neutral-500">100</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">soft</span>
+<span class="tabular-nums text-neutral-500">33</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">edu</span>
+<span class="tabular-nums text-neutral-500">20</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">exp</span>
+<span class="tabular-nums text-neutral-500">20</span>
+</div>
 </div>
 <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
 <div class="text-xs uppercase tracking-wide text-neutral-500 mb-2">Тип компании</div>
-<div class="text-neutral-500 text-sm">Включи анализатор «company_kind».</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">product</span>
+<span class="tabular-nums text-neutral-500">5</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">outsource</span>
+<span class="tabular-nums text-neutral-500">5</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">gamedev</span>
+<span class="tabular-nums text-neutral-500">3</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">ecommerce</span>
+<span class="tabular-nums text-neutral-500">3</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">edu</span>
+<span class="tabular-nums text-neutral-500">2</span>
+</div>
+<div class="flex justify-between text-sm py-0.5">
+<span class="font-mono">bank</span>
+<span class="tabular-nums text-neutral-500">2</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+<div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">
+          🎤 Топ-вопросов к собесу
+          <span class="text-neutral-500 normal-case font-normal">(из 8 разобранных)</span>
+</div>
+<div class="space-y-2">
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Как работает event loop в asyncio</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 6 из 8 разобранных">6/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Чем процесс отличается от потока, что такое корутина</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 6 из 8 разобранных">6/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">В чём разница между WSGI и ASGI</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 83.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 5 из 8 разобранных">5/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Как бы вы масштабировали сервис под высокой нагрузкой</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 67.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 4 из 8 разобранных">4/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Как устроены индексы в PostgreSQL: когда B-tree, когда GIN</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 67.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 4 из 8 разобранных">4/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Что такое ACID и уровни изоляции транзакций</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 50.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 3 из 8 разобранных">3/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Как организовать кеширование и инвалидацию в Redis</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 33.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 2 из 8 разобранных">2/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="text-neutral-800 dark:text-neutral-200 leading-snug">Расскажите про GIL и его влияние на многопоточность</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-fuchsia-500 h-full" style="width: 33.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 2 из 8 разобранных">2/8</div>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+<div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-2">
+          📚 Топ-тем для подготовки
+          <span class="text-neutral-500 normal-case font-normal">(из 8 разобранных)</span>
+</div>
+<div class="space-y-2">
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">PostgreSQL</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 5 из 8 разобранных">5/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">Docker</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 100.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 5 из 8 разобранных">5/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">asyncio</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 80.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 4 из 8 разобранных">4/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">System Design</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 60.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 3 из 8 разобранных">3/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">Python</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 60.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 3 из 8 разобранных">3/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">Kubernetes</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 60.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 3 из 8 разобранных">3/8</div>
+</div>
+</div>
+<div class="text-xs">
+<div class="font-mono text-neutral-800 dark:text-neutral-200 leading-snug break-words">Redis</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex-1 bg-neutral-100 dark:bg-neutral-800 rounded h-1.5 overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 20.0%"></div>
+</div>
+<div class="w-12 text-right tabular-nums text-neutral-500" title="встречается в 1 из 8 разобранных">1/8</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -151,7 +507,115 @@
 <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-3">
       🤖 LLM-затраты
     </div>
-<div class="text-neutral-500 text-sm">Нет данных. Запусти LLM-анализаторы — записи появятся в llm_runs.</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+<div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+<div class="text-[10px] uppercase text-neutral-500">Вызовов</div>
+<div class="font-mono font-semibold tabular-nums">81</div>
+</div>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+<div class="text-[10px] uppercase text-neutral-500">Σ prompt токенов</div>
+<div class="font-mono font-semibold tabular-nums">98770</div>
+</div>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+<div class="text-[10px] uppercase text-neutral-500">Σ response токенов</div>
+<div class="font-mono font-semibold tabular-nums">41778</div>
+</div>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded p-2">
+<div class="text-[10px] uppercase text-neutral-500">Avg latency, ms</div>
+<div class="font-mono font-semibold tabular-nums">2645.0</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<div>
+<div class="text-[10px] uppercase text-neutral-500 mb-1">По моделям</div>
+<div class="overflow-x-auto border border-neutral-200 dark:border-neutral-700 rounded">
+<table class="w-full text-xs">
+<thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+<tr>
+<th class="px-2 py-1 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">model</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">cnt</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">Σ prompt</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">Σ resp</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">avg ms</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">qwen3:14b</td>
+<td class="px-2 py-1 text-right tabular-nums">43</td>
+<td class="px-2 py-1 text-right tabular-nums">53982</td>
+<td class="px-2 py-1 text-right tabular-nums">22783</td>
+<td class="px-2 py-1 text-right tabular-nums">2661.7</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">llama3.1:8b</td>
+<td class="px-2 py-1 text-right tabular-nums">38</td>
+<td class="px-2 py-1 text-right tabular-nums">44788</td>
+<td class="px-2 py-1 text-right tabular-nums">18995</td>
+<td class="px-2 py-1 text-right tabular-nums">2626.2</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div>
+<div class="text-[10px] uppercase text-neutral-500 mb-1">По анализаторам</div>
+<div class="overflow-x-auto border border-neutral-200 dark:border-neutral-700 rounded">
+<table class="w-full text-xs">
+<thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+<tr>
+<th class="px-2 py-1 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">task_kind</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">cnt</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">
+<span class="text-emerald-600 dark:text-emerald-400">ok</span>
+</th>
+<th class="px-2 py-1 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">
+<span class="text-rose-600 dark:text-rose-400">fail</span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">company_kind</td>
+<td class="px-2 py-1 text-right tabular-nums">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">requirements</td>
+<td class="px-2 py-1 text-right tabular-nums">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">summary</td>
+<td class="px-2 py-1 text-right tabular-nums">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">20</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">interview_prep</td>
+<td class="px-2 py-1 text-right tabular-nums">8</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">8</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">match_essay</td>
+<td class="px-2 py-1 text-right tabular-nums">8</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">8</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-2 py-1 font-mono">cover_letter</td>
+<td class="px-2 py-1 text-right tabular-nums">5</td>
+<td class="px-2 py-1 text-right tabular-nums text-emerald-600 dark:text-emerald-400">5</td>
+<td class="px-2 py-1 text-right tabular-nums text-rose-600 dark:text-rose-400">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
 </div>
 <div class="mt-6 border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
 <div class="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 bg-neutral-50 dark:bg-neutral-800">
@@ -161,18 +625,254 @@
 <thead class="bg-neutral-50 dark:bg-neutral-800 text-left text-xs">
 <tr>
 <th class="px-3 py-1.5">#</th>
-<th class="px-3 py-1.5">Текст</th>
-<th class="px-3 py-1.5">kind</th>
-<th class="px-3 py-1.5">category</th>
-<th class="px-3 py-1.5 text-right">вакансий</th>
+<th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">Текст</th>
+<th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">kind</th>
+<th class="px-3 py-1.5 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">category</th>
+<th class="px-3 py-1.5 text-right cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">вакансий</th>
 </tr>
 </thead>
 <tbody>
-<tr><td class="px-3 py-4 text-center text-neutral-500" colspan="5">Пусто.</td></tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">1</td>
+<td class="px-3 py-1">python</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">20</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">2</td>
+<td class="px-3 py-1">Английский — чтение технической документации</td>
+<td class="px-3 py-1 font-mono text-xs">nice</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">edu</td>
+<td class="px-3 py-1 text-right tabular-nums">20</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">3</td>
+<td class="px-3 py-1">Опыт код-ревью и менторинга</td>
+<td class="px-3 py-1 font-mono text-xs">nice</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">soft</td>
+<td class="px-3 py-1 text-right tabular-nums">20</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">4</td>
+<td class="px-3 py-1">Опыт настройки CI/CD</td>
+<td class="px-3 py-1 font-mono text-xs">plus</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">20</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">5</td>
+<td class="px-3 py-1">Опыт лидирования команды</td>
+<td class="px-3 py-1 font-mono text-xs">plus</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">soft</td>
+<td class="px-3 py-1 text-right tabular-nums">13</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">6</td>
+<td class="px-3 py-1">postgresql</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">10</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">7</td>
+<td class="px-3 py-1">Опыт коммерческой разработки от 5+ лет</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">exp</td>
+<td class="px-3 py-1 text-right tabular-nums">10</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">8</td>
+<td class="px-3 py-1">django</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">7</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">9</td>
+<td class="px-3 py-1">kubernetes</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">5</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">10</td>
+<td class="px-3 py-1">redis</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">5</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">11</td>
+<td class="px-3 py-1">Опыт коммерческой разработки от 3+ лет</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">exp</td>
+<td class="px-3 py-1 text-right tabular-nums">5</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">12</td>
+<td class="px-3 py-1">docker</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">4</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">13</td>
+<td class="px-3 py-1">fastapi</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">4</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">14</td>
+<td class="px-3 py-1">microservices</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">4</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">15</td>
+<td class="px-3 py-1">kafka</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">3</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">16</td>
+<td class="px-3 py-1">Опыт коммерческой разработки от 8+ лет</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">exp</td>
+<td class="px-3 py-1 text-right tabular-nums">3</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">17</td>
+<td class="px-3 py-1">asyncio</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">18</td>
+<td class="px-3 py-1">aws</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">19</td>
+<td class="px-3 py-1">celery</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">20</td>
+<td class="px-3 py-1">flask</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">21</td>
+<td class="px-3 py-1">ml</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">22</td>
+<td class="px-3 py-1">rabbitmq</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">2</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">23</td>
+<td class="px-3 py-1">clickhouse</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">24</td>
+<td class="px-3 py-1">drf</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">25</td>
+<td class="px-3 py-1">elasticsearch</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">26</td>
+<td class="px-3 py-1">linux</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">27</td>
+<td class="px-3 py-1">nginx</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">28</td>
+<td class="px-3 py-1">tests</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">stack</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">29</td>
+<td class="px-3 py-1">Опыт коммерческой разработки от 0+ лет</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">exp</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800">
+<td class="px-3 py-1 text-neutral-400 tabular-nums">30</td>
+<td class="px-3 py-1">Опыт коммерческой разработки от 1+ лет</td>
+<td class="px-3 py-1 font-mono text-xs">must</td>
+<td class="px-3 py-1 font-mono text-xs text-neutral-500">exp</td>
+<td class="px-3 py-1 text-right tabular-nums">1</td>
+</tr>
 </tbody>
 </table>
 </div>
 </div>
+<script>
+// Раскрыть/свернуть строки сверх первых 30 (вопросы/темы).
+window.toggleExtra = (btn, cls, total) => {
+  const rows = document.querySelectorAll('.' + cls);
+  const hide = !rows[0].classList.contains('hidden');
+  rows.forEach(r => r.classList.toggle('hidden', hide));
+  btn.textContent = hide ? `показать все (${total})` : 'свернуть';
+};
+
+window.runParseCorpus = async () => {
+  const limit = prompt('Сколько вакансий разобрать за один прогон? (Cron делает 20)', '20');
+  if (!limit) return;
+  const n = parseInt(limit, 10);
+  if (isNaN(n) || n < 1 || n > 500) { alert('1..500'); return; }
+  window.showToast('info', `🚀 Запускаю разбор ${n} вакансий — следи в /jobs`);
+  const fd = new FormData();
+  fd.append('limit', String(n));
+  fd.append('only_unparsed', 'true');
+  const r = await fetch('/api/llm/parse-corpus', {method: 'POST', body: fd});
+  const d = await r.json();
+  if (d.task_id) {
+    window.showToast('ok', `✓ Запущено в фоне — task ${d.task_id}`);
+  } else if (d.ok === false) {
+    window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+  }
+};
+</script>
 </main>
 <!-- Status panel -->
 <div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
@@ -207,6 +907,75 @@
       const cur = document.documentElement.classList.contains('dark');
       if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
       else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
     };
   </script>
 </body>
