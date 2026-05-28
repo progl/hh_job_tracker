@@ -120,6 +120,107 @@ async def test_events_default_and_set(tmp_db):
 
 
 @pytest.mark.asyncio
+async def test_handle_start_shows_chat_id_and_hint(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "")  # не настроен → подсказка
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append((chat_id, text))
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+    await notify._handle_command(tmp_db, 12345, "/start")
+    assert sent and sent[0][0] == 12345
+    assert "chat_id: 12345" in sent[0][1]
+    assert "TELEGRAM_CHAT_ID=12345" in sent[0][1]
+
+
+@pytest.mark.asyncio
+async def test_handle_help_and_status(tmp_db, monkeypatch):
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+    await notify._handle_command(tmp_db, 1, "/help")
+    assert "/status" in sent[-1]
+    # команда с @упоминанием бота тоже распознаётся
+    await notify._handle_command(tmp_db, 1, "/status@my_bot")
+    assert "Scheduler" in sent[-1] and "Уведомления" in sent[-1]
+
+
+@pytest.mark.asyncio
+async def test_sensitive_command_blocked_for_non_owner(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+    await notify._handle_command(tmp_db, 999, "/run fx_refresh")  # чужой чат
+    assert "только владельцу" in sent[-1]
+
+
+@pytest.mark.asyncio
+async def test_vacancies_command_owner(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    await tmp_db.execute(
+        "INSERT INTO vacancies(id, name, company_name, description) VALUES (1, 'Senior Python', 'Acme', ?)",
+        ("d" * 200,),
+    )
+    await tmp_db.commit()
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+    await notify._handle_command(tmp_db, 111, "/vacancies")
+    assert "Senior Python" in sent[-1]
+    assert "hh.ru/vacancy/1" in sent[-1]
+
+
+@pytest.mark.asyncio
+async def test_run_command_owner(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    from app import scheduler as sched
+
+    async def fake_run_now(job_id):
+        return {"ok": True, "started": job_id}
+
+    monkeypatch.setattr(sched, "run_now", fake_run_now)
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+
+    # без аргумента — список джоб
+    await notify._handle_command(tmp_db, 111, "/run")
+    assert "fx_refresh" in sent[-1]
+    # с валидным job_id — запуск
+    await notify._handle_command(tmp_db, 111, "/run fx_refresh")
+    assert "запущено" in sent[-1]
+    # неизвестный job_id
+    await notify._handle_command(tmp_db, 111, "/run bogus")
+    assert "Неизвестная" in sent[-1]
+
+
+@pytest.mark.asyncio
+async def test_handle_unknown_command_silent(tmp_db, monkeypatch):
+    sent: list = []
+
+    async def fake_to(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+    await notify._handle_command(tmp_db, 1, "/foobar")
+    assert sent == []
+
+
+@pytest.mark.asyncio
 async def test_dispatch_skips_disabled_event(tmp_db, monkeypatch):
     sent = []
 

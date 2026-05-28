@@ -86,9 +86,16 @@ async def lifespan(app: FastAPI):
     await hh_client.start(initial_cookies=cookies)
     ml_module.reload_model()
     scheduler_mod.start(hh_client)
+    telegram_task = None
+    if settings.TELEGRAM_BOT_TOKEN:
+        from app import notify
+
+        telegram_task = asyncio.create_task(notify.poll_updates_loop())
     try:
         yield
     finally:
+        if telegram_task:
+            telegram_task.cancel()
         scheduler_mod.shutdown()
         db = await get_db()
         try:
