@@ -124,7 +124,7 @@ async def test_handle_start_shows_chat_id_and_hint(tmp_db, monkeypatch):
     monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "")  # не настроен → подсказка
     sent: list = []
 
-    async def fake_to(chat_id, text):
+    async def fake_to(chat_id, text, reply_markup=None):
         sent.append((chat_id, text))
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
@@ -138,7 +138,7 @@ async def test_handle_start_shows_chat_id_and_hint(tmp_db, monkeypatch):
 async def test_handle_help_and_status(tmp_db, monkeypatch):
     sent: list = []
 
-    async def fake_to(chat_id, text):
+    async def fake_to(chat_id, text, reply_markup=None):
         sent.append(text)
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
@@ -154,7 +154,7 @@ async def test_sensitive_command_blocked_for_non_owner(tmp_db, monkeypatch):
     monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
     sent: list = []
 
-    async def fake_to(chat_id, text):
+    async def fake_to(chat_id, text, reply_markup=None):
         sent.append(text)
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
@@ -172,7 +172,7 @@ async def test_vacancies_command_owner(tmp_db, monkeypatch):
     await tmp_db.commit()
     sent: list = []
 
-    async def fake_to(chat_id, text):
+    async def fake_to(chat_id, text, reply_markup=None):
         sent.append(text)
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
@@ -192,32 +192,66 @@ async def test_run_command_owner(tmp_db, monkeypatch):
     monkeypatch.setattr(sched, "run_now", fake_run_now)
     sent: list = []
 
-    async def fake_to(chat_id, text):
-        sent.append(text)
+    async def fake_to(chat_id, text, reply_markup=None):
+        sent.append((text, reply_markup))
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
 
-    # без аргумента — список джоб
+    # без аргумента — клавиатура с кнопкой на каждую джобу
     await notify._handle_command(tmp_db, 111, "/run")
-    assert "fx_refresh" in sent[-1]
+    text, markup = sent[-1]
+    assert "Какую задачу" in text
+    btns = [b["callback_data"] for row in markup["inline_keyboard"] for b in row]
+    assert "run:fx_refresh" in btns
     # с валидным job_id — запуск
     await notify._handle_command(tmp_db, 111, "/run fx_refresh")
-    assert "запущено" in sent[-1]
+    assert "запущено" in sent[-1][0]
     # неизвестный job_id
     await notify._handle_command(tmp_db, 111, "/run bogus")
-    assert "Неизвестная" in sent[-1]
+    assert "Неизвестная" in sent[-1][0]
 
 
 @pytest.mark.asyncio
 async def test_handle_unknown_command_silent(tmp_db, monkeypatch):
     sent: list = []
 
-    async def fake_to(chat_id, text):
+    async def fake_to(chat_id, text, reply_markup=None):
         sent.append(text)
 
     monkeypatch.setattr(notify, "send_telegram_to", fake_to)
     await notify._handle_command(tmp_db, 1, "/foobar")
     assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_callbacks_keyboard_and_owner_gate(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    from app import scheduler as sched
+
+    async def fake_run_now(job_id):
+        return {"ok": True}
+
+    monkeypatch.setattr(sched, "run_now", fake_run_now)
+    sent: list = []
+
+    async def fake_to(chat_id, text, reply_markup=None):
+        sent.append((chat_id, text, reply_markup))
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+
+    # cmd:status — открыт даже не-владельцу
+    await notify._handle_callback(tmp_db, 999, "cmd:status", "cq1")
+    assert "Scheduler" in sent[-1][1]
+    # cmd:jobs владельцу — приходит клавиатура с кнопками run:
+    await notify._handle_callback(tmp_db, 111, "cmd:jobs", "cq2")
+    btns = [b["callback_data"] for row in sent[-1][2]["inline_keyboard"] for b in row]
+    assert "run:fx_refresh" in btns
+    # run:<id> владельцу — запуск
+    await notify._handle_callback(tmp_db, 111, "run:fx_refresh", "cq3")
+    assert "запущено" in sent[-1][1]
+    # run:<id> из чужого чата — отказ
+    await notify._handle_callback(tmp_db, 999, "run:fx_refresh", "cq4")
+    assert "только владельцу" in sent[-1][1]
 
 
 @pytest.mark.asyncio

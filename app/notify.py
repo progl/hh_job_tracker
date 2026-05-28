@@ -119,14 +119,17 @@ async def any_enabled(db: aiosqlite.Connection) -> bool:
     return telegram_configured() and await is_telegram_enabled(db)
 
 
-async def send_telegram_to(chat_id: str | int, text: str) -> None:
-    """Шлёт сообщение в конкретный чат. No-op если токена нет."""
+async def send_telegram_to(chat_id: str | int, text: str, reply_markup: dict | None = None) -> None:
+    """Шлёт сообщение в конкретный чат (опц. с inline-кнопками). No-op если токена нет."""
     if not settings.TELEGRAM_BOT_TOKEN:
         return
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload: dict = {"chat_id": chat_id, "text": text}
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
     try:
         async with httpx.AsyncClient(timeout=10) as cli:
-            await cli.post(url, json={"chat_id": chat_id, "text": text})
+            await cli.post(url, json=payload)
     except Exception as e:
         log.warning("telegram send failed: %s", e)
 
@@ -302,16 +305,34 @@ async def _build_vacancies_reply(db: aiosqlite.Connection, limit: int = 10) -> s
     return f"🔝 Топ-{len(top)} вакансий по match:\n\n" + "\n\n".join(blocks)
 
 
-async def _build_run_reply(chat_id: int, text: str) -> str:
+_NOT_OWNER = "Эта команда доступна только владельцу (chat_id из .env)."
+
+
+def _start_keyboard() -> dict:
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "📊 Статус", "callback_data": "cmd:status"},
+                {"text": "🔝 Вакансии", "callback_data": "cmd:vacancies"},
+            ],
+            [{"text": "▶ Запустить задачу", "callback_data": "cmd:jobs"}],
+        ]
+    }
+
+
+def _jobs_keyboard() -> dict:
+    """Кнопка на каждую фоновую задачу → callback run:<job_id>."""
     from app import scheduler as sched
 
-    parts = text.split()
-    if len(parts) < 2:
-        ids = "\n".join(f"/run {jid} — {lbl}" for jid, lbl in sched._JOB_LABELS.items())
-        return "Какую задачу запустить?\n" + ids
-    job_id = parts[1].strip()
+    rows = [[{"text": lbl, "callback_data": f"run:{jid}"}] for jid, lbl in sched._JOB_LABELS.items()]
+    return {"inline_keyboard": rows}
+
+
+async def _run_job(job_id: str) -> str:
+    from app import scheduler as sched
+
     if job_id not in sched._JOB_LABELS:
-        return f"Неизвестная задача: {job_id}. /run — список."
+        return f"Неизвестная задача: {job_id}."
     res = await sched.run_now(job_id)
     if res.get("ok"):
         return f"▶ запущено: {sched._JOB_LABELS.get(job_id, job_id)}"
@@ -322,7 +343,7 @@ async def _build_run_reply(chat_id: int, text: str) -> str:
 async def _handle_command(db: aiosqlite.Connection, chat_id: int, text: str) -> None:
     cmd = text.split()[0].lstrip("/").split("@")[0].lower()
     if cmd == "start":
-        await send_telegram_to(chat_id, await _build_start_reply(db, chat_id))
+        await send_telegram_to(chat_id, await _build_start_reply(db, chat_id), reply_markup=_start_keyboard())
     elif cmd == "help":
         await send_telegram_to(chat_id, _HELP_TEXT)
     elif cmd == "status":
@@ -330,12 +351,48 @@ async def _handle_command(db: aiosqlite.Connection, chat_id: int, text: str) -> 
     elif cmd in ("vacancies", "top", "run"):
         # чувствительные команды — только владельцу
         if not _is_owner(chat_id):
-            await send_telegram_to(chat_id, "Эта команда доступна только владельцу (chat_id из .env).")
+            await send_telegram_to(chat_id, _NOT_OWNER)
             return
         if cmd == "run":
-            await send_telegram_to(chat_id, await _build_run_reply(chat_id, text))
+            parts = text.split()
+            if len(parts) < 2:
+                await send_telegram_to(chat_id, "Какую задачу запустить?", reply_markup=_jobs_keyboard())
+            else:
+                await send_telegram_to(chat_id, await _run_job(parts[1].strip()))
         else:
             await send_telegram_to(chat_id, await _build_vacancies_reply(db))
+
+
+async def _answer_callback(cq_id: str, text: str | None = None) -> None:
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+    payload: dict = {"callback_query_id": cq_id}
+    if text:
+        payload["text"] = text
+    try:
+        async with httpx.AsyncClient(timeout=10) as cli:
+            await cli.post(url, json=payload)
+    except Exception as e:
+        log.warning("telegram answerCallback failed: %s", e)
+
+
+async def _handle_callback(db: aiosqlite.Connection, chat_id: int, data: str, cq_id: str) -> None:
+    """Нажатие inline-кнопки. data: cmd:status | cmd:vacancies | cmd:jobs | run:<job_id>."""
+    await _answer_callback(cq_id)
+    if data == "cmd:status":
+        await send_telegram_to(chat_id, await _build_status_reply(db))
+        return
+    # остальное — чувствительное, только владельцу
+    if not _is_owner(chat_id):
+        await send_telegram_to(chat_id, _NOT_OWNER)
+        return
+    if data == "cmd:vacancies":
+        await send_telegram_to(chat_id, await _build_vacancies_reply(db))
+    elif data == "cmd:jobs":
+        await send_telegram_to(chat_id, "Какую задачу запустить?", reply_markup=_jobs_keyboard())
+    elif data.startswith("run:"):
+        await send_telegram_to(chat_id, await _run_job(data.split(":", 1)[1]))
 
 
 async def _get_offset(db: aiosqlite.Connection) -> int:
@@ -372,6 +429,18 @@ async def poll_updates_loop() -> None:
             updates = await _tg_get_updates(offset)
             for u in updates:
                 offset = u["update_id"] + 1
+                cq = u.get("callback_query")
+                if cq:
+                    data = cq.get("data") or ""
+                    cq_id = cq.get("id")
+                    cb_chat = ((cq.get("message") or {}).get("chat") or {}).get("id")
+                    if cb_chat is not None and cq_id:
+                        db = await get_db()
+                        try:
+                            await _handle_callback(db, cb_chat, data, cq_id)
+                        finally:
+                            await db.close()
+                    continue
                 msg = u.get("message") or u.get("edited_message") or {}
                 text = (msg.get("text") or "").strip()
                 chat_id = (msg.get("chat") or {}).get("id")
