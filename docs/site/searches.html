@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Сохранённые поиски</title>
+<script>
+    // theme bootstrap до загрузки tailwind
+    (function() {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+<script>tailwind = { config: { darkMode: 'class' } }</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+
+<style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+    .htmx-request.htmx-indicator { display: inline; }
+    table.compact td, table.compact th { padding: 6px 10px; font-size: 13px; }
+    .dark body { background: #0a0a0a; color: #e5e5e5; }
+    .dark .bg-white { background-color: #171717; }
+    .dark .bg-neutral-50 { background-color: #0a0a0a; }
+    .dark .border-neutral-200, .dark .border-neutral-100 { border-color: #262626; }
+    .dark .text-neutral-900 { color: #f5f5f5; }
+    .dark .text-neutral-800 { color: #e5e5e5; }
+    .dark .text-neutral-700, .dark .text-neutral-600 { color: #d4d4d4; }
+    .dark .text-neutral-500 { color: #a3a3a3; }
+    .dark .text-neutral-400 { color: #737373; }
+    .dark input, .dark textarea { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark select { background-color: #262626; color: #f5f5f5; border-color: #404040; }
+    .dark thead.sticky-h th, .dark thead { background-color: #171717 !important; }
+    .dark tbody tr:hover { background-color: #262626 !important; }
+    .dark .hover\:bg-neutral-50:hover, .dark .hover\:bg-neutral-100:hover { background-color: #262626 !important; }
+    .dark .bg-neutral-100 { background-color: #262626; color: #d4d4d4; }
+    .dark .bg-blue-100 { background-color: #1e3a5f; color: #93c5fd; }
+    .dark .bg-emerald-100 { background-color: #14532d; color: #6ee7b7; }
+    .dark .bg-violet-100 { background-color: #4c1d95; color: #c4b5fd; }
+    .dark .bg-amber-100 { background-color: #78350f; color: #fcd34d; }
+    .dark .bg-red-100 { background-color: #7f1d1d; color: #fca5a5; }
+    .dark .bg-emerald-50 { background-color: #064e3b; color: #6ee7b7; }
+    .dark .bg-neutral-900 { background-color: #171717; }
+    .dark a { color: inherit; }
+    .dark a.text-blue-600 { color: #60a5fa; }
+    /* Подсветка строки, на которую возвращаешься после клика по внешней ссылке */
+    tr.seen-external > td { background-color: rgb(254 243 199 / 0.5) !important; }
+    .dark tr.seen-external > td { background-color: rgb(120 53 15 / 0.35) !important; }
+    @keyframes seenShake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(5px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+    }
+    tr.seen-external-shake { animation: seenShake 450ms ease-in-out 1; }
+    /* Полоска авто-скрытия завершённой задачи (готово/cancelled) */
+    .auto-hide-bar {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(to right, #10b981, #6ee7b7);
+      border-radius: 1px;
+      transition: width var(--auto-hide-ms, 5000ms) linear;
+    }
+    .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
+  </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
+<header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<h1 class="text-base font-semibold">HH Job Tracker</h1>
+<nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+<a class="hover:text-neutral-900 dark:hover:text-white" href="index.html">Список</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="search.html">🧲 Поиск</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="profile.html">Профиль</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="logs.html">Логи</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="jobs.html">⚙️ Джобы</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="llm_logs.html">✨ LLM</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="analytics.html">📊 Аналитика</a>
+<a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleTheme()" title="Переключить тему">
+<span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-[1600px] mx-auto px-4 py-5">
+<div class="max-w-[1200px] mx-auto">
+<div class="flex items-baseline justify-between mb-3">
+<h2 class="text-lg font-semibold">🔎 Сохранённые поиски (4)</h2>
+<a class="text-xs text-neutral-500 hover:underline" href="index.html">← Список</a>
+</div>
+<div class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+<button class="px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" onclick="window.syncAll(event)" title="Запустить все активные (с early-stop). Shift+клик — полный прогон.">↻ Синкать все</button>
+<button class="px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.bulkPages()">🔧 Глубину всем</button>
+<button class="px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.addSearch()">+ Добавить</button>
+<span class="text-neutral-500">Правки сохраняются автоматически при изменении поля.</span>
+</div>
+<div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+<table class="w-full text-xs" data-sortable="">
+<thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+<tr>
+<th class="px-2 py-2">вкл</th>
+<th class="px-2 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">имя</th>
+<th class="px-2 py-2">текст запроса</th>
+<th class="px-2 py-2">регион</th>
+<th class="px-2 py-2 text-center">remote</th>
+<th class="px-2 py-2 text-right">стр.</th>
+<th class="px-2 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">найдено</th>
+<th class="px-2 py-2">последний прогон</th>
+<th class="px-2 py-2 text-right">действия</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-neutral-100 dark:border-neutral-800" data-sid="4">
+<td class="px-2 py-1.5 text-center">
+<input class="f-active" onchange="window.saveRow(4)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-name w-44 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(4)" value="Python ML"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-text w-56 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(4)" value="python ml"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-area w-16 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(4)" value=""/>
+</td>
+<td class="px-2 py-1.5 text-center">
+<input class="f-remote" onchange="window.saveRow(4)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5 text-right">
+<input class="f-pages w-16 text-right bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" max="1000" min="1" onchange="window.saveRow(4)" type="number" value="5"/>
+</td>
+<td class="px-2 py-1.5 text-right tabular-nums">0</td>
+<td class="px-2 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 11:29</td>
+<td class="px-2 py-1.5 text-right whitespace-nowrap">
+<span class="f-saved text-emerald-600 text-[11px] mr-1"></span>
+<button class="text-blue-700 dark:text-blue-400 hover:underline" onclick="window.runSearch(4, event)" title="Запустить сейчас (Shift — полный прогон)">▶</button>
+<button class="text-neutral-400 hover:text-red-600 ml-1" onclick="window.delSearch(4, 'Python ML')" title="Удалить">✕</button>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800" data-sid="3">
+<td class="px-2 py-1.5 text-center">
+<input checked="" class="f-active" onchange="window.saveRow(3)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-name w-44 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(3)" value="FastAPI Backend"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-text w-56 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(3)" value="fastapi backend"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-area w-16 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(3)" value=""/>
+</td>
+<td class="px-2 py-1.5 text-center">
+<input class="f-remote" onchange="window.saveRow(3)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5 text-right">
+<input class="f-pages w-16 text-right bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" max="1000" min="1" onchange="window.saveRow(3)" type="number" value="5"/>
+</td>
+<td class="px-2 py-1.5 text-right tabular-nums">0</td>
+<td class="px-2 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 11:29</td>
+<td class="px-2 py-1.5 text-right whitespace-nowrap">
+<span class="f-saved text-emerald-600 text-[11px] mr-1"></span>
+<button class="text-blue-700 dark:text-blue-400 hover:underline" onclick="window.runSearch(3, event)" title="Запустить сейчас (Shift — полный прогон)">▶</button>
+<button class="text-neutral-400 hover:text-red-600 ml-1" onclick="window.delSearch(3, 'FastAPI Backend')" title="Удалить">✕</button>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800" data-sid="2">
+<td class="px-2 py-1.5 text-center">
+<input checked="" class="f-active" onchange="window.saveRow(2)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-name w-44 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(2)" value="Lead Python"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-text w-56 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(2)" value="lead python"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-area w-16 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(2)" value="113"/>
+</td>
+<td class="px-2 py-1.5 text-center">
+<input class="f-remote" onchange="window.saveRow(2)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5 text-right">
+<input class="f-pages w-16 text-right bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" max="1000" min="1" onchange="window.saveRow(2)" type="number" value="5"/>
+</td>
+<td class="px-2 py-1.5 text-right tabular-nums">0</td>
+<td class="px-2 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 11:29</td>
+<td class="px-2 py-1.5 text-right whitespace-nowrap">
+<span class="f-saved text-emerald-600 text-[11px] mr-1"></span>
+<button class="text-blue-700 dark:text-blue-400 hover:underline" onclick="window.runSearch(2, event)" title="Запустить сейчас (Shift — полный прогон)">▶</button>
+<button class="text-neutral-400 hover:text-red-600 ml-1" onclick="window.delSearch(2, 'Lead Python')" title="Удалить">✕</button>
+</td>
+</tr>
+<tr class="border-t border-neutral-100 dark:border-neutral-800" data-sid="1">
+<td class="px-2 py-1.5 text-center">
+<input checked="" class="f-active" onchange="window.saveRow(1)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-name w-44 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(1)" value="Python Senior Remote"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-text w-56 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(1)" value="python senior"/>
+</td>
+<td class="px-2 py-1.5">
+<input class="f-area w-16 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" onchange="window.saveRow(1)" value="113"/>
+</td>
+<td class="px-2 py-1.5 text-center">
+<input checked="" class="f-remote" onchange="window.saveRow(1)" type="checkbox"/>
+</td>
+<td class="px-2 py-1.5 text-right">
+<input class="f-pages w-16 text-right bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" max="1000" min="1" onchange="window.saveRow(1)" type="number" value="5"/>
+</td>
+<td class="px-2 py-1.5 text-right tabular-nums">0</td>
+<td class="px-2 py-1.5 text-neutral-500 whitespace-nowrap">2026-05-28 11:29</td>
+<td class="px-2 py-1.5 text-right whitespace-nowrap">
+<span class="f-saved text-emerald-600 text-[11px] mr-1"></span>
+<button class="text-blue-700 dark:text-blue-400 hover:underline" onclick="window.runSearch(1, event)" title="Запустить сейчас (Shift — полный прогон)">▶</button>
+<button class="text-neutral-400 hover:text-red-600 ml-1" onclick="window.delSearch(1, 'Python Senior Remote')" title="Удалить">✕</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<script>
+  window.saveRow = async (sid) => {
+    const tr = document.querySelector(`tr[data-sid="${sid}"]`);
+    if (!tr) return;
+    const fd = new FormData();
+    fd.append('name', tr.querySelector('.f-name').value);
+    fd.append('text', tr.querySelector('.f-text').value);
+    fd.append('area', tr.querySelector('.f-area').value);
+    fd.append('remote', tr.querySelector('.f-remote').checked ? 'true' : 'false');
+    fd.append('max_pages', tr.querySelector('.f-pages').value || '5');
+    fd.append('is_active', tr.querySelector('.f-active').checked ? 'true' : 'false');
+    const out = tr.querySelector('.f-saved');
+    try {
+      const r = await fetch(`/api/searches/${sid}/update`, {method: 'POST', body: fd});
+      const d = await r.json();
+      out.textContent = d.ok ? '✓' : '✗';
+      setTimeout(() => out.textContent = '', 1500);
+    } catch(e) { out.textContent = '✗'; }
+  };
+
+  window.runSearch = async (sid, ev) => {
+    const full = ev && ev.shiftKey;
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    window.showToast('info', `▶ запускаю поиск #${sid}${full ? ' (полный)' : ''}…`);
+    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? `▶ поиск #${sid} запущен` : `ошибка: ${d.reason || ''}`);
+  };
+
+  window.delSearch = async (sid, name) => {
+    if (!confirm(`Удалить поиск «${name}»? (вакансии останутся)`)) return;
+    await fetch(`/api/searches/${sid}`, {method: 'DELETE'});
+    const tr = document.querySelector(`tr[data-sid="${sid}"]`);
+    if (tr) tr.remove();
+    window.showToast('ok', '✓ удалён');
+  };
+
+  window.syncAll = async (ev) => {
+    const fd = new FormData();
+    if (ev && ev.shiftKey) fd.append('full', 'true');
+    window.showToast('info', '↻ синкаю все активные…');
+    const r = await fetch('/api/searches/sync-all', {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? '↻ запущено' : 'ошибка');
+  };
+
+  window.bulkPages = async () => {
+    const n = prompt('Глубина (max_pages) всем активным:', '50');
+    if (!n) return;
+    const fd = new FormData(); fd.append('max_pages', n);
+    const r = await fetch('/api/searches/bulk-max-pages', {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? `✓ глубина ${n} применена` : 'ошибка');
+    setTimeout(() => location.reload(), 800);
+  };
+
+  window.addSearch = async () => {
+    const text = prompt('Текст запроса нового поиска:', 'python senior');
+    if (!text) return;
+    const fd = new FormData();
+    fd.append('name', text);
+    fd.append('text', text);
+    fd.append('area', '113');
+    fd.append('only_remote', 'true');
+    const r = await fetch('/api/searches', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (d.ok !== false) { window.showToast('ok', '✓ добавлен'); setTimeout(() => location.reload(), 600); }
+    else window.showToast('err', `ошибка: ${d.reason || ''}`);
+  };
+</script>
+</main>
+<!-- Status panel -->
+<div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
+<div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="status-dot"></span>
+<span class="font-medium">Статус</span>
+<span class="text-neutral-500" id="status-summary"></span>
+</div>
+<span class="text-neutral-400" id="status-arrow">▾</span>
+</div>
+<div class="overflow-y-auto p-3 space-y-3" id="status-body">
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
+<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
+<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info"></div>
+</div>
+<div>
+<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
+<div class="space-y-2" id="tasks-info"></div>
+</div>
+</div>
+</div>
+<!-- Toasts -->
+<div class="fixed top-16 right-3 z-50 space-y-2" id="toasts"></div>
+
+<script>
+    window.toggleTheme = () => {
+      const cur = document.documentElement.classList.contains('dark');
+      if (cur) { document.documentElement.classList.remove('dark'); localStorage.setItem('theme','light'); }
+      else { document.documentElement.classList.add('dark'); localStorage.setItem('theme','dark'); }
+    };
+
+    // Универсальная клиентская сортировка таблиц по клику на <th>.
+    // Использование: <th data-type="text|number" onclick="window.sortHtmlTable(this)">...
+    // Цикл: asc → desc → none (восстановление исходного порядка).
+    window.sortHtmlTable = (th) => {
+      const table = th.closest('table');
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const headers = Array.from(th.parentElement.children);
+      const colIdx = headers.indexOf(th);
+      const type = th.dataset.type || 'text';
+      const cur = th.dataset.sortState || 'none';
+      const next = cur === 'none' ? 'asc' : (cur === 'asc' ? 'desc' : 'none');
+      // сбросим стрелки на других колонках
+      headers.forEach(h => { if (h !== th) { h.dataset.sortState = ''; h.dataset.arrow = ''; } });
+      th.dataset.sortState = next;
+      th.dataset.arrow = next === 'asc' ? ' ↑' : (next === 'desc' ? ' ↓' : '');
+      // обновим визуальный индикатор
+      headers.forEach(h => {
+        const baseText = (h.dataset.baseText !== undefined) ? h.dataset.baseText : h.textContent.replace(/[ ↑↓]+$/, '');
+        h.dataset.baseText = baseText;
+        h.textContent = baseText + (h.dataset.arrow || '');
+      });
+      // сохраним исходный порядок при первом клике
+      if (!tbody.dataset.origOrder) {
+        Array.from(tbody.rows).forEach((r, i) => r.dataset.origIdx = i);
+        tbody.dataset.origOrder = '1';
+      }
+      const rows = Array.from(tbody.rows);
+      if (next === 'none') {
+        rows.sort((a, b) => Number(a.dataset.origIdx) - Number(b.dataset.origIdx));
+      } else {
+        const sign = next === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+          const av = (a.cells[colIdx]?.textContent || '').trim();
+          const bv = (b.cells[colIdx]?.textContent || '').trim();
+          let cmp;
+          if (type === 'number') {
+            const an = parseFloat(av.replace(/[^\d.-]/g, '')) || 0;
+            const bn = parseFloat(bv.replace(/[^\d.-]/g, '')) || 0;
+            cmp = an - bn;
+          } else {
+            cmp = av.localeCompare(bv, 'ru');
+          }
+          return cmp * sign;
+        });
+      }
+      rows.forEach(r => tbody.appendChild(r));
+    };
+
+    // Стоп running-прогона джоба со страницы /jobs.
+    window.stopJobRun = async (runId) => {
+      if (!confirm('Остановить этот прогон джоба?')) return;
+      window.showToast('info', `⏹ останавливаю прогон #${runId}…`);
+      try {
+        const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
+        const d = await r.json();
+        if (d.ok) {
+          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          setTimeout(() => location.reload(), 800);
+        } else if (d.reason === 'not_running') {
+          window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
+        } else {
+          window.showToast('err', `не удалось остановить #${runId}`);
+        }
+      } catch(e) {
+        window.showToast('err', `ошибка: ${e.message}`);
+      }
+    };
+  </script>
+</body>
+</html>
