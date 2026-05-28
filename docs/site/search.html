@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Логи запросов</title>
+<title>Семантический поиск</title>
 <script>
     // theme bootstrap до загрузки tailwind
     (function() {
@@ -97,135 +97,76 @@
 </div>
 </header>
 <main class="max-w-[1600px] mx-auto px-4 py-5">
-<style>
-  .row-ok td { }
-  .row-3xx td { background: rgba(245, 158, 11, 0.06); }
-  .row-4xx td { background: rgba(220, 38, 38, 0.08); }
-  .row-5xx td { background: rgba(220, 38, 38, 0.15); }
-  .row-err td { background: rgba(220, 38, 38, 0.10); }
-  .row-skipped td { opacity: 0.5; }
-  details.row-details { background: #fafafa; border-left: 2px solid #d4d4d4; padding: 6px 10px; font-size: 12px; }
-  .dark details.row-details { background: #171717; border-color: #404040; }
-</style>
-<div class="flex items-center justify-between mb-4">
-<h2 class="text-lg font-semibold">Логи запросов к HH</h2>
-<a class="text-sm text-blue-600 hover:underline" href="index.html">← к списку</a>
+<div class="max-w-[1000px] mx-auto">
+<div class="flex items-baseline justify-between mb-3">
+<h2 class="text-lg font-semibold">🧲 Семантический поиск + RAG</h2>
+<a class="text-xs text-neutral-500 hover:underline" href="index.html">← Список</a>
 </div>
-<!-- Карточки статистики (за 24 часа) -->
-<div class="grid grid-cols-2 sm:grid-cols-7 gap-2 mb-4">
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" title="Всего запросов за 24 часа">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">Всего за 24ч</div>
-<div class="text-xl font-semibold tabular-nums">1</div>
+<div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+<span>Проиндексировано: <span class="font-mono font-semibold">20</span> / 20 вакансий</span>
 </div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">2xx OK</div>
-<div class="text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">1</div>
-</div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">3xx redirect</div>
-<div class="text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-400">0</div>
-</div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" title="403/429 — антибот HH">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">Anti-bot</div>
-<div class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-400">0</div>
-</div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">Ошибки</div>
-<div class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-400">0</div>
-</div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">avg ms</div>
-<div class="text-xl font-semibold tabular-nums">267</div>
-</div>
-<div class="px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-<div class="text-[11px] uppercase tracking-wide text-neutral-500">max ms</div>
-<div class="text-xl font-semibold tabular-nums">267</div>
-</div>
-</div>
-<!-- Фильтры -->
-<form class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-3 mb-4 flex flex-wrap gap-3 items-end text-sm" method="GET" onsubmit="return false;">
-<div>
-<label class="block text-[11px] text-neutral-500">Path содержит</label>
-<input class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5 w-56" name="path" placeholder="/vacancy/ или /applicant" value=""/>
-</div>
-<div>
-<label class="block text-[11px] text-neutral-500">Статус</label>
-<select class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5" name="status">
-<option value="">все</option>
-<option value="2xx">2xx OK</option>
-<option value="3xx">3xx редиректы</option>
-<option value="4xx">4xx (включая 403)</option>
-<option value="5xx">5xx</option>
-</select>
-</div>
-<div>
-<label class="block text-[11px] text-neutral-500">Лимит</label>
-<select class="border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1.5" name="limit">
-<option value="50">50</option><option value="100">100</option><option selected="" value="200">200</option><option value="500">500</option><option value="1000">1000</option>
-</select>
-</div>
-<label class="flex items-center gap-2 pb-2">
-<input class="rounded" name="only_errors" type="checkbox" value="true"/> только ошибки/403
-  </label>
-<button class="px-3 py-1.5 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Применить</button>
-<a class="px-3 py-1.5 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" href="logs.html">Сбросить</a>
-<button class="ml-auto px-3 py-1.5 rounded border border-red-300 text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30" onclick="window.cleanupLogs()" title="Удалить старые записи, оставить последние 5000" type="button">🗑 Очистить старые</button>
+<form class="flex flex-wrap gap-2 mb-4" onsubmit="return false;">
+<input class="flex-1 min-w-[280px] border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-3 py-2 text-sm" id="rag-q" onkeydown="if(event.key==='Enter'){window.ragSearch();}" placeholder="Например: удалённый Python с FastAPI и высокой нагрузкой" type="text"/>
+<button class="px-3 py-2 rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white text-sm" onclick="window.ragSearch()">🔍 Найти</button>
+<button class="px-3 py-2 rounded border border-fuchsia-400 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 text-sm" onclick="window.ragAsk()" title="Найти релевантные вакансии и ответить на вопрос с ссылками на них">💬 Спросить (RAG)</button>
 </form>
-<!-- Таблица -->
-<div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
-<table class="w-full compact">
-<thead class="bg-neutral-50 dark:bg-neutral-800 text-left text-neutral-600 dark:text-neutral-400 uppercase tracking-wide text-[11px] border-b border-neutral-200 dark:border-neutral-700">
-<tr>
-<th class="px-3 py-2">Время</th>
-<th class="px-3 py-2">Статус</th>
-<th class="px-3 py-2">Метод</th>
-<th class="px-3 py-2">Путь</th>
-<th class="px-3 py-2">Параметры</th>
-<th class="px-3 py-2 text-right">мс</th>
-<th class="px-3 py-2 text-right">KB</th>
-<th class="px-3 py-2">Referer / Кратко</th>
-<th class="px-3 py-2"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="border-b border-neutral-100 dark:border-neutral-800 align-top row-ok">
-<td class="px-3 py-1.5 text-neutral-500 whitespace-nowrap tabular-nums">05-28 11:08:11</td>
-<td class="px-3 py-1.5 tabular-nums">
-<span class="font-mono">200</span>
-</td>
-<td class="px-3 py-1.5 text-neutral-600">GET</td>
-<td class="px-3 py-1.5 font-mono text-[12px] max-w-[280px] truncate" title="https://www.cbr-xml-daily.ru/daily_json.js">https://www.cbr-xml-daily.ru/daily_json.js</td>
-<td class="px-3 py-1.5 font-mono text-[11px] text-neutral-500 max-w-[200px] truncate" title="">—</td>
-<td class="px-3 py-1.5 text-right tabular-nums">267</td>
-<td class="px-3 py-1.5 text-right tabular-nums text-neutral-500">7</td>
-<td class="px-3 py-1.5 text-[11px] text-neutral-500 max-w-[280px] truncate">
-</td>
-<td class="px-3 py-1.5">
-<button class="text-xs text-blue-600 hover:underline" onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')">▾</button>
-</td>
-</tr>
-<tr class="hidden">
-<td class="px-3 py-2" colspan="9">
-<div class="text-[12px] space-y-1 bg-neutral-50 dark:bg-neutral-800 rounded p-2 font-mono">
-<div><b>ID:</b> 1 <b>kind:</b> cbr</div>
-<div><b>path:</b> https://www.cbr-xml-daily.ru/daily_json.js</div>
-<div><b>params:</b> —</div>
-<div><b>referer:</b> —</div>
-<div><b>status:</b> 200 · <b>duration:</b> 267ms · <b>size:</b> 7594b</div>
-</div>
-</td>
-</tr>
-</tbody>
-</table>
+<div class="mb-4" id="rag-answer"></div>
+<div class="space-y-2" id="rag-results"></div>
 </div>
 <script>
-  window.cleanupLogs = async () => {
-    if (!confirm('Оставить последние 5000 записей, остальные удалить?')) return;
-    const fd = new URLSearchParams(); fd.append('keep', '5000');
-    const r = await fetch('/api/logs/cleanup', {method: 'POST', body: fd});
+  window.runEmbedCorpus = async () => {
+    window.showToast('info', '⚙️ Запускаю индексацию — следи в /jobs');
+    const r = await fetch('/api/scheduler/embed_vacancies/run-now', {method: 'POST'});
     const d = await r.json();
-    window.showToast('ok', `Удалено ${d.deleted}, оставлено ${d.kept}`);
-    setTimeout(() => location.reload(), 600);
+    if (d.ok) window.showToast('ok', '✓ Индексация запущена');
+    else window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+  };
+
+  window._ragCard = (x) => `
+    <a href="${x.url}" class="block border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-medium text-sm">${x.name || '—'}</div>
+        <div class="text-[11px] tabular-nums text-fuchsia-700 dark:text-fuchsia-300">${Math.round((x.score||0)*100)}%</div>
+      </div>
+      <div class="text-xs text-neutral-500">${x.company || ''}</div>
+    </a>`;
+
+  window.ragSearch = async () => {
+    const q = document.getElementById('rag-q').value.trim();
+    if (!q) return;
+    document.getElementById('rag-answer').innerHTML = '';
+    document.getElementById('rag-results').innerHTML = '<div class="text-neutral-500 text-sm">ищу…</div>';
+    const fd = new FormData(); fd.append('q', q);
+    try {
+      const r = await fetch('/api/rag/search', {method: 'POST', body: fd});
+      const d = await r.json();
+      if (!d.ok) { document.getElementById('rag-results').innerHTML = `<div class="text-red-600 text-sm">${d.reason || 'ошибка'}</div>`; return; }
+      const html = (d.results || []).map(window._ragCard).join('');
+      document.getElementById('rag-results').innerHTML = html || '<div class="text-neutral-500 text-sm">Ничего не найдено.</div>';
+    } catch(e) {
+      document.getElementById('rag-results').innerHTML = `<div class="text-red-600 text-sm">${e.message}</div>`;
+    }
+  };
+
+  window.ragAsk = async () => {
+    const q = document.getElementById('rag-q').value.trim();
+    if (!q) return;
+    document.getElementById('rag-answer').innerHTML = '<div class="text-neutral-500 text-sm">думаю…</div>';
+    document.getElementById('rag-results').innerHTML = '';
+    const fd = new FormData(); fd.append('q', q);
+    try {
+      const r = await fetch('/api/rag/ask', {method: 'POST', body: fd});
+      const d = await r.json();
+      if (!d.ok) {
+        document.getElementById('rag-answer').innerHTML = `<div class="text-red-600 text-sm">${d.reason || d.error || 'ошибка'}</div>`;
+        return;
+      }
+      const ans = `<div class="border border-fuchsia-300 dark:border-fuchsia-800 rounded-lg p-3 bg-white dark:bg-neutral-900 text-sm whitespace-pre-wrap">${(d.answer||'').replace(/</g,'&lt;')}</div>`;
+      document.getElementById('rag-answer').innerHTML = `<div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1">Ответ (на основе найденных вакансий)</div>${ans}`;
+      document.getElementById('rag-results').innerHTML = `<div class="text-[11px] uppercase text-neutral-500 mt-2 mb-1">Источники</div>` + (d.sources || []).map(window._ragCard).join('');
+    } catch(e) {
+      document.getElementById('rag-answer').innerHTML = `<div class="text-red-600 text-sm">${e.message}</div>`;
+    }
   };
 </script>
 </main>
