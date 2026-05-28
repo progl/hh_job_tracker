@@ -315,6 +315,66 @@ async def test_job_ml_retrain_swallows_exception(tmp_db, sched_mod, monkeypatch)
     assert res is None
 
 
+# ----- _job_generate_cover_letters ----
+
+
+async def _seed_pipeline_vacancy(conn, vid: int, *, status: str | None = None, negotiation: bool = False):
+    await conn.execute(
+        "INSERT INTO vacancies (id, name, description) VALUES (?, ?, ?)", (vid, "Py", "d" * 200)
+    )
+    if status is not None:
+        await conn.execute("INSERT INTO vacancy_status (vacancy_id, status) VALUES (?, ?)", (vid, status))
+    if negotiation:
+        await conn.execute("INSERT INTO negotiations (id, vacancy_id) VALUES (?, ?)", (vid * 10, vid))
+
+
+@pytest.mark.asyncio
+async def test_job_generate_cover_letters_runs_for_pipeline_only(tmp_db, sched_mod, monkeypatch):
+    await tmp_db.execute("INSERT INTO profile (id, raw_resume) VALUES (1, '{\"x\":1}')")
+    await _seed_pipeline_vacancy(tmp_db, 1, status="interested")  # попадёт
+    await _seed_pipeline_vacancy(tmp_db, 2, negotiation=True)  # попадёт
+    await _seed_pipeline_vacancy(tmp_db, 3, status="new")  # НЕ попадёт (не в пайплайне)
+    await _seed_pipeline_vacancy(tmp_db, 4)  # НЕ попадёт (нет статуса/отклика)
+    await tmp_db.commit()
+
+    from app.llm import registry
+
+    seen: list[int] = []
+
+    async def fake_analyze_one(db, vid, kinds, model=None):
+        seen.append(vid)
+        assert kinds == ["cover_letter"]
+        return [
+            registry.AnalysisResult(
+                ok=True, kind="cover_letter", data={"letter": "hi"}, llm_run_id=1, model="m", latency_ms=5
+            )
+        ]
+
+    monkeypatch.setattr(registry, "analyze_one", fake_analyze_one)
+
+    res = await sched_mod._job_generate_cover_letters()
+    assert res == {"processed": 2, "ok": 2}
+    assert sorted(seen) == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_job_generate_cover_letters_skips_without_resume(tmp_db, sched_mod):
+    await tmp_db.execute("INSERT INTO profile (id) VALUES (1)")  # raw_resume NULL
+    await _seed_pipeline_vacancy(tmp_db, 1, status="interested")
+    await tmp_db.commit()
+    res = await sched_mod._job_generate_cover_letters()
+    assert res == {"processed": 0, "skipped": "no_resume"}
+
+
+@pytest.mark.asyncio
+async def test_job_generate_cover_letters_no_pending(tmp_db, sched_mod):
+    await tmp_db.execute("INSERT INTO profile (id, raw_resume) VALUES (1, '{\"x\":1}')")
+    await _seed_pipeline_vacancy(tmp_db, 1, status="new")  # не в пайплайне
+    await tmp_db.commit()
+    res = await sched_mod._job_generate_cover_letters()
+    assert res == {"processed": 0, "skipped": "no_pending"}
+
+
 # ----- start ----
 
 
@@ -329,6 +389,6 @@ def test_start_creates_scheduler_and_idempotent(sched_mod, monkeypatch):
     assert s1 is not None
     s2 = sched_mod.start(cli)
     assert s2 is s1
-    # должно быть 7 джобов
-    assert len(s1.get_jobs()) == 8  # +llm_parse_requirements
+    # 9 джобов: 7 базовых + llm_parse_requirements + cover_letter_generate
+    assert len(s1.get_jobs()) == 9
     sched_mod._scheduler = None

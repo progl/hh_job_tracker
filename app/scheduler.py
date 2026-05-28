@@ -294,6 +294,50 @@ async def _job_llm_parse_requirements() -> dict:
         await db.close()
 
 
+@_record("cover_letter_generate")
+async def _job_generate_cover_letters() -> dict:
+    """Генерирует сопроводительные письма для вакансий «в пайплайне» (есть отклик
+    или статус interested/applied), у которых письма ещё нет. Маленький батч —
+    cover_letter тяжёлый. Требует profile.raw_resume."""
+    batch = 5
+    db = await get_db()
+    try:
+        from app.db import profile_repo
+        from app.llm.registry import analyze_one
+
+        profile = await profile_repo.get_profile(db) or {}
+        if not (profile.get("raw_resume") or ""):
+            return {"processed": 0, "skipped": "no_resume"}
+        cur = await db.execute(
+            """
+            SELECT DISTINCT v.id FROM vacancies v
+            LEFT JOIN vacancy_analysis a ON a.vacancy_id = v.id AND a.kind = 'cover_letter'
+            LEFT JOIN negotiations n ON n.vacancy_id = v.id
+            LEFT JOIN vacancy_status s ON s.vacancy_id = v.id
+            WHERE a.vacancy_id IS NULL
+              AND v.description IS NOT NULL AND length(v.description) > 100
+              AND (n.vacancy_id IS NOT NULL OR s.status IN ('interested', 'applied'))
+            ORDER BY v.id DESC
+            LIMIT ?
+            """,
+            (batch,),
+        )
+        ids = [r[0] for r in await cur.fetchall()]
+        if not ids:
+            return {"processed": 0, "skipped": "no_pending"}
+        ok = 0
+        for vid in ids:
+            try:
+                results = await analyze_one(db, vid, ["cover_letter"])
+                if results and results[0].ok:
+                    ok += 1
+            except Exception as e:
+                log.warning("cover_letter_generate: vid=%s failed: %s", vid, e)
+        return {"processed": len(ids), "ok": ok}
+    finally:
+        await db.close()
+
+
 @_record("backfill_pending")
 async def _job_backfill_pending(hh_client) -> dict:
     db = await get_db()
@@ -392,6 +436,12 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
         id="llm_parse_requirements",
         replace_existing=True,
     )
+    _scheduler.add_job(
+        _job_generate_cover_letters,
+        IntervalTrigger(hours=2),
+        id="cover_letter_generate",
+        replace_existing=True,
+    )
     _scheduler.start()
     import time as _t
 
@@ -434,6 +484,7 @@ _JOB_LABELS = {
     "sync_searches": "Синк сохранённых поисков",
     "dedup_vacancies": "Дедуп вакансий",
     "llm_parse_requirements": "LLM: разбор требований",
+    "cover_letter_generate": "LLM: сопроводительные письма",
 }
 
 

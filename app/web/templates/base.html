@@ -235,6 +235,8 @@
         backfill_pending: 'Дотягивать вакансии',
         sync_searches: 'Синк сохранённых поисков',
         dedup_vacancies: 'Дедуп вакансий',
+        llm_parse_requirements: 'LLM: разбор требований',
+        cover_letter_generate: 'LLM: сопроводительные письма',
       };
       document.getElementById('scheduler-info').innerHTML = s.jobs.map(j => {
         const label = labels[j.id] || j.id;
