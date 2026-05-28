@@ -43,6 +43,7 @@
             <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100" data-type="number" onclick="window.sortHtmlTable(this)">Отказ</th>
             <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100" data-type="number" onclick="window.sortHtmlTable(this)">Ждёт</th>
             <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100" data-type="number" onclick="window.sortHtmlTable(this)">Вежливость</th>
+            <th class="px-3 py-2 text-right cursor-pointer hover:bg-neutral-100" data-type="number" onclick="window.sortHtmlTable(this)" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа soft_skills_employer">Soft</th>
           </tr>
         </thead>
         <tbody>
@@ -61,9 +62,15 @@
               <td class="px-3 py-1.5 text-right tabular-nums text-red-700">{{ e.discard }}</td>
               <td class="px-3 py-1.5 text-right tabular-nums text-amber-700">{{ e.waiting }}</td>
               <td class="px-3 py-1.5 text-right tabular-nums text-neutral-700">{{ e.read_pct or '—' }}{% if e.read_pct %}%{% endif %}</td>
+              <td class="px-3 py-1.5 text-right tabular-nums">
+                {% if e.soft_score is not none %}
+                  {% set sc_color = 'emerald' if e.soft_score >= 70 else ('amber' if e.soft_score >= 40 else 'red') %}
+                  <span class="px-1.5 py-0.5 rounded bg-{{ sc_color }}-100 text-{{ sc_color }}-700 dark:bg-{{ sc_color }}-900/30 dark:text-{{ sc_color }}-300">{{ e.soft_score }}</span>
+                {% else %}<span class="text-neutral-400">—</span>{% endif %}
+              </td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="px-3 py-6 text-center text-neutral-500">Нет данных. Нажми «Обновить мои отклики».</td></tr>
+            <tr><td colspan="7" class="px-3 py-6 text-center text-neutral-500">Нет данных. Нажми «Обновить мои отклики».</td></tr>
           {% endfor %}
         </tbody>
       </table>

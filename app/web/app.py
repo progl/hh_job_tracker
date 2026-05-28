@@ -856,6 +856,49 @@ async def searches_set_max_pages(sid: int, max_pages: int = Form(...)):
         await db.close()
 
 
+@app.post("/api/searches/{sid}/update")
+async def searches_update(
+    sid: int,
+    name: str | None = Form(None),
+    text: str | None = Form(None),
+    area: str | None = Form(None),
+    remote: bool | None = Form(None),
+    max_pages: int | None = Form(None),
+    is_active: bool | None = Form(None),
+):
+    """Inline-редактирование сохранённого поиска. Params мержатся с существующими
+    (не теряем resume/early_stop_seen и прочие ключи)."""
+    db = await get_db()
+    try:
+        s = await searches_repo.get(db, sid)
+        if not s:
+            return JSONResponse({"ok": False, "reason": "not_found"}, status_code=404)
+        params = dict(s["params"])
+        if text is not None:
+            params["text"] = text
+        if area is not None:
+            if area.strip():
+                params["area"] = area.strip()
+            else:
+                params.pop("area", None)
+        if remote is not None:
+            if remote:
+                params["schedule"] = "remote"
+            else:
+                params.pop("schedule", None)
+        if max_pages is not None:
+            params["max_pages"] = max(1, min(1000, max_pages))
+        fields: dict = {"params": params}
+        if name is not None and name.strip():
+            fields["name"] = name.strip()
+        if is_active is not None:
+            fields["is_active"] = int(is_active)
+        await searches_repo.update_search(db, sid, **fields)
+        return {"ok": True}
+    finally:
+        await db.close()
+
+
 @app.post("/api/searches/{sid}/toggle")
 async def searches_toggle(sid: int):
     db = await get_db()
@@ -1275,6 +1318,7 @@ async def vacancy_detail(request: Request, vid: int):
         analyzers_list: list = []
         enabled_kinds: list[str] = []
         similar_vacancies: list = []
+        soft_score: int | None = None
         if v_enriched:
             from app.db import llm_repo
             from app.llm import rag as rag_mod
@@ -1302,6 +1346,10 @@ async def vacancy_detail(request: Request, vid: int):
             )
             last_run = runs[0] if runs else None
             analyses = await llm_repo.get_all_analysis(db, vid)
+            if analyses.get("soft_skills_employer"):
+                from app.scoring.match import employer_soft_score
+
+                soft_score = employer_soft_score(analyses["soft_skills_employer"].get("data"))
             enabled_kinds = await get_enabled_analyzers(db)
             analyzers_list = [
                 {
@@ -1328,6 +1376,7 @@ async def vacancy_detail(request: Request, vid: int):
         analyzers=analyzers_list,
         analyses=analyses,
         similar_vacancies=similar_vacancies,
+        soft_score=soft_score,
     )
 
 
@@ -1630,6 +1679,17 @@ async def search_page(request: Request):
     )
 
 
+@app.get("/searches", response_class=HTMLResponse)
+async def searches_page(request: Request):
+    """Редактируемая таблица сохранённых поисков (inline-правка всех полей)."""
+    db = await get_db()
+    try:
+        searches = await searches_repo.list_searches(db)
+    finally:
+        await db.close()
+    return render("searches.html", request=request, searches=searches)
+
+
 @app.get("/jobs", response_class=HTMLResponse)
 async def jobs_page(
     request: Request,
@@ -1842,6 +1902,9 @@ async def funnel_page(
         await funnel_repo.backfill_employer_names(db)
         c = await negotiations_repo.counters(db)
         top_list = await funnel_repo.top_employers(db, limit=max(1, min(top, 500)), only=only)
+        soft_scores = await funnel_repo.soft_scores_by_employer(db)
+        for e in top_list:
+            e["soft_score"] = soft_scores.get(e.get("employer_id"))
         weeks = await funnel_repo.by_week(db)
         avg_h = await funnel_repo.avg_hr_response_hours(db)
     finally:
@@ -1949,6 +2012,10 @@ async def profile_page(request: Request):
         llm_model = await llm_settings.get_requirements_model(db)
         llm_model_fast = await llm_settings.get_fast_model(db)
         notifications_enabled = await notify.is_enabled(db)
+        notifications_telegram = await notify.is_telegram_enabled(db)
+        telegram_configured = notify.telegram_configured()
+        match_threshold = await notify.get_match_threshold(db)
+        notif_events = await notify.get_events(db)
         enabled = await get_enabled_analyzers(db)
         analyzers_list = [
             {
@@ -1971,6 +2038,11 @@ async def profile_page(request: Request):
         llm_default=settings.LLM_MODEL_REQUIREMENTS,
         llm_default_fast=settings.LLM_MODEL_FAST,
         notifications_enabled=notifications_enabled,
+        notifications_telegram=notifications_telegram,
+        telegram_configured=telegram_configured,
+        match_threshold=match_threshold,
+        notif_events=notif_events,
+        notif_event_labels=notify.EVENT_LABELS,
         analyzers=analyzers_list,
     )
 
@@ -2001,14 +2073,36 @@ async def settings_set_llm_model_fast(model: str = Form(...)):
 
 
 @app.post("/api/settings/notifications")
-async def settings_set_notifications(enabled: bool = Form(...)):
-    """Включить/выключить macOS-уведомления о новых вакансиях и приглашениях."""
+async def settings_set_notifications(
+    enabled: bool | None = Form(None),
+    telegram: bool | None = Form(None),
+    threshold: int | None = Form(None),
+    events: list[str] = Form(default=[]),
+    events_present: bool = Form(False),
+):
+    """Настройки уведомлений: каналы (macOS/Telegram), порог match-score и категории
+    событий (вакансии/собесы/ошибки/завершение джоб). Передавать можно подмножество полей.
+    events применяются только если events_present=true (чтобы пустой список = «выключить всё»)."""
     from app import notify
 
     db = await get_db()
     try:
-        await notify.set_enabled(db, enabled)
-        return {"ok": True, "enabled": enabled}
+        if enabled is not None:
+            await notify.set_enabled(db, enabled)
+        if telegram is not None:
+            await notify.set_telegram_enabled(db, telegram)
+        if threshold is not None:
+            await notify.set_match_threshold(db, threshold)
+        if events_present:
+            await notify.set_events(db, events)
+        return {
+            "ok": True,
+            "enabled": await notify.is_enabled(db),
+            "telegram": await notify.is_telegram_enabled(db),
+            "threshold": await notify.get_match_threshold(db),
+            "events": sorted(await notify.get_events(db)),
+            "telegram_configured": notify.telegram_configured(),
+        }
     finally:
         await db.close()
 

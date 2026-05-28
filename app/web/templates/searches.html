@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Сохранённые поиски{% endblock %}
+{% block content %}
+<div class="max-w-[1200px] mx-auto">
+  <div class="flex items-baseline justify-between mb-3">
+    <h2 class="text-lg font-semibold">🔎 Сохранённые поиски ({{ searches | length }})</h2>
+    <a href="/" class="text-xs text-neutral-500 hover:underline">← Список</a>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+    <button onclick="window.syncAll(event)" class="px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные (с early-stop). Shift+клик — полный прогон.">↻ Синкать все</button>
+    <button onclick="window.bulkPages()" class="px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">🔧 Глубину всем</button>
+    <button onclick="window.addSearch()" class="px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">+ Добавить</button>
+    <span class="text-neutral-500">Правки сохраняются автоматически при изменении поля.</span>
+  </div>
+
+  <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-x-auto">
+    <table class="w-full text-xs" data-sortable>
+      <thead class="bg-neutral-50 dark:bg-neutral-800 text-left">
+        <tr>
+          <th class="px-2 py-2">вкл</th>
+          <th class="px-2 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="text" onclick="window.sortHtmlTable(this)">имя</th>
+          <th class="px-2 py-2">текст запроса</th>
+          <th class="px-2 py-2">регион</th>
+          <th class="px-2 py-2 text-center">remote</th>
+          <th class="px-2 py-2 text-right">стр.</th>
+          <th class="px-2 py-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700" data-type="number" onclick="window.sortHtmlTable(this)">найдено</th>
+          <th class="px-2 py-2">последний прогон</th>
+          <th class="px-2 py-2 text-right">действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in searches %}
+          <tr class="border-t border-neutral-100 dark:border-neutral-800" data-sid="{{ s.id }}">
+            <td class="px-2 py-1.5 text-center">
+              <input type="checkbox" class="f-active" {% if s.is_active %}checked{% endif %} onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5">
+              <input class="f-name w-44 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" value="{{ s.name }}" onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5">
+              <input class="f-text w-56 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" value="{{ s.params.get('text','') }}" onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5">
+              <input class="f-area w-16 bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" value="{{ s.params.get('area','') }}" onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5 text-center">
+              <input type="checkbox" class="f-remote" {% if s.params.get('schedule') == 'remote' %}checked{% endif %} onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5 text-right">
+              <input type="number" min="1" max="1000" class="f-pages w-16 text-right bg-transparent border border-transparent hover:border-neutral-300 focus:border-blue-500 rounded px-1 py-0.5" value="{{ s.params.get('max_pages', 5) }}" onchange="window.saveRow({{ s.id }})">
+            </td>
+            <td class="px-2 py-1.5 text-right tabular-nums">{{ s.found_count or 0 }}</td>
+            <td class="px-2 py-1.5 text-neutral-500 whitespace-nowrap">{{ s.last_run_at[:16] if s.last_run_at else 'никогда' }}</td>
+            <td class="px-2 py-1.5 text-right whitespace-nowrap">
+              <span class="f-saved text-emerald-600 text-[11px] mr-1"></span>
+              <button onclick="window.runSearch({{ s.id }}, event)" class="text-blue-700 dark:text-blue-400 hover:underline" title="Запустить сейчас (Shift — полный прогон)">▶</button>
+              <button onclick="window.delSearch({{ s.id }}, '{{ s.name }}')" class="text-neutral-400 hover:text-red-600 ml-1" title="Удалить">✕</button>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="px-3 py-6 text-center text-neutral-500">Пусто. Нажми «+ Добавить».</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  window.saveRow = async (sid) => {
+    const tr = document.querySelector(`tr[data-sid="${sid}"]`);
+    if (!tr) return;
+    const fd = new FormData();
+    fd.append('name', tr.querySelector('.f-name').value);
+    fd.append('text', tr.querySelector('.f-text').value);
+    fd.append('area', tr.querySelector('.f-area').value);
+    fd.append('remote', tr.querySelector('.f-remote').checked ? 'true' : 'false');
+    fd.append('max_pages', tr.querySelector('.f-pages').value || '5');
+    fd.append('is_active', tr.querySelector('.f-active').checked ? 'true' : 'false');
+    const out = tr.querySelector('.f-saved');
+    try {
+      const r = await fetch(`/api/searches/${sid}/update`, {method: 'POST', body: fd});
+      const d = await r.json();
+      out.textContent = d.ok ? '✓' : '✗';
+      setTimeout(() => out.textContent = '', 1500);
+    } catch(e) { out.textContent = '✗'; }
+  };
+
+  window.runSearch = async (sid, ev) => {
+    const full = ev && ev.shiftKey;
+    const fd = new FormData();
+    if (full) fd.append('full', 'true');
+    window.showToast('info', `▶ запускаю поиск #${sid}${full ? ' (полный)' : ''}…`);
+    const r = await fetch(`/api/searches/${sid}/run`, {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? `▶ поиск #${sid} запущен` : `ошибка: ${d.reason || ''}`);
+  };
+
+  window.delSearch = async (sid, name) => {
+    if (!confirm(`Удалить поиск «${name}»? (вакансии останутся)`)) return;
+    await fetch(`/api/searches/${sid}`, {method: 'DELETE'});
+    const tr = document.querySelector(`tr[data-sid="${sid}"]`);
+    if (tr) tr.remove();
+    window.showToast('ok', '✓ удалён');
+  };
+
+  window.syncAll = async (ev) => {
+    const fd = new FormData();
+    if (ev && ev.shiftKey) fd.append('full', 'true');
+    window.showToast('info', '↻ синкаю все активные…');
+    const r = await fetch('/api/searches/sync-all', {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? '↻ запущено' : 'ошибка');
+  };
+
+  window.bulkPages = async () => {
+    const n = prompt('Глубина (max_pages) всем активным:', '50');
+    if (!n) return;
+    const fd = new FormData(); fd.append('max_pages', n);
+    const r = await fetch('/api/searches/bulk-max-pages', {method: 'POST', body: fd});
+    const d = await r.json();
+    window.showToast(d.ok !== false ? 'ok' : 'err', d.ok !== false ? `✓ глубина ${n} применена` : 'ошибка');
+    setTimeout(() => location.reload(), 800);
+  };
+
+  window.addSearch = async () => {
+    const text = prompt('Текст запроса нового поиска:', 'python senior');
+    if (!text) return;
+    const fd = new FormData();
+    fd.append('name', text);
+    fd.append('text', text);
+    fd.append('area', '113');
+    fd.append('only_remote', 'true');
+    const r = await fetch('/api/searches', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (d.ok !== false) { window.showToast('ok', '✓ добавлен'); setTimeout(() => location.reload(), 600); }
+    else window.showToast('err', `ошибка: ${d.reason || ''}`);
+  };
+</script>
+{% endblock %}

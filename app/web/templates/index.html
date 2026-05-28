@@ -187,6 +187,7 @@
       <div class="flex items-center justify-between">
         <div class="text-[11px] uppercase tracking-wide text-neutral-500">Сохранённые поиски ({{ searches | length }})</div>
         <div class="flex items-center gap-2">
+          <a href="/searches" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Открыть редактируемую таблицу поисков (inline-правка всех полей)">⚙ управление</a>
           <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">↻ Синкать все</button>
           <button onclick="window.bulkMaxPages()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать глубину (max_pages) сразу всем активным поискам — например, 200 = «до конца»">🔧 Глубину всем</button>
           <button onclick="window.bulkEarlyStop()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать early_stop_seen (K подряд seen → stop) всем активным. 0 = выключить early-stop.&#10;Типичные: 3 (обычные) / 5 (рекомендации).">⚡ Early-stop всем</button>

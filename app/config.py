@@ -37,5 +37,11 @@ class Settings(BaseSettings):
     EMBED_DIM: int = 768  # размерность nomic-embed-text; vec0-таблица фиксирована под неё
     RAG_TOP_K: int = 5
 
+    # --- Уведомления ---
+    # macOS-уведомления работают без настройки. Telegram — опционально: создай бота у @BotFather,
+    # узнай свой chat_id (например, через @userinfobot) и положи сюда. Канал включается на /profile.
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
 
 settings = Settings()

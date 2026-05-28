@@ -508,6 +508,32 @@ def _build_cover_letter(role: str, company: str) -> dict:
     }
 
 
+_SOFT_TONE_BY_EMP = {
+    1001: "warm",
+    1002: "warm",
+    1003: "neutral",
+    1004: "demanding",
+    1005: "demanding",
+    1006: "warm",
+    1007: "neutral",
+    1008: "warm",
+}
+
+
+def _build_soft_skills(eid: int) -> dict:
+    tone = _SOFT_TONE_BY_EMP.get(eid, "neutral")
+    wlb, growth = {"warm": (8, 8), "neutral": (6, 6), "demanding": (4, 5), "aggressive": (2, 3)}[tone]
+    return {
+        "tone": tone,
+        "wlb_score": wlb,
+        "team_culture": "modern" if tone == "warm" else "traditional",
+        "growth_opportunities": growth,
+        "red_flags": [] if tone == "warm" else ["упомянуты переработки"],
+        "green_flags": ["адекватная команда", "современный стек"],
+        "summary": "демо-оценка работодателя по тону описания",
+    }
+
+
 def _build_summary(role: str, level: str, stack: list[str], rem: int, area: str) -> dict:
     where = "удалёнка" if rem else f"офис, {area}"
     return {"summary": f"{role}: уровень {level}, стек {', '.join(stack[:4])}. {where.capitalize()}."}
@@ -583,6 +609,13 @@ async def _seed_llm(conn) -> dict[str, int]:
         await _add_analysis(conn, vid, "company_kind", ckd, run)
         counts["analyses"] += 2
         counts["llm_runs"] += 2
+
+        # soft_skills_employer — на всех (чтобы в /funnel был soft-score у каждого работодателя)
+        ss = _build_soft_skills(eid)
+        run = await _add_llm_run(conn, "soft_skills_employer", vid, model, ss)
+        await _add_analysis(conn, vid, "soft_skills_employer", ss, run)
+        counts["analyses"] += 1
+        counts["llm_runs"] += 1
 
         if vid in MATCH_VIDS:
             me = _build_match_essay(stack, lvl)

@@ -316,8 +316,12 @@
 
     {% if analyses.soft_skills_employer %}
       <div class="mb-3">
-        <div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1">
+        <div class="text-[11px] uppercase text-fuchsia-700 dark:text-fuchsia-300 mb-1 flex items-center gap-2">
           Soft-skills работодателя
+          {% if soft_score is not none %}
+            {% set sc_color = 'emerald' if soft_score >= 70 else ('amber' if soft_score >= 40 else 'red') %}
+            <span class="text-[11px] px-1.5 py-0.5 rounded bg-{{ sc_color }}-100 text-{{ sc_color }}-700 dark:bg-{{ sc_color }}-900/30 dark:text-{{ sc_color }}-300 normal-case font-normal" title="Агрегированный soft-skills score (0–100) из тона/WLB/роста">score {{ soft_score }}/100</span>
+          {% endif %}
           {% if analyses.soft_skills_employer.llm_run_id %}
             <a href="/llm-logs?run={{ analyses.soft_skills_employer.llm_run_id }}" class="text-blue-600 hover:underline normal-case font-normal">→</a>
           {% endif %}

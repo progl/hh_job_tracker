@@ -45,6 +45,7 @@ def _record(job_id: str):
                 res = await coro_func(*args, **kwargs)
                 await job_runs_repo.finish(run_id, "ok", result=res, started_mono=t0)
                 _state["jobs"][job_id] = {"ok": True, "result": res}
+                await _maybe_notify_job(job_id, ok=True, result=res)
                 return res
             except asyncio.CancelledError:
                 await job_runs_repo.finish(run_id, "cancelled", started_mono=t0)
@@ -52,6 +53,7 @@ def _record(job_id: str):
             except Exception as e:
                 await job_runs_repo.finish(run_id, "error", error=str(e), started_mono=t0)
                 _state["jobs"][job_id] = {"ok": False, "error": str(e)}
+                await _maybe_notify_job(job_id, ok=False, error=str(e))
                 raise
             finally:
                 _running.pop(run_id, None)
@@ -59,6 +61,30 @@ def _record(job_id: str):
         return wrapper
 
     return decorator
+
+
+async def _maybe_notify_job(job_id: str, ok: bool, result: Any = None, error: str | None = None) -> None:
+    """Шлёт уведомление о завершении/ошибке джоба (если соответствующая категория включена)."""
+    try:
+        from app import notify
+
+        event = "job_done" if ok else "job_errors"
+        db = await get_db()
+        try:
+            if not await notify.any_enabled(db) or not await notify.is_event_enabled(db, event):
+                return
+            label = _JOB_LABELS.get(job_id, job_id)
+            if ok:
+                summary = ""
+                if isinstance(result, dict):
+                    summary = ", ".join(f"{k}={v}" for k, v in list(result.items())[:4])
+                await notify.dispatch(db, title=f"✓ {label}", message=summary or "готово", event="job_done")
+            else:
+                await notify.dispatch(db, title=f"✗ {label}", message=(error or "")[:300], event="job_errors")
+        finally:
+            await db.close()
+    except Exception as e:
+        log.warning("job notify failed for %s: %s", job_id, e)
 
 
 async def cancel_run(run_id: int) -> dict[str, Any]:
@@ -85,7 +111,7 @@ async def _job_personal_refresh(hh_client, full: bool = False) -> dict:
         try:
             from app import notify
 
-            if await notify.is_enabled(db):
+            if await notify.any_enabled(db) and await notify.is_event_enabled(db, "negotiations"):
                 cur = await db.execute(
                     """
                     SELECT n.last_state, v.name, v.company_name
@@ -102,9 +128,11 @@ async def _job_personal_refresh(hh_client, full: bool = False) -> dict:
                         st = "📩 " if r["last_state"] == "INVITATION" else "🎤 "
                         msg_lines.append(f"{st}{(r['name'] or '?')[:50]} — {(r['company_name'] or '?')[:30]}")
                     more = f" (+{len(fresh) - 3})" if len(fresh) > 3 else ""
-                    await notify.send(
+                    await notify.dispatch(
+                        db,
                         title=f"HH: {len(fresh)} приглашений/собесов{more}",
                         message="\n".join(msg_lines),
+                        event="negotiations",
                     )
         except Exception as e:
             log.warning("personal_refresh: notification failed: %s", e)
@@ -186,14 +214,15 @@ async def _job_sync_searches(hh_client) -> dict:
         except Exception as e:
             log.warning("dedup after sync_searches failed: %s", e)
 
-        # Уведомления о новых вакансиях с высоким match-score (≥75)
+        # Уведомления о новых вакансиях с высоким match-score (порог настраивается в UI).
         # Берём те что появились за последний час с подсчитанным локально score.
         try:
             from app import notify
             from app.db import employers_repo, profile_repo
             from app.scoring.match import score_vacancy
 
-            if await notify.is_enabled(db):
+            if await notify.any_enabled(db) and await notify.is_event_enabled(db, "vacancies"):
+                threshold = await notify.get_match_threshold(db)
                 cur = await db.execute(
                     """
                     SELECT v.* FROM vacancies v
@@ -220,16 +249,18 @@ async def _job_sync_searches(hh_client) -> dict:
                                     rd[f] = []
                         emp_pol = emp_map.get(rd.get("company_id")) if rd.get("company_id") else None
                         sc = score_vacancy(rd, profile, emp_pol)
-                        if sc["score"] >= 75:
+                        if sc["score"] >= threshold:
                             new_high.append((sc["score"], rd["name"], rd.get("company_name") or "?"))
                     if new_high:
                         new_high.sort(reverse=True)
                         top = new_high[:3]
                         msg_lines = [f"{s}% · {n[:50]} — {c[:30]}" for s, n, c in top]
                         more = f" (+{len(new_high) - len(top)})" if len(new_high) > len(top) else ""
-                        await notify.send(
-                            title=f"HH: {len(new_high)} новых вакансий с match ≥75{more}",
+                        await notify.dispatch(
+                            db,
+                            title=f"HH: {len(new_high)} новых вакансий с match ≥{threshold}{more}",
                             message="\n".join(msg_lines),
+                            event="vacancies",
                         )
         except Exception as e:
             log.warning("sync_searches: notification failed: %s", e)
@@ -482,10 +513,8 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
     import time as _t
 
     _state["started_at"] = _t.time()
-    log.info(
-        "scheduler started: personal_refresh every %sh, fx_refresh 03:30, ml_retrain 04:00, backfill_pending every 20m",
-        personal_interval_hours,
-    )
+    job_ids = [j.id for j in _scheduler.get_jobs()]
+    log.info("scheduler started: %d джобов — %s", len(job_ids), ", ".join(job_ids))
     return _scheduler
 
 

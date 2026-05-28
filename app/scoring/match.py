@@ -160,3 +160,34 @@ def score_vacancy(
     for p in parts:
         p["scale"] = SCALES.get(p["f"], "")
     return {"score": score, "max": 100, "parts": parts}
+
+
+_TONE_SCORE = {"warm": 10, "neutral": 6, "demanding": 4, "aggressive": 1}
+
+
+def employer_soft_score(data: dict | None) -> int | None:
+    """Числовой soft-skills score работодателя (0–100) из анализа `soft_skills_employer`.
+
+    Агрегирует тон, work-life balance и возможности роста. None — если данных нет.
+    """
+    if not data:
+        return None
+    wlb = data.get("wlb_score")
+    growth = data.get("growth_opportunities")
+    tone = _TONE_SCORE.get(data.get("tone"))
+    have = [x for x in (wlb, growth, tone) if isinstance(x, int | float)]
+    if not have:
+        return None
+    wlb = float(wlb) if isinstance(wlb, int | float) else None
+    growth = float(growth) if isinstance(growth, int | float) else None
+    # взвешиваем только присутствующие компоненты (нормируем веса)
+    comps = []
+    if wlb is not None:
+        comps.append((wlb, 0.4))
+    if growth is not None:
+        comps.append((growth, 0.3))
+    if tone is not None:
+        comps.append((float(tone), 0.3))
+    total_w = sum(w for _, w in comps)
+    val = sum(v * w for v, w in comps) / total_w  # 0..10
+    return max(0, min(100, round(val * 10)))

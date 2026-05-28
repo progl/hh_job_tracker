@@ -30,6 +30,7 @@ DB_PATH = PROJECT_ROOT / "data" / "hh_demo.db"
 STATIC_ROUTES: dict[str, str] = {
     "/": "index.html",
     "/search": "search.html",
+    "/searches": "searches.html",
     "/funnel": "funnel.html",
     "/profile": "profile.html",
     "/logs": "logs.html",

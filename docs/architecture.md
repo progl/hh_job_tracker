@@ -153,3 +153,15 @@ RAG включается отдельным extra `rag` (ставит `sqlite-ve
 - **Retrieval.** `similar(vid)` — KNN по вектору вакансии (блок «Похожие вакансии» на `/vacancy`); `semantic_search(query)` — эмбеддинг запроса → KNN (`/api/rag/search`).
 - **Generation (полный RAG).** `ask(query)` = semantic_search → собирает контекст топ-k вакансий → `llm_client.generate` с требованием ссылаться на `[#id]` → ответ + источники (`/api/rag/ask`, страница `/search`). Лог в `llm_runs` (task_kind=`rag_answer`).
 - **Ограничение.** dim vec0-таблицы фиксирован (768 под nomic). Смена embed-модели с другим dim требует пересоздания `vec_vacancies`.
+
+## Уведомления (`app/notify.py`)
+
+Два независимых канала, оба включаются на `/profile` (флаги в `cookie_store`):
+- **macOS** (`notifications.enabled`) — `osascript display notification`, fire-and-forget.
+- **Telegram** (`notifications.telegram`) — Bot API `sendMessage`; токен/chat_id из `.env` (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`), без них канал — no-op.
+
+`dispatch(db, title, message, event=...)` рассылает во все включённые каналы. **Категории событий** (`notifications.events`, по умолчанию вакансии/собесы/ошибки): `vacancies` (новые с match ≥ порога — порог в `notifications.match_threshold`), `negotiations` (приглашения/собесы), `job_errors`, `job_done`. Если категория выключена — `dispatch` молчит. Завершение/ошибки джоб эмитит декоратор `_record` через `_maybe_notify_job`.
+
+## Soft-skills score работодателя
+
+`employer_soft_score(data)` (`app/scoring/match.py`) сводит анализ `soft_skills_employer` (тон/WLB/рост) в число 0–100. `funnel_repo.soft_scores_by_employer` усредняет по вакансиям работодателя → колонка «Soft» в `/funnel`; на `/vacancy` — бейдж по конкретной вакансии.

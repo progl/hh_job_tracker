@@ -1,6 +1,34 @@
+import json
 from datetime import datetime
 
 import aiosqlite
+
+
+async def soft_scores_by_employer(db: aiosqlite.Connection) -> dict[int, int]:
+    """Средний soft-skills score (0–100) по работодателям — из анализов soft_skills_employer.
+
+    {employer_id: avg_score}. Работодатели без анализа в результат не попадают.
+    """
+    from app.scoring.match import employer_soft_score
+
+    cur = await db.execute(
+        """
+        SELECT v.company_id AS eid, a.data_json
+          FROM vacancy_analysis a
+          JOIN vacancies v ON v.id = a.vacancy_id
+         WHERE a.kind = 'soft_skills_employer' AND v.company_id IS NOT NULL
+        """
+    )
+    acc: dict[int, list[int]] = {}
+    for eid, data_json in await cur.fetchall():
+        try:
+            data = json.loads(data_json)
+        except Exception:
+            continue
+        sc = employer_soft_score(data)
+        if sc is not None:
+            acc.setdefault(eid, []).append(sc)
+    return {eid: round(sum(v) / len(v)) for eid, v in acc.items() if v}
 
 
 async def top_employers(

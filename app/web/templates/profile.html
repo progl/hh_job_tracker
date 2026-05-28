@@ -126,15 +126,39 @@
     </div>
 
     <div class="mt-4 pt-3 border-t border-fuchsia-200/50 dark:border-fuchsia-900/30">
-      <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">🔔 Уведомления (macOS)</div>
+      <div class="text-xs uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300 mb-1">🔔 Уведомления</div>
       <div class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
-        Локальные macOS-уведомления при появлении новых вакансий с высоким match-score (≥75)
-        и новых приглашений/собесов в откликах. Не требует Telegram-бота, не уходит наружу.
+        О новых вакансиях с высоким match-score и новых приглашениях/собесах. Порог настраивается ниже.
       </div>
       <label class="flex items-center gap-2 text-sm cursor-pointer">
         <input type="checkbox" id="notifications-enabled" {% if notifications_enabled %}checked{% endif %}>
-        Включить macOS-уведомления
+        macOS-уведомления (osascript, локально)
       </label>
+      <label class="flex items-center gap-2 text-sm cursor-pointer mt-1" title="{% if not telegram_configured %}Задай TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в .env{% endif %}">
+        <input type="checkbox" id="notifications-telegram" {% if notifications_telegram %}checked{% endif %} {% if not telegram_configured %}disabled{% endif %}>
+        Telegram-уведомления
+        {% if telegram_configured %}
+          <span class="text-[11px] text-emerald-600">✓ бот настроен</span>
+        {% else %}
+          <span class="text-[11px] text-amber-600">нет токена — задай TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID в .env</span>
+        {% endif %}
+      </label>
+      <div class="mt-2 flex items-center gap-2 text-sm">
+        <label for="notifications-threshold">Порог match-score:</label>
+        <input type="number" id="notifications-threshold" min="0" max="100" value="{{ match_threshold }}"
+               class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20">
+      </div>
+      <div class="mt-2">
+        <div class="text-[11px] uppercase text-neutral-500 mb-1">Что слать</div>
+        <div class="flex flex-col gap-1">
+          {% for key, label in notif_event_labels.items() %}
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" class="notify-event" value="{{ key }}" {% if key in notif_events %}checked{% endif %}>
+              {{ label }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
       <div class="mt-2 flex items-center gap-2">
         <button onclick="window.setNotifications()" class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600">Сохранить</button>
         <span id="notify-save-result" class="text-xs text-emerald-700"></span>
@@ -174,14 +198,18 @@ window.setLLMModelFast = async () => {
   setTimeout(() => out.textContent = '', 2000);
 };
 window.setNotifications = async () => {
-  const cb = document.getElementById('notifications-enabled');
   const fd = new FormData();
-  fd.append('enabled', cb.checked ? 'true' : 'false');
+  fd.append('enabled', document.getElementById('notifications-enabled').checked ? 'true' : 'false');
+  const tg = document.getElementById('notifications-telegram');
+  if (tg && !tg.disabled) fd.append('telegram', tg.checked ? 'true' : 'false');
+  fd.append('threshold', document.getElementById('notifications-threshold').value || '75');
+  fd.append('events_present', 'true');
+  document.querySelectorAll('.notify-event:checked').forEach(c => fd.append('events', c.value));
   const r = await fetch('/api/settings/notifications', {method: 'POST', body: fd});
   const d = await r.json();
   const out = document.getElementById('notify-save-result');
-  out.textContent = d.ok ? (d.enabled ? '✓ включены' : '✓ выключены') : 'ошибка';
-  setTimeout(() => out.textContent = '', 2000);
+  out.textContent = d.ok ? `✓ сохранено (порог ${d.threshold})` : 'ошибка';
+  setTimeout(() => out.textContent = '', 2500);
 };
 </script>
 {% endblock %}

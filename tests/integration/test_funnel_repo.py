@@ -180,3 +180,30 @@ async def test_avg_hr_response_hours_skips_invalid_and_negative(tmp_db):
     )
     await tmp_db.commit()
     assert await funnel_repo.avg_hr_response_hours(tmp_db) is None
+
+
+@pytest.mark.asyncio
+async def test_soft_scores_by_employer(tmp_db):
+    import json
+
+    # две вакансии работодателя 100 + одна работодателя 200
+    for vid, eid in ((1, 100), (2, 100), (3, 200)):
+        await tmp_db.execute(
+            "INSERT INTO vacancies(id, name, company_id) VALUES (?, ?, ?)", (vid, f"v{vid}", eid)
+        )
+    # emp 100: warm(80) + neutral(60) → avg 70; emp 200: aggressive → низкий
+    payloads = {
+        1: {"wlb_score": 8, "growth_opportunities": 6, "tone": "warm"},
+        2: {"tone": "neutral"},
+        3: {"wlb_score": 2, "growth_opportunities": 2, "tone": "aggressive"},
+    }
+    for vid, data in payloads.items():
+        await tmp_db.execute(
+            "INSERT INTO vacancy_analysis(vacancy_id, kind, data_json) VALUES (?, 'soft_skills_employer', ?)",
+            (vid, json.dumps(data)),
+        )
+    await tmp_db.commit()
+
+    scores = await funnel_repo.soft_scores_by_employer(tmp_db)
+    assert scores[100] == 70  # (80 + 60) / 2
+    assert scores[200] < 30
