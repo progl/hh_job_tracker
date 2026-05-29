@@ -47,6 +47,10 @@
   </td>
   <td class="max-w-[200px] truncate text-neutral-700">
     {{ v.company_name or '—' }}
+    {% if v.soft_score is not none %}
+      {% set sc_color = 'emerald' if v.soft_score >= 70 else ('amber' if v.soft_score >= 40 else 'red') %}
+      <span class="text-[10px] px-1 py-0 rounded bg-{{ sc_color }}-100 text-{{ sc_color }}-700 dark:bg-{{ sc_color }}-900/30 dark:text-{{ sc_color }}-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">{{ v.soft_score }}</span>
+    {% endif %}
     {% if v.politeness and v.politeness.read_topic_percent is not none %}
       <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·{{ v.politeness.read_topic_percent }}%</span>
     {% endif %}

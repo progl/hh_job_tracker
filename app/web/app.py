@@ -174,9 +174,11 @@ async def _enrich_with_scoring(db, rows: list[dict]) -> list[dict]:
     profile = await profile_repo.get_profile(db)
     emp_map = await employers_repo.get_map(db)
     neg_map = await negotiations_repo.map_vacancy_to_state(db)
+    soft_map = await funnel_repo.soft_scores_by_employer(db)
     out = []
     for r in rows:
         emp_pol = emp_map.get(r.get("company_id")) if r.get("company_id") else None
+        r["soft_score"] = soft_map.get(r.get("company_id"))
         sc = score_vacancy(r, profile, emp_pol)
         pred = predict_invite_prob(sc["score"], emp_pol, r.get("total_responses_count"), r)
         r["score"] = sc["score"]
@@ -1027,6 +1029,13 @@ async def searches_sync_all(full: bool = Form(False)):
     async def job(ctx):
         db = await get_db()
         try:
+            # Обновим resume-токен у рекомендаций (HH периодически меняет ?resume=...) до прогона
+            try:
+                from app.collector import personal as personal_col
+
+                await personal_col.sync_resume_token_into_searches(hh_client, db)
+            except Exception as e:
+                log.warning("sync-all: refresh resume token failed: %s", e)
             searches = [s for s in await searches_repo.list_searches(db) if s.get("is_active")]
             if not searches:
                 return {"ok": True, "ran": 0, "note": "нет активных поисков"}
