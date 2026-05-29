@@ -24,6 +24,8 @@
         <option value="ok" {% if filters.status == 'ok' %}selected{% endif %}>ok</option>
         <option value="error" {% if filters.status == 'error' %}selected{% endif %}>error</option>
         <option value="running" {% if filters.status == 'running' %}selected{% endif %}>running</option>
+        <option value="cancelled" {% if filters.status == 'cancelled' %}selected{% endif %}>cancelled</option>
+        <option value="interrupted" {% if filters.status == 'interrupted' %}selected{% endif %}>interrupted</option>
       </select>
     </div>
     <div>
@@ -55,7 +57,7 @@
       </thead>
       <tbody>
         {% for r in runs %}
-          {% set status_color = {'ok': 'emerald', 'error': 'red', 'running': 'blue'}.get(r.status, 'neutral') %}
+          {% set status_color = {'ok': 'emerald', 'error': 'red', 'running': 'blue', 'cancelled': 'amber', 'interrupted': 'amber'}.get(r.status, 'neutral') %}
           <tr class="border-t border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
             <td class="px-3 py-1.5 tabular-nums text-neutral-500">{{ r.id }}</td>
             <td class="px-3 py-1.5">

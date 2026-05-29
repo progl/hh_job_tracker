@@ -94,10 +94,14 @@ async def cancel_run(run_id: int) -> dict[str, Any]:
     CancelledError и записывает статус 'cancelled'.
     """
     task = _running.get(run_id)
-    if task is None or task.done():
-        return {"ok": False, "reason": "not_running", "run_id": run_id}
-    task.cancel()
-    return {"ok": True, "run_id": run_id}
+    if task is not None and not task.done():
+        task.cancel()
+        return {"ok": True, "run_id": run_id, "action": "cancelled"}
+    # не в реестре — вероятно осиротевший 'running' из прошлого процесса; пометим прерванным
+    marked = await job_runs_repo.mark_running_interrupted(run_id)
+    if marked:
+        return {"ok": True, "run_id": run_id, "action": "marked_interrupted"}
+    return {"ok": False, "reason": "not_running", "run_id": run_id}
 
 
 @_record("personal_refresh")

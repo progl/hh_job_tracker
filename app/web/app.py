@@ -85,6 +85,12 @@ async def lifespan(app: FastAPI):
         await db.close()
     await hh_client.start(initial_cookies=cookies)
     ml_module.reload_model()
+    # Помечаем осиротевшие 'running' джобы (процесс упал/перезапущен посреди прогона) как interrupted
+    from app.db import job_runs_repo
+
+    n_orphans = await job_runs_repo.mark_running_interrupted()
+    if n_orphans:
+        logging.info("job_runs: помечено interrupted осиротевших running: %s", n_orphans)
     scheduler_mod.start(hh_client)
     telegram_task = None
     if settings.TELEGRAM_BOT_TOKEN:

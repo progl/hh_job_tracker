@@ -89,6 +89,27 @@ async def test_list_runs_filters_by_status(tmp_db):
 
 
 @pytest.mark.asyncio
+async def test_mark_running_interrupted(tmp_db):
+    a = await job_runs_repo.start("job_a")  # running
+    b = await job_runs_repo.start("job_b")  # running
+    c = await job_runs_repo.start("job_c")
+    await job_runs_repo.finish(c, "ok")  # завершён — не трогаем
+
+    # пометить одну конкретную
+    n = await job_runs_repo.mark_running_interrupted(a)
+    assert n == 1
+    runs = {r["id"]: r for r in await job_runs_repo.list_runs(limit=10)}
+    assert runs[a]["status"] == "interrupted"
+    assert runs[a]["finished_at"] is not None
+    assert runs[b]["status"] == "running"  # b не тронут
+
+    # пометить все оставшиеся running
+    n2 = await job_runs_repo.mark_running_interrupted()
+    assert n2 == 1  # только b
+    assert (await job_runs_repo.list_runs(status="running")) == []
+
+
+@pytest.mark.asyncio
 async def test_list_runs_respects_limit(tmp_db):
     for _ in range(5):
         rid = await job_runs_repo.start("job_x")

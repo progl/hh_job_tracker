@@ -54,6 +54,27 @@ async def finish(
         await db.close()
 
 
+async def mark_running_interrupted(run_id: int | None = None) -> int:
+    """Помечает зависшие 'running' как 'interrupted'. Если run_id=None — все
+    (вызывается на старте: процесс свежий → ничего из прошлого не выполняется).
+    Возвращает число помеченных строк."""
+    db = await get_db()
+    try:
+        sql = (
+            "UPDATE job_runs SET status='interrupted', finished_at=CURRENT_TIMESTAMP, "
+            "error=COALESCE(error, 'прервано (рестарт приложения)') WHERE status='running'"
+        )
+        params: tuple = ()
+        if run_id is not None:
+            sql += " AND id = ?"
+            params = (run_id,)
+        cur = await db.execute(sql, params)
+        await db.commit()
+        return cur.rowcount
+    finally:
+        await db.close()
+
+
 async def list_runs(job_id: str | None = None, status: str | None = None, limit: int = 100) -> list[dict]:
     where: list[str] = []
     params: list[Any] = []

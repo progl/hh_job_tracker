@@ -231,9 +231,22 @@ async def test_record_decorator_cancelled(tmp_db):
 
 
 @pytest.mark.asyncio
-async def test_cancel_run_not_running():
+async def test_cancel_run_not_running(tmp_db):
+    # нет ни в реестре, ни в БД → not_running
     res = await sched_mod.cancel_run(999999)
     assert res == {"ok": False, "reason": "not_running", "run_id": 999999}
+
+
+@pytest.mark.asyncio
+async def test_cancel_run_marks_orphan_interrupted(tmp_db):
+    # осиротевшая 'running' строка из «прошлого процесса»: есть в БД, нет в _running
+    from app.db import job_runs_repo
+
+    run_id = await job_runs_repo.start("orphan_job")
+    res = await sched_mod.cancel_run(run_id)
+    assert res == {"ok": True, "run_id": run_id, "action": "marked_interrupted"}
+    runs = await job_runs_repo.list_runs(job_id="orphan_job")
+    assert runs[0]["status"] == "interrupted"
 
 
 @pytest.mark.asyncio
@@ -254,7 +267,7 @@ async def test_cancel_run_cancels_running_job(tmp_db):
     run_id = next(iter(sched_mod._running))
 
     res = await sched_mod.cancel_run(run_id)
-    assert res == {"ok": True, "run_id": run_id}
+    assert res == {"ok": True, "run_id": run_id, "action": "cancelled"}
 
     with pytest.raises(asyncio.CancelledError):
         await task
