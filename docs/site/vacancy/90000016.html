@@ -434,26 +434,33 @@ window.runAnalyze = async (vid) => {
 </main>
 <!-- Status panel -->
 <div class="fixed bottom-3 right-3 z-40 w-[360px] max-h-[70vh] flex flex-col rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg overflow-hidden text-[12.5px]" id="status-panel" style="display:none">
-<div class="px-3 py-2 flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 cursor-pointer select-none" onclick="window.statusToggle()">
+<div class="px-3 py-2 flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="inline-block w-2 h-2 rounded-full bg-emerald-500" id="status-dot"></span>
 <span class="font-medium">Статус</span>
-<span class="text-neutral-500" id="status-summary"></span>
+<span class="text-neutral-500 truncate max-w-[230px]" id="status-summary"></span>
 </div>
-<span class="text-neutral-400" id="status-arrow">▾</span>
+<span class="text-neutral-400" id="status-arrow">▸</span>
 </div>
-<div class="overflow-y-auto p-3 space-y-3" id="status-body">
-<div>
-<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Клиент HH</div>
-<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+<!-- мини-прогресс активной задачи: виден даже когда панель свёрнута -->
+<div class="h-0.5 bg-blue-100 dark:bg-blue-900/40" id="status-minibar" style="display:none">
+<div class="h-full bg-blue-500" id="status-minibar-fill" style="width:0%"></div>
 </div>
-<div>
-<div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Расписание</div>
-<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info"></div>
 </div>
+<div class="overflow-y-auto p-3 space-y-3" id="status-body" style="display:none">
 <div>
 <div class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1">Активные задачи</div>
 <div class="space-y-2" id="tasks-info"></div>
+</div>
+<div>
+<div class="text-neutral-700 dark:text-neutral-200" id="client-info"></div>
+</div>
+<div>
+<button class="text-[10px] uppercase tracking-wide text-neutral-500 mb-1 flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-300" onclick="window.schedToggle(event)" type="button">
+<span id="sched-arrow">▸</span> Расписание <span class="normal-case text-neutral-400">(полностью — на /jobs)</span>
+</button>
+<div class="space-y-1 text-neutral-700 dark:text-neutral-200" id="scheduler-info" style="display:none"></div>
 </div>
 </div>
 </div>
