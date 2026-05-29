@@ -127,11 +127,12 @@
   <!-- Действия с HH -->
   <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
     <div class="border-b border-neutral-100 dark:border-neutral-800 pb-3">
-      <div class="text-[11px] uppercase tracking-wide text-neutral-500 mb-2 flex items-center justify-between">
-        <span>Разовый сбор с hh.ru</span>
-        <span class="normal-case tracking-normal text-neutral-400">обновить отклики / полный sync / ML / курсы ЦБ — кнопки <b>▶</b> в панели Статус справа</span>
-      </div>
-      <div class="flex flex-wrap items-end gap-3">
+      <button type="button" onclick="window.toggleSection('collect','collect-body')"
+              class="w-full text-[11px] uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-2 hover:text-neutral-700 dark:hover:text-neutral-300">
+        <span id="collect-arrow">▸</span><span>🛠 Сбор и экспорт</span>
+        <span class="ml-auto normal-case tracking-normal text-neutral-400">обновить отклики / полный sync / ML / курсы ЦБ — в панели Статус справа</span>
+      </button>
+      <div id="collect-body" class="flex flex-wrap items-end gap-3" style="display:none">
         <form id="collect-form" onsubmit="window.runAction(event, '/api/collect', 'Сбор вакансий'); return false" class="flex flex-wrap items-end gap-3">
           <div>
             <label class="block text-[11px] text-neutral-500" title="Текст поискового запроса (как в HH)">Запрос</label>
@@ -183,18 +184,20 @@
     </div>
 
     <!-- Сохранённые поиски -->
-    <div class="border-b border-neutral-100 dark:border-neutral-800 pb-3 space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="text-[11px] uppercase tracking-wide text-neutral-500">Сохранённые поиски ({{ searches | length }})</div>
+    <div class="pb-3 space-y-2">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <button type="button" onclick="window.toggleSection('searches','searches-body')"
+                class="text-[11px] uppercase tracking-wide text-neutral-500 flex items-center gap-2 hover:text-neutral-700 dark:hover:text-neutral-300">
+          <span id="searches-arrow">▾</span><span>Сохранённые поиски ({{ searches | length }})</span>
+        </button>
         <div class="flex items-center gap-2">
-          <a href="/searches" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Открыть редактируемую таблицу поисков (inline-правка всех полей)">⚙ управление</a>
-          <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">↻ Синкать все</button>
-          <button onclick="window.bulkMaxPages()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать глубину (max_pages) сразу всем активным поискам — например, 200 = «до конца»">🔧 Глубину всем</button>
-          <button onclick="window.bulkEarlyStop()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Задать early_stop_seen (K подряд seen → stop) всем активным. 0 = выключить early-stop.&#10;Типичные: 3 (обычные) / 5 (рекомендации).">⚡ Early-stop всем</button>
+          <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">🔄 Синхронизация</button>
           <button onclick="window.addRecommendations()" class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨ Рекомендации</button>
-          <button onclick="window.toggleSaveForm()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">+ Сохранить новый</button>
+          <button onclick="window.toggleSaveForm()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">+ Сохранить</button>
+          <a href="/searches" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Редактируемая таблица поисков: имя/текст/регион/глубина/early-stop/вкл — inline">⚙ Управление</a>
         </div>
       </div>
+      <div id="searches-body" class="space-y-2">
       <div id="saved-searches" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
         {% for s in searches %}
           {% set params_text = s.params.get('text','') %}
@@ -221,7 +224,7 @@
             <button onclick="window.deleteSearch({{ s.id }}, '{{ s.name }}')" class="text-neutral-400 hover:text-red-600 px-1" title="Удалить поиск (вакансии останутся)">✕</button>
           </div>
         {% else %}
-          <div class="col-span-full text-xs text-neutral-500 py-2">Пока нет. Нажми «+ Сохранить новый» — поиск будет синкаться автоматически каждые 4 часа.</div>
+          <div class="col-span-full text-xs text-neutral-500 py-2">Пока нет. Нажми «+ Сохранить» — поиск будет синхронизироваться автоматически каждые 4 часа.</div>
         {% endfor %}
       </div>
       <form id="save-form" hx-post="/api/searches" hx-target="#save-result" hx-swap="innerHTML" class="hidden flex flex-wrap items-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
@@ -233,6 +236,7 @@
         <button class="px-3 py-1.5 text-sm rounded bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white">Сохранить</button>
         <span id="save-result" class="text-sm text-emerald-700"></span>
       </form>
+      </div>
     </div>
 
     {# Форма #filters — все hidden inputs управляются popup'ами в шапке таблицы (см. ниже).
@@ -645,6 +649,29 @@
     const f = document.getElementById('save-form');
     f.classList.toggle('hidden');
   };
+  // Сворачиваемые секции панели управления (состояние в localStorage).
+  window.toggleSection = (key, bodyId) => {
+    const body = document.getElementById(bodyId);
+    const arrow = document.getElementById(key + '-arrow');
+    const hidden = body.style.display === 'none';
+    body.style.display = hidden ? '' : 'none';
+    if (arrow) arrow.textContent = hidden ? '▾' : '▸';
+    try { localStorage.setItem('sec.' + key, hidden ? '1' : '0'); } catch(e) {}
+  };
+  (function() {
+    // Дефолт: «Сбор и экспорт» свёрнут, «Сохранённые поиски» развёрнуты.
+    const defaults = { collect: '0', searches: '1' };
+    [['collect','collect-body'], ['searches','searches-body']].forEach(([key, bodyId]) => {
+      const body = document.getElementById(bodyId);
+      const arrow = document.getElementById(key + '-arrow');
+      if (!body) return;
+      let open;
+      try { open = localStorage.getItem('sec.' + key); } catch(e) { open = null; }
+      if (open === null) open = defaults[key];
+      body.style.display = open === '1' ? '' : 'none';
+      if (arrow) arrow.textContent = open === '1' ? '▾' : '▸';
+    });
+  })();
   window.runSearch = async (sid, name, evt) => {
     const full = !!(evt && (evt.shiftKey || evt.altKey));
     const tag = full ? '▶▶' : '▶';
