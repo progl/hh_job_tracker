@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     LLM_MODEL_EMBED: str = "nomic-embed-text"
     EMBED_DIM: int = 768  # размерность nomic-embed-text; vec0-таблица фиксирована под неё
     RAG_TOP_K: int = 5
+    # Обрезаем текст перед эмбеддингом — иначе длинные описания не влезают в контекст
+    # nomic-embed-text (~2048 токенов). Для кириллицы консервативно ~1800 символов.
+    EMBED_MAX_CHARS: int = 1800
 
     # --- Уведомления ---
     # macOS-уведомления работают без настройки. Telegram — опционально: создай бота у @BotFather,

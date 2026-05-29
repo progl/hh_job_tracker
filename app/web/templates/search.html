@@ -23,6 +23,13 @@
           ⚙️ Индексировать корпус
         </button>
       {% endif %}
+      {% if desc_missing %}
+        <button onclick="window.runBackfillDescriptions()"
+                class="text-xs px-2.5 py-1 rounded border border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                title="Дотянуть полные описания вакансий из списков поиска (запросы к HH, может встать на anti-bot паузу). Без описания вакансия не индексируется. Cron тянет малыми порциями каждый час.">
+          📥 Дотянуть описания ({{ desc_missing }})
+        </button>
+      {% endif %}
     </div>
 
     <form onsubmit="return false" class="flex flex-wrap gap-2 mb-4">
@@ -45,6 +52,18 @@
     const d = await r.json();
     if (d.ok) window.showToast('ok', '✓ Индексация запущена');
     else window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+  };
+
+  window.runBackfillDescriptions = async () => {
+    const n = prompt('Сколько вакансий дотянуть за прогон? (остановится на anti-bot паузе)', '200');
+    if (!n) return;
+    window.showToast('info', '📥 Дотягиваю описания — прогресс в панели «Статус» / на /jobs');
+    const fd = new FormData(); fd.append('limit', String(parseInt(n, 10) || 200));
+    const r = await fetch('/api/backfill-descriptions', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (d.reason === 'already_running') window.showToast('info', 'Уже выполняется');
+    else if (d.ok === false) window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+    else window.showToast('ok', '✓ Запущено в фоне');
   };
 
   window._ragCard = (x) => `

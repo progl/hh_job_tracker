@@ -77,7 +77,9 @@ def build_embed_text(v: dict) -> str:
     if stack:
         parts.append("Стек: " + ", ".join(str(s) for s in stack))
     parts.append(clean_description(v.get("description") or ""))
-    return "\n".join(p for p in parts if p).strip()
+    text = "\n".join(p for p in parts if p).strip()
+    # Обрезаем под контекст embed-модели (иначе Ollama 400 «input exceeds context length»)
+    return text[: settings.EMBED_MAX_CHARS]
 
 
 def source_hash(text: str) -> str:

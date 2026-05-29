@@ -41,6 +41,14 @@ def test_build_embed_text_and_hash():
     assert h1 == h2 and len(h1) == 40  # sha1 hex
 
 
+def test_build_embed_text_truncates_long():
+    from app.llm import rag
+
+    v = {"name": "Py", "company_name": "Acme", "parsed_stack": "[]", "description": "очень " * 2000}
+    text = rag.build_embed_text(v)
+    assert len(text) <= settings.EMBED_MAX_CHARS
+
+
 def test_score_clamps():
     from app.llm import rag
 

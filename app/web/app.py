@@ -429,6 +429,33 @@ async def backfill(limit: int = Form(200)):
         return JSONResponse({"ok": False, "reason": "already_running", "kind": e.kind}, status_code=409)
 
 
+@app.post("/api/backfill-descriptions")
+async def backfill_descriptions(limit: int = Form(200)):
+    """Массово дотягивает описания вакансий без полного текста (для RAG-индексации)."""
+
+    async def job(ctx):
+        db = await get_db()
+        try:
+            res = await collector.backfill_descriptions(
+                hh_client,
+                db,
+                limit=limit,
+                progress_cb=lambda current=None, total=None, message=None: ctx.update(
+                    current, total, message
+                ),
+            )
+            await save_jar(db, hh_client.client)
+            return res
+        finally:
+            await db.close()
+
+    try:
+        t = await task_mod.run("backfill_descriptions", "Дотянуть описания", job)
+        return _task_response(t)
+    except task_mod.TaskAlreadyRunning as e:
+        return JSONResponse({"ok": False, "reason": "already_running", "kind": e.kind}, status_code=409)
+
+
 @app.post("/api/vacancy/{vid}/refresh")
 async def refresh_vacancy(vid: int):
     db = await get_db()
@@ -1669,20 +1696,27 @@ async def search_page(request: Request):
 
     available = rag_mod.is_available()
     embedded = total = 0
-    if available:
-        db = await get_db()
-        try:
+    db = await get_db()
+    try:
+        if available:
             from app.db import embeddings_repo
 
             embedded, total = await embeddings_repo.coverage(db)
-        finally:
-            await db.close()
+        cur = await db.execute(
+            "SELECT COUNT(*) FROM vacancies "
+            "WHERE (description IS NULL OR length(description) <= 100) "
+            "AND disappeared_at IS NULL AND archived_at IS NULL"
+        )
+        desc_missing = (await cur.fetchone())[0]
+    finally:
+        await db.close()
     return render(
         "search.html",
         request=request,
         rag_available=available,
         embedded=embedded,
         total=total,
+        desc_missing=desc_missing,
     )
 
 

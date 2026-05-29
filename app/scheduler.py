@@ -425,6 +425,23 @@ async def _job_backfill_pending(hh_client) -> dict:
         await db.close()
 
 
+@_record("backfill_descriptions")
+async def _job_backfill_descriptions(hh_client) -> dict:
+    """Мягко дотягивает описания вакансий без полного текста (малыми порциями) —
+    чтобы их можно было индексировать в RAG. Останавливается на anti-bot паузе."""
+    if hh_client.status.get("paused_now"):
+        return {"skipped": "paused"}
+    db = await get_db()
+    try:
+        from app.collector import vacancies as col
+
+        res = await col.backfill_descriptions(hh_client, db, limit=15)
+        await save_jar(db, hh_client.client)
+        return res
+    finally:
+        await db.close()
+
+
 @_record("ml_retrain")
 async def _job_ml_retrain() -> dict:
     try:
@@ -509,6 +526,13 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
         id="embed_vacancies",
         replace_existing=True,
     )
+    _scheduler.add_job(
+        _job_backfill_descriptions,
+        IntervalTrigger(hours=1),
+        args=[hh_client],
+        id="backfill_descriptions",
+        replace_existing=True,
+    )
     _scheduler.start()
     import time as _t
 
@@ -551,10 +575,11 @@ _JOB_LABELS = {
     "llm_parse_requirements": "LLM: разбор требований",
     "cover_letter_generate": "LLM: сопроводительные письма",
     "embed_vacancies": "RAG: индексация вакансий",
+    "backfill_descriptions": "Дотянуть описания вакансий",
 }
 
 
-_JOBS_NEED_CLIENT = {"backfill_pending", "personal_refresh", "sync_searches"}
+_JOBS_NEED_CLIENT = {"backfill_pending", "personal_refresh", "sync_searches", "backfill_descriptions"}
 
 
 async def run_now(job_id: str) -> dict[str, Any]:

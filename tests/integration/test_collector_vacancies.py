@@ -645,6 +645,36 @@ async def test_backfill_progress_callback(tmp_db):
     assert any("saved" in (c.get("message") or "") or "готово" in (c.get("message") or "") for c in calls)
 
 
+# ----- backfill_descriptions ----
+
+
+@pytest.mark.asyncio
+async def test_backfill_descriptions_targets_short_desc_only(tmp_db):
+    # 700 — без описания (попадёт), 701 — с длинным (не попадёт)
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (700, 'v700', '')")
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (701, 'v701', ?)", ("x" * 200,))
+    await tmp_db.commit()
+    client = _FakeClient([_wrap_view_state(700)])
+    res = await col.backfill_descriptions(client, tmp_db, limit=10)
+    assert res["requested"] == 1  # только 700
+    assert res["saved"] == 1
+    assert res["paused"] is False
+
+
+@pytest.mark.asyncio
+async def test_backfill_descriptions_antibot_pause_breaks(tmp_db):
+    Anti, _, _ = _exc_classes()
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (710, 'v710', '')")
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (711, 'v711', '')")
+    await tmp_db.commit()
+    client = _FakeClient([_wrap_view_state(710), ""], raise_on={1: Anti("pause")})
+    client.paused_now = True
+    res = await col.backfill_descriptions(client, tmp_db, limit=10)
+    assert res["paused"] is True
+    assert res["saved"] == 1
+    assert res["remaining"] >= 1
+
+
 # ----- _mark_vacancy_unavailable ----
 
 

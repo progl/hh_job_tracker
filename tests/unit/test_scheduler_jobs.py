@@ -413,6 +413,30 @@ async def test_job_embed_vacancies_embeds_missing(tmp_db, sched_mod, monkeypatch
     assert res == {"processed": 2, "ok": 2}
 
 
+# ----- _job_backfill_descriptions ----
+
+
+@pytest.mark.asyncio
+async def test_job_backfill_descriptions_paused(tmp_db, sched_mod):
+    cli = _mk_client(paused=True)
+    res = await sched_mod._job_backfill_descriptions(cli)
+    assert res == {"skipped": "paused"}
+
+
+@pytest.mark.asyncio
+async def test_job_backfill_descriptions_runs(tmp_db, sched_mod, monkeypatch):
+    cli = _mk_client()
+    from app.collector import vacancies as col
+
+    async def fake(client, db, limit=200, progress_cb=None):
+        return {"requested": 3, "saved": 3, "paused": False}
+
+    monkeypatch.setattr(col, "backfill_descriptions", fake)
+    monkeypatch.setattr(sched_mod, "save_jar", AsyncMock())
+    res = await sched_mod._job_backfill_descriptions(cli)
+    assert res["saved"] == 3
+
+
 # ----- start ----
 
 
@@ -427,6 +451,6 @@ def test_start_creates_scheduler_and_idempotent(sched_mod, monkeypatch):
     assert s1 is not None
     s2 = sched_mod.start(cli)
     assert s2 is s1
-    # 10 джобов: 7 базовых + llm_parse_requirements + cover_letter_generate + embed_vacancies
-    assert len(s1.get_jobs()) == 10
+    # 11 джобов: базовые + llm_parse_requirements + cover_letter_generate + embed_vacancies + backfill_descriptions
+    assert len(s1.get_jobs()) == 11
     sched_mod._scheduler = None

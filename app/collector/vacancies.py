@@ -370,8 +370,6 @@ async def backfill_from_negotiations(
 ) -> dict[str, int]:
     """Подтягивает /vacancy/{id} для всех vacancy_id из negotiations, которых нет в vacancies.
     При anti-bot challenge — корректно останавливается и возвращает остаток."""
-    from app.clients.hh import AntibotChallengeError, SessionExpiredError
-
     cur = await db.execute(
         """
         SELECT DISTINCT n.vacancy_id
@@ -389,6 +387,20 @@ async def backfill_from_negotiations(
     total = len(ids)
     if limit:
         ids = ids[:limit]
+    return await _backfill_vacancy_ids(client, db, ids, total, progress_cb)
+
+
+async def _backfill_vacancy_ids(
+    client: HHClient,
+    db: aiosqlite.Connection,
+    ids: list[int],
+    total: int,
+    progress_cb=None,
+) -> dict[str, int]:
+    """Общий цикл backfill по списку vacancy_id (с anti-bot остановкой).
+    `total` — полный размер очереди (для remaining), `ids` — текущий батч."""
+    from app.clients.hh import AntibotChallengeError, SessionExpiredError
+
     saved = 0
     failed = 0
     paused = False
@@ -449,3 +461,27 @@ async def backfill_from_negotiations(
         "remaining": remaining,
         "hint": "повтори запрос через ~10 минут, чтобы дотянуть остаток" if paused and remaining else None,
     }
+
+
+async def backfill_descriptions(
+    client: HHClient,
+    db: aiosqlite.Connection,
+    limit: int | None = 200,
+    progress_cb=None,
+) -> dict[str, int]:
+    """Дотягивает /vacancy/{id} для уже сохранённых вакансий без полного описания
+    (пришли из списков поиска). Останавливается на anti-bot паузе, возвращает остаток."""
+    cur = await db.execute(
+        """
+        SELECT id FROM vacancies
+         WHERE (description IS NULL OR length(description) <= 100)
+           AND disappeared_at IS NULL
+           AND archived_at IS NULL
+         ORDER BY seen_at DESC
+        """
+    )
+    ids = [r[0] for r in await cur.fetchall()]
+    total = len(ids)
+    if limit:
+        ids = ids[:limit]
+    return await _backfill_vacancy_ids(client, db, ids, total, progress_cb)
