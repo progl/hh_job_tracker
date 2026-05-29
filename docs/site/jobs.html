@@ -116,6 +116,8 @@
 <option value="ok">ok</option>
 <option value="error">error</option>
 <option value="running">running</option>
+<option value="cancelled">cancelled</option>
+<option value="interrupted">interrupted</option>
 </select>
 </div>
 <div>
@@ -260,7 +262,10 @@
         const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
         const d = await r.json();
         if (d.ok) {
-          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          const msg = d.action === 'marked_interrupted'
+            ? `⏹ прогон #${runId} был зависшим — помечен прерванным`
+            : `⏹ прогон #${runId} остановлен`;
+          window.showToast('ok', msg);
           setTimeout(() => location.reload(), 800);
         } else if (d.reason === 'not_running') {
           window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);

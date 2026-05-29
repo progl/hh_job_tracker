@@ -108,7 +108,7 @@
 <dt class="text-neutral-500">HHID</dt><dd class="font-mono">00000001</dd>
 <dt class="text-neutral-500">Имя</dt><dd>Иван Петров</dd>
 <dt class="text-neutral-500">Резюме ID</dt><dd class="font-mono">demo_resume_1</dd>
-<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-29 06:24:53</dd>
+<dt class="text-neutral-500">Обновлено</dt><dd class="text-neutral-500">2026-05-29 09:46:47</dd>
 </dl>
 <form class="mt-3" onsubmit="return false;">
 <button class="px-3 py-1.5 text-sm rounded bg-violet-700 text-white hover:bg-violet-600">Обновить из HH</button>
@@ -295,6 +295,8 @@
 <div class="mt-2 flex items-center gap-2 text-sm">
 <label for="notifications-threshold">Порог match-score:</label>
 <input class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20" id="notifications-threshold" max="100" min="0" type="number" value="75"/>
+<label class="ml-3" for="notifications-digest-hour" title="Время Europe/Moscow">Час дайджеста:</label>
+<input class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-16" id="notifications-digest-hour" max="23" min="0" type="number" value="9"/>
 </div>
 <div class="mt-2">
 <div class="text-[11px] uppercase text-neutral-500 mb-1">Что слать</div>
@@ -314,6 +316,10 @@
 <label class="flex items-center gap-2 text-sm cursor-pointer">
 <input class="notify-event" type="checkbox" value="job_done"/>
               Завершение фоновых задач
+            </label>
+<label class="flex items-center gap-2 text-sm cursor-pointer">
+<input checked="" class="notify-event" type="checkbox" value="digest"/>
+              Ежедневный дайджест
             </label>
 </div>
 </div>
@@ -361,6 +367,7 @@ window.setNotifications = async () => {
   const tg = document.getElementById('notifications-telegram');
   if (tg && !tg.disabled) fd.append('telegram', tg.checked ? 'true' : 'false');
   fd.append('threshold', document.getElementById('notifications-threshold').value || '75');
+  fd.append('digest_hour', document.getElementById('notifications-digest-hour').value || '9');
   fd.append('events_present', 'true');
   document.querySelectorAll('.notify-event:checked').forEach(c => fd.append('events', c.value));
   const r = await fetch('/api/settings/notifications', {method: 'POST', body: fd});
@@ -463,7 +470,10 @@ window.setNotifications = async () => {
         const r = await fetch(`/api/jobs/${runId}/stop`, {method: 'POST'});
         const d = await r.json();
         if (d.ok) {
-          window.showToast('ok', `⏹ прогон #${runId} остановлен`);
+          const msg = d.action === 'marked_interrupted'
+            ? `⏹ прогон #${runId} был зависшим — помечен прерванным`
+            : `⏹ прогон #${runId} остановлен`;
+          window.showToast('ok', msg);
           setTimeout(() => location.reload(), 800);
         } else if (d.reason === 'not_running') {
           window.showToast('err', `прогон #${runId} уже не выполняется (нечего останавливать)`);
