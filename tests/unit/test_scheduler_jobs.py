@@ -375,6 +375,60 @@ async def test_job_generate_cover_letters_no_pending(tmp_db, sched_mod):
     assert res == {"processed": 0, "skipped": "no_pending"}
 
 
+# ----- _job_llm_parse_requirements (добивает недостающее) ----
+
+
+@pytest.mark.asyncio
+async def test_job_llm_parse_only_missing(tmp_db, sched_mod, monkeypatch):
+    # vid=1: есть requirements → не хватает только soft_skills_employer
+    # vid=2: ничего нет → не хватает обоих
+    for vid in (1, 2):
+        await tmp_db.execute(
+            "INSERT INTO vacancies(id, name, description) VALUES (?, 'v', ?)", (vid, "d" * 200)
+        )
+    await tmp_db.execute(
+        "INSERT INTO vacancy_requirements(vacancy_id, kind, text, source) VALUES (1, 'must', 'py', 'llm')"
+    )
+    await tmp_db.commit()
+
+    from app.llm import registry as reg
+
+    async def fake_enabled(db):
+        return ["requirements", "soft_skills_employer"]
+
+    calls: list = []
+
+    async def fake_analyze_one(db, vid, kinds, model=None):
+        calls.append((vid, tuple(kinds)))
+        return []
+
+    monkeypatch.setattr(reg, "get_enabled_analyzers", fake_enabled)
+    monkeypatch.setattr(reg, "analyze_one", fake_analyze_one)
+
+    res = await sched_mod._job_llm_parse_requirements()
+    assert res["processed"] == 2
+    by_vid = dict(calls)
+    assert by_vid[1] == ("soft_skills_employer",)  # requirements уже есть — не гоним
+    assert set(by_vid[2]) == {"requirements", "soft_skills_employer"}
+
+
+@pytest.mark.asyncio
+async def test_job_llm_parse_all_complete(tmp_db, sched_mod, monkeypatch):
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (1, 'v', ?)", ("d" * 200,))
+    await tmp_db.execute(
+        "INSERT INTO vacancy_requirements(vacancy_id, kind, text, source) VALUES (1, 'must', 'py', 'llm')"
+    )
+    await tmp_db.commit()
+    from app.llm import registry as reg
+
+    async def fake_enabled(db):
+        return ["requirements"]
+
+    monkeypatch.setattr(reg, "get_enabled_analyzers", fake_enabled)
+    res = await sched_mod._job_llm_parse_requirements()
+    assert res == {"processed": 0, "skipped": "all_complete", "enabled": ["requirements"]}
+
+
 # ----- _job_embed_vacancies (RAG) ----
 
 

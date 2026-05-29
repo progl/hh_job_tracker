@@ -283,46 +283,49 @@ async def _job_dedup_vacancies() -> dict:
 
 @_record("llm_parse_requirements")
 async def _job_llm_parse_requirements() -> dict:
-    """Раз в час: берёт N вакансий без 'requirements' анализа (или без хоть одного включённого
-    анализа) и прогоняет ВСЕ включённые анализаторы.
-    Каждый под-анализ отдельно логируется в llm_runs (через registry.analyze_one)."""
+    """Раз в час: добивает НЕДОСТАЮЩИЕ включённые анализаторы по вакансиям с описанием.
+    Берёт N вакансий, у которых не хватает хотя бы одного enabled-анализа, и гонит только
+    отсутствующие — так позже-включённые анализаторы (например soft_skills_employer) сами
+    дозаполняются на старых вакансиях. Каждый под-анализ логируется в llm_runs."""
     batch = 20
     db = await get_db()
     try:
-        from app.llm.registry import analyze_one, get_enabled_analyzers
+        from app.llm.registry import analyze_one, get_enabled_analyzers, missing_analysis_kinds
 
         enabled = await get_enabled_analyzers(db)
         if not enabled:
             return {"processed": 0, "skipped": "no_enabled_analyzers"}
-        # «не обработано» = нет ни одного из vacancy_requirements (для 'requirements')
-        # либо нет строки в vacancy_analysis с любым из enabled kinds (для остальных).
-        # Простой эвристикой: смотрим только requirements (это всегда включено по умолчанию)
+        # Пул кандидатов — свежие вакансии с описанием; среди них ищем те, где чего-то не хватает.
         cur = await db.execute(
             """
             SELECT v.id FROM vacancies v
-            LEFT JOIN vacancy_requirements r ON r.vacancy_id = v.id
             WHERE v.description IS NOT NULL AND length(v.description) > 100
-              AND r.id IS NULL
+              AND v.disappeared_at IS NULL
             ORDER BY v.id DESC
-            LIMIT ?
-            """,
-            (batch,),
+            LIMIT 400
+            """
         )
-        ids = [r[0] for r in await cur.fetchall()]
-        if not ids:
-            return {"processed": 0, "skipped": "no_unparsed", "enabled": enabled}
+        candidates = [r[0] for r in await cur.fetchall()]
         total_ok = 0
+        processed = 0
         per_kind: dict[str, int] = dict.fromkeys(enabled, 0)
-        for vid in ids:
+        for vid in candidates:
+            if processed >= batch:
+                break
+            missing = await missing_analysis_kinds(db, vid, enabled)
+            if not missing:
+                continue
+            processed += 1
             try:
-                results = await analyze_one(db, vid, enabled)
-                for r in results:
+                for r in await analyze_one(db, vid, missing):
                     if r.ok:
                         total_ok += 1
                         per_kind[r.kind] = per_kind.get(r.kind, 0) + 1
             except Exception as e:
                 log.warning("llm_parse_requirements: vid=%s failed: %s", vid, e)
-        return {"processed": len(ids), "ok": total_ok, "per_kind": per_kind, "enabled": enabled}
+        if processed == 0:
+            return {"processed": 0, "skipped": "all_complete", "enabled": enabled}
+        return {"processed": processed, "ok": total_ok, "per_kind": per_kind, "enabled": enabled}
     finally:
         await db.close()
 

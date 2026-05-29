@@ -589,6 +589,27 @@ async def analyze_one(
     return out
 
 
+async def missing_analysis_kinds(db: aiosqlite.Connection, vacancy_id: int, kinds: list[str]) -> list[str]:
+    """Из списка kinds возвращает те, для которых у вакансии ещё НЕТ результата.
+    requirements → vacancy_requirements, остальные → vacancy_analysis. Нужно, чтобы
+    cron добивал позже-включённые анализаторы (например soft_skills_employer) на
+    старых вакансиях, у которых requirements уже есть."""
+    out: list[str] = []
+    for k in kinds:
+        if k == "requirements":
+            cur = await db.execute(
+                "SELECT 1 FROM vacancy_requirements WHERE vacancy_id = ? LIMIT 1", (vacancy_id,)
+            )
+        else:
+            cur = await db.execute(
+                "SELECT 1 FROM vacancy_analysis WHERE vacancy_id = ? AND kind = ? LIMIT 1",
+                (vacancy_id, k),
+            )
+        if not await cur.fetchone():
+            out.append(k)
+    return out
+
+
 # ---------- runtime: какие анализаторы включены глобально ----------
 
 

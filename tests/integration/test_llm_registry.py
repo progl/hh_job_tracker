@@ -569,3 +569,27 @@ async def test_analyze_cover_letter_no_resume(tmp_db, monkeypatch):
     assert res[0].error == "no_resume"
     # LLM не должен был вызываться
     assert called["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_missing_analysis_kinds(tmp_db):
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (90, 'v', 'd')")
+    # есть requirements + company_kind, нет soft_skills_employer
+    await tmp_db.execute(
+        "INSERT INTO vacancy_requirements(vacancy_id, kind, text, source) VALUES (90, 'must', 'python', 'llm')"
+    )
+    await tmp_db.execute(
+        "INSERT INTO vacancy_analysis(vacancy_id, kind, data_json) VALUES (90, 'company_kind', '{}')"
+    )
+    await tmp_db.commit()
+
+    enabled = ["requirements", "company_kind", "soft_skills_employer", "summary"]
+    missing = await reg.missing_analysis_kinds(tmp_db, 90, enabled)
+    assert set(missing) == {"soft_skills_employer", "summary"}
+    # порядок сохранён (как в enabled)
+    assert missing == ["soft_skills_employer", "summary"]
+
+    # у вакансии без анализов — все kinds недостающие
+    await tmp_db.execute("INSERT INTO vacancies(id, name, description) VALUES (91, 'v', 'd')")
+    await tmp_db.commit()
+    assert await reg.missing_analysis_kinds(tmp_db, 91, enabled) == enabled
