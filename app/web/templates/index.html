@@ -313,15 +313,26 @@
         Результатов: <b id="results-count" class="tabular-nums">{{ rows | length }}</b>
         <span class="text-neutral-400 text-[11px] ml-1">из {{ counts.total }}</span>
       </span>
+      <span id="views-bar" class="flex items-center gap-1 flex-wrap text-[11px]"></span>
+      <button onclick="window.saveView()" class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Сохранить текущие фильтры как «вид» (быстрый пресет)">💾 вид</button>
       <div class="ml-auto flex items-center gap-2">
+        <label class="flex items-center gap-1 text-[11px] text-neutral-500 cursor-pointer select-none" title="Семантический поиск по смыслу через RAG (по описаниям). Иначе — быстрый фильтр подстрокой.">
+          <input type="checkbox" id="semantic-toggle"> 🧲 смысл
+        </label>
         <input id="quick-filter" placeholder="быстрый фильтр в таблице (компания, город, должность)…"
                oninput="window.quickFilter(this.value)"
+               onkeydown="if(event.key==='Enter'){window.maybeSemantic();}"
                class="w-80 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm"
-               title="Фильтрует строки прямо в таблице на клиенте, без запроса к серверу. Для серверного поиска используй «Поиск» выше.">
+               title="Фильтрует строки в таблице на клиенте. С тумблером «🧲 смысл» — семантический поиск по описаниям (RAG) по Enter.">
+        <details class="relative">
+          <summary class="cursor-pointer text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 list-none">⚙ Колонки</summary>
+          <div id="col-menu" class="absolute right-0 mt-1 w-44 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg p-2 z-30 text-sm space-y-1"></div>
+        </details>
       </div>
     </div>
+    <style id="col-hide-style"></style>
     <div class="max-h-[70vh] overflow-y-auto overflow-x-auto">
-      <table class="w-full compact" style="table-layout: auto">
+      <table id="vac-table" class="w-full compact" style="table-layout: auto">
         <thead class="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 text-left text-neutral-600 dark:text-neutral-400 uppercase tracking-wide text-[11px] sticky-h">
           <tr>
             <th class="text-center w-8" title="Выбрать все для сравнения (макс 6)"><input type="checkbox" id="cmp-all" onchange="window.cmpAll(this)"></th>
@@ -861,6 +872,90 @@
     });
     const cnt = document.getElementById('results-count');
     if (cnt) cnt.textContent = visible;
+  };
+
+  // === Скрываемые колонки таблицы (состояние в localStorage) ===
+  window.COL_DEFS = [
+    {i:6,name:'Город'},{i:7,name:'ЗП'},{i:8,name:'Формат'},{i:9,name:'Уровень'},
+    {i:10,name:'Стек'},{i:11,name:'Откл.'},{i:12,name:'Источник'},{i:14,name:'Обновлено'},
+  ];
+  window._hiddenCols = () => { try { return JSON.parse(localStorage.getItem('hiddenCols')||'[]'); } catch(e){ return []; } };
+  window.applyColHide = () => {
+    const hidden = window._hiddenCols();
+    const css = hidden.map(i => `#vac-table th:nth-child(${i}),#vac-table td:nth-child(${i}){display:none}`).join('');
+    const el = document.getElementById('col-hide-style');
+    if (el) el.textContent = css;
+  };
+  window.toggleCol = (i, on) => {
+    let hidden = window._hiddenCols().filter(x => x !== i);
+    if (!on) hidden.push(i);
+    try { localStorage.setItem('hiddenCols', JSON.stringify(hidden)); } catch(e){}
+    window.applyColHide();
+  };
+  (function() {
+    const menu = document.getElementById('col-menu');
+    if (!menu) return;
+    const hidden = window._hiddenCols();
+    menu.innerHTML = window.COL_DEFS.map(c =>
+      `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="${c.i}" ${hidden.includes(c.i)?'':'checked'} onchange="window.toggleCol(${c.i}, this.checked)"> ${c.name}</label>`
+    ).join('');
+    window.applyColHide();
+  })();
+
+  // === Сохранённые «виды» (наборы фильтров) — пресеты в localStorage ===
+  window.savedViews = () => { try { return JSON.parse(localStorage.getItem('savedViews')||'[]'); } catch(e){ return []; } };
+  window.renderViews = () => {
+    const bar = document.getElementById('views-bar'); if (!bar) return;
+    bar.innerHTML = window.savedViews().map(v =>
+      `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+         <a href="?${v.qs}" class="hover:underline text-blue-700 dark:text-blue-400" title="Применить вид">${v.name}</a>
+         <button onclick="window.deleteView(${JSON.stringify(v.name)})" class="text-neutral-400 hover:text-red-600" title="Удалить вид">×</button>
+       </span>`).join('');
+  };
+  window.saveView = () => {
+    const name = (prompt('Название вида (текущие фильтры):') || '').trim();
+    if (!name) return;
+    let qs = ''; try { qs = window.serializeFilters(); } catch(e){ qs = location.search.slice(1); }
+    const views = window.savedViews().filter(v => v.name !== name);
+    views.push({name, qs});
+    try { localStorage.setItem('savedViews', JSON.stringify(views)); } catch(e){}
+    window.renderViews();
+    window.showToast('ok', `✓ вид «${name}» сохранён`);
+  };
+  window.deleteView = (name) => {
+    try { localStorage.setItem('savedViews', JSON.stringify(window.savedViews().filter(v => v.name !== name))); } catch(e){}
+    window.renderViews();
+  };
+  window.renderViews();
+
+  // === Семантический поиск (RAG) прямо в таблице по тумблеру «🧲 смысл» ===
+  window.maybeSemantic = async () => {
+    const toggle = document.getElementById('semantic-toggle');
+    const q = (document.getElementById('quick-filter').value || '').trim();
+    if (!toggle || !toggle.checked || !q) { window.quickFilter(q); return; }
+    window.showToast('info', `🧲 ищу по смыслу: «${q}»…`);
+    const fd = new FormData(); fd.append('q', q); fd.append('k', '30');
+    let d;
+    try { d = await (await fetch('/api/rag/search', {method:'POST', body: fd})).json(); }
+    catch(e) { window.showToast('err', e.message); return; }
+    if (d.ok === false) { window.showToast('err', d.reason === 'rag_disabled' ? 'RAG не включён' : (d.reason||'ошибка')); return; }
+    const order = {};
+    (d.results || []).forEach((r, idx) => { order[r.id] = idx; });
+    let shown = 0;
+    const rows = Array.from(document.querySelectorAll('#table-body tr[id^="row-"]'));
+    rows.forEach(tr => {
+      const id = +tr.id.slice(4);
+      if (id in order) { tr.style.display = ''; tr.dataset.semOrder = order[id]; shown++; }
+      else { tr.style.display = 'none'; }
+    });
+    // переставим найденные по релевантности
+    const tbody = document.getElementById('table-body');
+    rows.filter(tr => tr.style.display !== 'none')
+        .sort((a,b) => (+a.dataset.semOrder) - (+b.dataset.semOrder))
+        .forEach(tr => tbody.appendChild(tr));
+    const cnt = document.getElementById('results-count');
+    if (cnt) cnt.textContent = shown;
+    window.showToast('ok', `🧲 найдено по смыслу: ${d.results.length}, видно в загруженных: ${shown}`);
   };
   // обновление счётчика после HTMX swap
   document.addEventListener("htmx:afterSettle", (e) => {

@@ -654,5 +654,6 @@ async def poll_updates_loop() -> None:
             log.info("telegram: poller stopped")
             raise
         except Exception as e:
-            log.warning("telegram poll error: %s", e)
+            # у сетевых ошибок httpx str(e) часто пустой — логируем тип, иначе непонятно что
+            log.warning("telegram poll error: %s: %s", type(e).__name__, e or "(нет текста)")
             await asyncio.sleep(5)
