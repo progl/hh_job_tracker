@@ -103,12 +103,15 @@
 <a class="text-xs text-neutral-500 hover:underline" href="index.html">← Список</a>
 </div>
 <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-<span>Проиндексировано: <span class="font-mono font-semibold" id="cov-embedded">20</span> / <span id="cov-total">20</span> вакансий
-        <span class="text-[11px] hidden" id="cov-missing-wrap">· без описания: <span id="cov-missing">0</span></span>
+<span>Проиндексировано: <span class="font-mono font-semibold" id="cov-embedded">17</span> / <span id="cov-total">17</span> вакансий
+        <span class="text-[11px]" id="cov-missing-wrap">· без описания: <span id="cov-missing">2</span></span>
 </span>
 <div class="w-32 h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded overflow-hidden">
 <div class="h-full bg-fuchsia-500" id="cov-bar" style="width: 100.0%"></div>
 </div>
+<button class="text-xs px-2.5 py-1 rounded border border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20" onclick="window.runBackfillDescriptions()" title="Дотянуть полные описания вакансий из списков поиска (запросы к HH, может встать на anti-bot паузу). Без описания вакансия не индексируется. Cron тянет малыми порциями каждый час.">
+          📥 Дотянуть описания (2)
+        </button>
 </div>
 <form class="flex flex-wrap gap-2 mb-4" onsubmit="return false;">
 <input class="flex-1 min-w-[280px] border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-3 py-2 text-sm" id="rag-q" onkeydown="if(event.key==='Enter'){window.ragSearch();}" placeholder="Например: удалённый Python с FastAPI и высокой нагрузкой" type="text"/>
