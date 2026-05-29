@@ -122,6 +122,18 @@
     else window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
   };
 
+  window.runBackfillDescriptions = async () => {
+    const n = prompt('Сколько вакансий дотянуть за прогон? (остановится на anti-bot паузе)', '200');
+    if (!n) return;
+    window.showToast('info', '📥 Дотягиваю описания — прогресс в панели «Статус» / на /jobs');
+    const fd = new FormData(); fd.append('limit', String(parseInt(n, 10) || 200));
+    const r = await fetch('/api/backfill-descriptions', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (d.reason === 'already_running') window.showToast('info', 'Уже выполняется');
+    else if (d.ok === false) window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
+    else window.showToast('ok', '✓ Запущено в фоне');
+  };
+
   window._ragCard = (x) => `
     <a href="${x.url}" class="block border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
       <div class="flex items-center justify-between gap-2">
