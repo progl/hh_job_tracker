@@ -454,6 +454,9 @@ YEARS_BY_LEVEL = {"intern": 0, "junior": 1, "middle": 3, "senior": 5, "lead": 8}
 INTERVIEW_VIDS = {90000001, 90000002, 90000004, 90000008, 90000009, 90000011, 90000014, 90000018}
 MATCH_VIDS = {90000001, 90000002, 90000004, 90000005, 90000008, 90000009, 90000011, 90000018}
 COVER_VIDS = {90000001, 90000002, 90000004, 90000006, 90000014}
+# Несколько вакансий намеренно без полного описания — чтобы в снапшоте была видна
+# кнопка «Дотянуть описания» и неполное покрытие RAG (demo не «идеально проиндексирован»).
+DEMO_NO_DESC_VIDS = {90000018, 90000019, 90000020}
 
 
 def _build_requirements(stack: list[str], level: str) -> list[tuple[str, str, str]]:
@@ -668,6 +671,8 @@ async def _seed_embeddings(conn) -> int:
     await embeddings_repo.ensure_ready(conn)
     n = 0
     for vid, name, _eid, _area, _sf, _st, _rem, lvl, stack, _arch, _dis in VACANCIES:
+        if vid in DEMO_NO_DESC_VIDS:
+            continue  # без описания — не индексируем (как в реальности)
         tokens = [*stack, lvl, *name.lower().replace("(", " ").replace(")", " ").split()]
         vec = _demo_vector(tokens, settings.EMBED_DIM)
         text = name + " " + " ".join(stack)
@@ -725,15 +730,18 @@ async def seed(force: bool) -> None:
     # vacancies
     for vid, name, eid, area, sf, st, rem, lvl, stack, archived, disappeared in VACANCIES:
         company_name = next(e["name"] for e in EMPLOYERS if e["id"] == eid)
-        description = (
-            f"Компания «{company_name}» ищет разработчика уровня {lvl}. "
-            f"Основной стек: {', '.join(stack)}. "
-            f"Задачи: проектирование и разработка backend-сервисов, code review, поддержка и развитие "
-            f"highload-систем, работа с базами данных и очередями. "
-            f"Требования: уверенный {stack[0]}, опыт коммерческой разработки, умение писать тесты и "
-            f"работать в команде. Формат: {'удалённо' if rem else 'офис, ' + area}. "
-            f"Мы предлагаем интересные задачи, современный стек и адекватную команду."
-        )
+        if vid in DEMO_NO_DESC_VIDS:
+            description = ""  # без полного описания — для демонстрации backfill/покрытия
+        else:
+            description = (
+                f"Компания «{company_name}» ищет разработчика уровня {lvl}. "
+                f"Основной стек: {', '.join(stack)}. "
+                f"Задачи: проектирование и разработка backend-сервисов, code review, поддержка и развитие "
+                f"highload-систем, работа с базами данных и очередями. "
+                f"Требования: уверенный {stack[0]}, опыт коммерческой разработки, умение писать тесты и "
+                f"работать в команде. Формат: {'удалённо' if rem else 'офис, ' + area}. "
+                f"Мы предлагаем интересные задачи, современный стек и адекватную команду."
+            )
         await conn.execute(
             """INSERT OR REPLACE INTO vacancies
                (id, name, company_id, company_name, area_id, area_name,

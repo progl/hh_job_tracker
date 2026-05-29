@@ -37,6 +37,9 @@ from app.scoring.match import score_vacancy
 from app.scoring.predict import predict_invite_prob
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+# httpx логирует каждый запрос на INFO — это и спам (Telegram long-poll каждые 30с,
+# Ollama-вызовы), и УТЕЧКА токена бота в логи (URL содержит bot<token>). Глушим до WARNING.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
