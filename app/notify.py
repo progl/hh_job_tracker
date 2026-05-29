@@ -247,6 +247,7 @@ async def update_jobs_status(db: aiosqlite.Connection) -> None:
     if not await is_event_enabled(db, "job_done"):
         return
     from app.db import job_runs_repo
+    from app.timeutil import to_local
 
     runs = await job_runs_repo.list_runs(limit=6)
     labels = {
@@ -267,7 +268,7 @@ async def update_jobs_status(db: aiosqlite.Connection) -> None:
     for r in runs:
         icon = _STATUS_ICON.get(r.get("status"), "·")
         lbl = labels.get(r.get("job_id"), r.get("job_id"))
-        when = (r.get("finished_at") or r.get("started_at") or "")[11:16]
+        when = to_local(r.get("finished_at") or r.get("started_at"), "%H:%M")
         lines.append(f"{icon} {lbl} · {when}")
     text = "\n".join(lines)
 

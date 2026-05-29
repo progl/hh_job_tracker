@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     HH_REST_DURATION_SEC: float = 45.0
 
     DB_PATH: str = "data/hh.db"
+    # Таймзона для отображения времени (в БД всё хранится в UTC через CURRENT_TIMESTAMP).
+    # Москва — фиксированный UTC+3 без перехода на летнее время.
+    TIMEZONE: str = "Europe/Moscow"
 
     # --- LLM-пайплайн (Ollama) ---
     OLLAMA_BASE_URL: str = "http://localhost:11434"

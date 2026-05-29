@@ -118,5 +118,5 @@
       {% if v.neg_viewed %}<span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>{% endif %}
     {% endif %}
   </td>
-  <td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">{{ (v.updated_at or '')[:16] }}</td>
+  <td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">{{ v.updated_at | localdt }}</td>
 </tr>

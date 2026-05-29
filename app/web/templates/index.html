@@ -199,7 +199,7 @@
         {% for s in searches %}
           {% set params_text = s.params.get('text','') %}
           {% set params_remote = 'remote' if s.params.get('schedule') == 'remote' else 'все форматы' %}
-          {% set last_run_short = s.last_run_at[5:16] if s.last_run_at else 'никогда' %}
+          {% set last_run_short = (s.last_run_at | localdt('%m-%d %H:%M')) or 'никогда' %}
           <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs {{ 'opacity-60' if not s.is_active }}"
                title="запрос: «{{ params_text }}»&#10;формат: {{ params_remote }}&#10;страниц: {{ s.params.get('max_pages',5) }}{% if s.last_run_at %}&#10;последний прогон: {{ s.last_run_at }}{% endif %}&#10;найдено вакансий: {{ s.found_count or 0 }}">
             <button onclick="window.runSearch({{ s.id }}, '{{ s.name }}', event)" class="flex-1 text-left hover:underline truncate" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">

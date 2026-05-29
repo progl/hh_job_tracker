@@ -67,6 +67,15 @@ def _human_money(x: int | float | None) -> str:
 templates.env.filters["money"] = _human_money
 
 
+def _localdt(value, fmt: str = "%Y-%m-%d %H:%M") -> str:
+    from app.timeutil import to_local
+
+    return to_local(value, fmt)
+
+
+templates.env.filters["localdt"] = _localdt
+
+
 def render(name: str, **ctx: Any) -> HTMLResponse:
     return HTMLResponse(
         templates.get_template(name).render(**ctx),
