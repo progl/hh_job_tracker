@@ -21,6 +21,15 @@ async def test_search_page_renders(app_client):
 
 
 @pytest.mark.asyncio
+async def test_rag_coverage_endpoint(app_client):
+    client, _ = app_client
+    r = await client.get("/api/rag/coverage")
+    assert r.status_code == 200
+    body = r.json()
+    assert {"embedded", "total", "desc_missing"} <= set(body)
+
+
+@pytest.mark.asyncio
 async def test_rag_search_disabled(app_client, monkeypatch):
     client, _ = app_client
     from app.llm import rag

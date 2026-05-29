@@ -30,6 +30,7 @@ _KEY_TELEGRAM = "notifications.telegram"
 _KEY_THRESHOLD = "notifications.match_threshold"
 _KEY_EVENTS = "notifications.events"
 _KEY_TG_OFFSET = "telegram.update_offset"  # курсор getUpdates (long-poll)
+_KEY_STATUS_MSG = "telegram.status_message_id"  # id «живого» сообщения о завершении задач
 _DEFAULT_THRESHOLD = 75
 
 # Категории событий, которые можно слать. По умолчанию — вакансии/собесы/ошибки;
@@ -39,8 +40,12 @@ EVENT_LABELS: dict[str, str] = {
     "negotiations": "Приглашения / собесы",
     "job_errors": "Ошибки фоновых задач",
     "job_done": "Завершение фоновых задач",
+    "digest": "Ежедневный дайджест",
 }
-_DEFAULT_EVENTS = ["vacancies", "negotiations", "job_errors"]
+_DEFAULT_EVENTS = ["vacancies", "negotiations", "job_errors", "digest"]
+_KEY_DIGEST_HOUR = "notifications.digest_hour"
+_KEY_DIGEST_LAST = "notifications.digest_last_sent"
+_DEFAULT_DIGEST_HOUR = 9
 
 
 async def _get(db: aiosqlite.Connection, key: str) -> str | None:
@@ -107,6 +112,18 @@ async def is_event_enabled(db: aiosqlite.Connection, event: str) -> bool:
     return event in await get_events(db)
 
 
+async def get_digest_hour(db: aiosqlite.Connection) -> int:
+    raw = await _get(db, _KEY_DIGEST_HOUR)
+    try:
+        return int(raw) if raw is not None else _DEFAULT_DIGEST_HOUR
+    except ValueError:
+        return _DEFAULT_DIGEST_HOUR
+
+
+async def set_digest_hour(db: aiosqlite.Connection, hour: int) -> None:
+    await _set(db, _KEY_DIGEST_HOUR, str(max(0, min(23, int(hour)))))
+
+
 def telegram_configured() -> bool:
     """Есть ли токен и chat_id в .env (без этого Telegram-канал не работает)."""
     return bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID)
@@ -119,19 +136,39 @@ async def any_enabled(db: aiosqlite.Connection) -> bool:
     return telegram_configured() and await is_telegram_enabled(db)
 
 
-async def send_telegram_to(chat_id: str | int, text: str, reply_markup: dict | None = None) -> None:
-    """Шлёт сообщение в конкретный чат (опц. с inline-кнопками). No-op если токена нет."""
+async def send_telegram_to(chat_id: str | int, text: str, reply_markup: dict | None = None) -> int | None:
+    """Шлёт сообщение в конкретный чат (опц. с inline-кнопками). Возвращает message_id
+    или None. No-op если токена нет."""
     if not settings.TELEGRAM_BOT_TOKEN:
-        return
+        return None
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
     payload: dict = {"chat_id": chat_id, "text": text}
     if reply_markup is not None:
         payload["reply_markup"] = reply_markup
     try:
         async with httpx.AsyncClient(timeout=10) as cli:
-            await cli.post(url, json=payload)
+            r = await cli.post(url, json=payload)
+        data = r.json()
+        return (data.get("result") or {}).get("message_id") if data.get("ok") else None
     except Exception as e:
         log.warning("telegram send failed: %s", e)
+        return None
+
+
+async def edit_telegram(message_id: int, text: str) -> bool:
+    """Редактирует ранее отправленное сообщение (editMessageText). Правки не пингуют.
+    Возвращает False, если не удалось (например, сообщение удалено)."""
+    if not telegram_configured():
+        return False
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
+    payload = {"chat_id": settings.TELEGRAM_CHAT_ID, "message_id": message_id, "text": text}
+    try:
+        async with httpx.AsyncClient(timeout=10) as cli:
+            r = await cli.post(url, json=payload)
+        return bool(r.json().get("ok"))
+    except Exception as e:
+        log.warning("telegram edit failed: %s", e)
+        return False
 
 
 async def send_telegram(text: str) -> None:
@@ -198,6 +235,125 @@ async def maybe_send(db: aiosqlite.Connection, title: str, message: str, subtitl
     await dispatch(db, title, message, subtitle)
 
 
+_STATUS_ICON = {"ok": "✓", "error": "✗", "cancelled": "⏹", "interrupted": "⚠", "running": "⏳"}
+
+
+async def update_jobs_status(db: aiosqlite.Connection) -> None:
+    """Анти-спам: вместо нового сообщения на каждый завершённый джоб — редактирует ОДНО
+    «живое» сообщение с последними прогонами (правки в Telegram не пингуют).
+    Только telegram, только если канал и категория job_done включены."""
+    if not (telegram_configured() and await is_telegram_enabled(db)):
+        return
+    if not await is_event_enabled(db, "job_done"):
+        return
+    from app.db import job_runs_repo
+
+    runs = await job_runs_repo.list_runs(limit=6)
+    labels = {
+        "personal_refresh": "Отклики (инкрем.)",
+        "personal_full_refresh": "Полный sync",
+        "fx_refresh": "Курсы ЦБ",
+        "ml_retrain": "Обучение ML",
+        "backfill_pending": "Дотянуть вакансии",
+        "backfill_descriptions": "Дотянуть описания",
+        "sync_searches": "Синк поисков",
+        "dedup_vacancies": "Дедуп",
+        "llm_parse_requirements": "LLM: разбор",
+        "cover_letter_generate": "LLM: письма",
+        "embed_vacancies": "RAG: индексация",
+        "daily_digest": "Дайджест",
+    }
+    lines = ["📋 Последние задачи:"]
+    for r in runs:
+        icon = _STATUS_ICON.get(r.get("status"), "·")
+        lbl = labels.get(r.get("job_id"), r.get("job_id"))
+        when = (r.get("finished_at") or r.get("started_at") or "")[11:16]
+        lines.append(f"{icon} {lbl} · {when}")
+    text = "\n".join(lines)
+
+    mid_raw = await _get(db, _KEY_STATUS_MSG)
+    if mid_raw and await edit_telegram(int(mid_raw), text):
+        return  # отредактировали существующее — тихо
+    new_id = await send_telegram_to(settings.TELEGRAM_CHAT_ID, text)
+    if new_id:
+        await _set(db, _KEY_STATUS_MSG, str(new_id))
+
+
+# ---------- ежедневный дайджест ----------
+
+
+async def _digest_top_vacancies(db: aiosqlite.Connection, limit: int) -> list[tuple[int, dict]]:
+    """Новые (за 24ч) активные вакансии с match >= порога."""
+    from app.db import employers_repo, profile_repo
+    from app.scoring.match import score_vacancy
+
+    threshold = await get_match_threshold(db)
+    profile = await profile_repo.get_profile(db)
+    emp_map = await employers_repo.get_map(db)
+    cur = await db.execute(
+        """
+        SELECT v.* FROM vacancies v
+        LEFT JOIN vacancy_status s ON s.vacancy_id = v.id
+        WHERE v.disappeared_at IS NULL AND v.archived_at IS NULL
+          AND COALESCE(s.status, 'new') != 'skipped'
+          AND datetime(v.seen_at) >= datetime('now', '-1 day')
+        """
+    )
+    scored: list[tuple[int, dict]] = []
+    for r in await cur.fetchall():
+        rd = dict(r)
+        for f in ("parsed_stack", "work_formats", "key_skills"):
+            if isinstance(rd.get(f), str):
+                try:
+                    rd[f] = json.loads(rd[f])
+                except Exception:
+                    rd[f] = []
+        emp_pol = emp_map.get(rd.get("company_id")) if rd.get("company_id") else None
+        sc = score_vacancy(rd, profile, emp_pol)
+        if sc["score"] >= threshold:
+            scored.append((sc["score"], rd))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[:limit]
+
+
+async def _build_digest(db: aiosqlite.Connection) -> str:
+    from app.db import negotiations_repo
+
+    c = await negotiations_repo.counters(db)
+    lines = [
+        f"Воронка: всего {c.get('total', 0)}, ждут {c.get('waiting', 0)}, "
+        f"собес/приглашений {c.get('invited', 0)}, отказов {c.get('rejected', 0)}"
+    ]
+    top = await _digest_top_vacancies(db, 5)
+    if top:
+        lines.append("\nНовые с высоким match (24ч):")
+        for score, v in top:
+            url = v.get("url") or f"https://hh.ru/vacancy/{v['id']}"
+            lines.append(f"{score}% · {(v.get('name') or '?')[:45]}\n{url}")
+    else:
+        lines.append("\nНовых вакансий с высоким match за сутки нет.")
+    return "\n".join(lines)
+
+
+async def run_daily_digest(db: aiosqlite.Connection) -> dict:
+    """Шлёт дайджест раз в день в настроенный час (вызывается ежечасно из cron).
+    Гард по дате (`digest_last_sent`) — не дублирует."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    if not await any_enabled(db) or not await is_event_enabled(db, "digest"):
+        return {"sent": False, "reason": "disabled"}
+    now = datetime.now(ZoneInfo("Europe/Moscow"))
+    if now.hour != await get_digest_hour(db):
+        return {"sent": False, "reason": "not_hour"}
+    today = now.date().isoformat()
+    if (await _get(db, _KEY_DIGEST_LAST)) == today:
+        return {"sent": False, "reason": "already_sent"}
+    await dispatch(db, title="📊 Ежедневный дайджест", message=await _build_digest(db), event="digest")
+    await _set(db, _KEY_DIGEST_LAST, today)
+    return {"sent": True}
+
+
 # ---------- входящий канал: long-polling getUpdates + команды ----------
 
 
@@ -245,13 +401,36 @@ async def _build_status_reply(db: aiosqlite.Connection) -> str:
 
 _HELP_TEXT = (
     "Команды:\n"
-    "/start — приветствие и твой chat_id\n"
+    "/start — приветствие, кнопки и твой chat_id\n"
     "/status — статус планировщика и уведомлений\n"
     "/vacancies — топ вакансий по match-score\n"
+    "/find <запрос> — семантический поиск по корпусу\n"
     "/run [джоб] — запустить фоновую задачу (без аргумента — список)\n"
     "/help — этот список\n\n"
     "Уведомления о вакансиях/собесах/джобах настраиваются на странице /profile."
 )
+
+
+async def _build_search_reply(db: aiosqlite.Connection, query: str, limit: int = 8) -> str:
+    """Семантический поиск из бота (RAG). Возвращает текст со ссылками."""
+    from app.db import vacancies_repo
+    from app.llm import rag
+
+    if not rag.is_available():
+        return "RAG не включён (нужен extra `rag` / sqlite-vec)."
+    hits = await rag.semantic_search(db, query, limit)
+    if not hits:
+        return "Ничего не найдено (возможно, корпус ещё не проиндексирован)."
+    blocks = []
+    for vid, score in hits:
+        v = await vacancies_repo.get_vacancy(db, vid)
+        if not v:
+            continue
+        url = v.get("url") or f"https://hh.ru/vacancy/{vid}"
+        blocks.append(
+            f"{round(score * 100)}% · {(v.get('name') or '?')[:45]} — {(v.get('company_name') or '?')[:25]}\n{url}"
+        )
+    return f"🧲 По запросу «{query}»:\n\n" + "\n\n".join(blocks)
 
 
 def _is_owner(chat_id: int) -> bool:
@@ -315,6 +494,10 @@ def _start_keyboard() -> dict:
                 {"text": "📊 Статус", "callback_data": "cmd:status"},
                 {"text": "🔝 Вакансии", "callback_data": "cmd:vacancies"},
             ],
+            [
+                {"text": "📥 Дотянуть описания", "callback_data": "cmd:backfill"},
+                {"text": "⚙ Индексировать", "callback_data": "cmd:index"},
+            ],
             [{"text": "▶ Запустить задачу", "callback_data": "cmd:jobs"}],
         ]
     }
@@ -348,7 +531,7 @@ async def _handle_command(db: aiosqlite.Connection, chat_id: int, text: str) -> 
         await send_telegram_to(chat_id, _HELP_TEXT)
     elif cmd == "status":
         await send_telegram_to(chat_id, await _build_status_reply(db))
-    elif cmd in ("vacancies", "top", "run"):
+    elif cmd in ("vacancies", "top", "run", "find"):
         # чувствительные команды — только владельцу
         if not _is_owner(chat_id):
             await send_telegram_to(chat_id, _NOT_OWNER)
@@ -359,6 +542,12 @@ async def _handle_command(db: aiosqlite.Connection, chat_id: int, text: str) -> 
                 await send_telegram_to(chat_id, "Какую задачу запустить?", reply_markup=_jobs_keyboard())
             else:
                 await send_telegram_to(chat_id, await _run_job(parts[1].strip()))
+        elif cmd == "find":
+            parts = text.split(maxsplit=1)
+            if len(parts) < 2 or not parts[1].strip():
+                await send_telegram_to(chat_id, "Укажи запрос: /find python remote fastapi")
+            else:
+                await send_telegram_to(chat_id, await _build_search_reply(db, parts[1].strip()))
         else:
             await send_telegram_to(chat_id, await _build_vacancies_reply(db))
 
@@ -391,6 +580,10 @@ async def _handle_callback(db: aiosqlite.Connection, chat_id: int, data: str, cq
         await send_telegram_to(chat_id, await _build_vacancies_reply(db))
     elif data == "cmd:jobs":
         await send_telegram_to(chat_id, "Какую задачу запустить?", reply_markup=_jobs_keyboard())
+    elif data == "cmd:backfill":
+        await send_telegram_to(chat_id, await _run_job("backfill_descriptions"))
+    elif data == "cmd:index":
+        await send_telegram_to(chat_id, await _run_job("embed_vacancies"))
     elif data.startswith("run:"):
         await send_telegram_to(chat_id, await _run_job(data.split(":", 1)[1]))
 

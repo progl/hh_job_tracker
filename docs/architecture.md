@@ -134,6 +134,7 @@ Ollama — внешняя зависимость, опциональная. Ес
 | `cover_letter_generate` | каждые 2 ч | генерит сопроводительные письма для вакансий «в пайплайне» (есть отклик или статус interested/applied) без письма |
 | `embed_vacancies` | каждые 30 мин | RAG-индексация: эмбедит вакансии без вектора (no-op, если extra `rag` не установлен) |
 | `backfill_descriptions` | каждый час | дотягивает полные описания вакансий без текста (малыми порциями, стоп на anti-bot) — чтобы их можно было индексировать |
+| `daily_digest` | каждый час (тик) | шлёт дайджест раз в день в настроенный час (гард по дате) — воронка + топ новых вакансий |
 
 **Под капотом:**
 - `MemoryJobStore` (не SQLAlchemy) — потому что `hh_client` с httpx.AsyncClient не picklable. Расписание восстанавливается из кода при старте, история прогонов хранится в таблице `job_runs`
@@ -161,7 +162,11 @@ RAG включается отдельным extra `rag` (ставит `sqlite-ve
 - **macOS** (`notifications.enabled`) — `osascript display notification`, fire-and-forget.
 - **Telegram** (`notifications.telegram`) — Bot API `sendMessage`; токен/chat_id из `.env` (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`), без них канал — no-op.
 
-`dispatch(db, title, message, event=...)` рассылает во все включённые каналы. **Категории событий** (`notifications.events`, по умолчанию вакансии/собесы/ошибки): `vacancies` (новые с match ≥ порога — порог в `notifications.match_threshold`), `negotiations` (приглашения/собесы), `job_errors`, `job_done`. Если категория выключена — `dispatch` молчит. Завершение/ошибки джоб эмитит декоратор `_record` через `_maybe_notify_job`.
+`dispatch(db, title, message, event=...)` рассылает во все включённые каналы. **Категории событий** (`notifications.events`): `vacancies` (новые с match ≥ порога — `notifications.match_threshold`), `negotiations`, `job_errors`, `job_done`, `digest`. Если категория выключена — `dispatch` молчит.
+
+- **Завершение задач (анти-спам)**: `job_done` НЕ шлёт новое сообщение на каждый прогон — `_maybe_notify_job` зовёт `update_jobs_status`, который **редактирует одно сообщение** (`editMessageText`, id в `telegram.status_message_id`) последними прогонами. Правки в Telegram не пингуют. Ошибки (`job_errors`) — отдельными сообщениями.
+- **Telegram-бот (входящий)**: long-poll `poll_updates_loop` (getUpdates) + inline-кнопки/`callback_query`. Команды `/start /status /vacancies /find /run` + кнопки; чувствительные — только владельцу (`TELEGRAM_CHAT_ID`).
+- **Дайджест**: `daily_digest` тикает ежечасно, `run_daily_digest` шлёт раз в день в `notifications.digest_hour` (Europe/Moscow, гард по `digest_last_sent`).
 
 ## Soft-skills score работодателя
 

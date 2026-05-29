@@ -451,6 +451,7 @@ def test_start_creates_scheduler_and_idempotent(sched_mod, monkeypatch):
     assert s1 is not None
     s2 = sched_mod.start(cli)
     assert s2 is s1
-    # 11 джобов: базовые + llm_parse_requirements + cover_letter_generate + embed_vacancies + backfill_descriptions
-    assert len(s1.get_jobs()) == 11
+    # 12 джобов: базовые + llm_parse_requirements + cover_letter_generate + embed_vacancies
+    #            + backfill_descriptions + daily_digest
+    assert len(s1.get_jobs()) == 12
     sched_mod._scheduler = None

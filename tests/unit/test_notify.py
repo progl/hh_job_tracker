@@ -102,11 +102,130 @@ async def test_dispatch_routes_to_enabled_channels(tmp_db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_telegram_returns_message_id(monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "T")
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "1")
+
+    class _Resp:
+        def json(self):
+            return {"ok": True, "result": {"message_id": 77}}
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **k):
+            return _Resp()
+
+    monkeypatch.setattr(notify.httpx, "AsyncClient", _Client)
+    mid = await notify.send_telegram_to("1", "hi")
+    assert mid == 77
+
+
+@pytest.mark.asyncio
+async def test_update_jobs_status_sends_then_edits(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "T")
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "1")
+    await notify.set_telegram_enabled(tmp_db, True)
+    await notify.set_events(tmp_db, ["job_done"])
+    from app.db import job_runs_repo
+
+    rid = await job_runs_repo.start("fx_refresh")
+    await job_runs_repo.finish(rid, "ok")
+
+    sent, edited = [], []
+
+    async def fake_send(chat_id, text, reply_markup=None):
+        sent.append(text)
+        return 555
+
+    async def fake_edit(mid, text):
+        edited.append((mid, text))
+        return True
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_send)
+    monkeypatch.setattr(notify, "edit_telegram", fake_edit)
+
+    # первый раз — нет сохранённого id → шлём новое и сохраняем
+    await notify.update_jobs_status(tmp_db)
+    assert sent and "Последние задачи" in sent[0]
+    assert await notify._get(tmp_db, notify._KEY_STATUS_MSG) == "555"
+
+    # второй раз — id есть → редактируем, новое не шлём
+    sent.clear()
+    await notify.update_jobs_status(tmp_db)
+    assert edited and edited[-1][0] == 555
+    assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_update_jobs_status_skipped_when_telegram_off(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "")  # не настроен
+    called = []
+
+    async def fake_send(*a, **k):
+        called.append(1)
+        return 1
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_send)
+    await notify.update_jobs_status(tmp_db)
+    assert called == []
+
+
+@pytest.mark.asyncio
 async def test_any_enabled(tmp_db, monkeypatch):
     monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "")
     assert await notify.any_enabled(tmp_db) is False
     await notify.set_enabled(tmp_db, True)
     assert await notify.any_enabled(tmp_db) is True
+
+
+@pytest.mark.asyncio
+async def test_digest_hour_default_and_clamp(tmp_db):
+    assert await notify.get_digest_hour(tmp_db) == 9
+    await notify.set_digest_hour(tmp_db, 20)
+    assert await notify.get_digest_hour(tmp_db) == 20
+    await notify.set_digest_hour(tmp_db, 99)
+    assert await notify.get_digest_hour(tmp_db) == 23
+
+
+@pytest.mark.asyncio
+async def test_run_daily_digest_hour_and_guard(tmp_db, monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "T")
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "1")
+    await notify.set_telegram_enabled(tmp_db, True)
+    await notify.set_events(tmp_db, ["digest"])
+
+    sent: list = []
+
+    async def fake_dispatch(db, title, message, subtitle=None, event="general"):
+        sent.append(event)
+
+    monkeypatch.setattr(notify, "dispatch", fake_dispatch)
+    cur_hour = datetime.now(ZoneInfo("Europe/Moscow")).hour
+
+    # не тот час → молчит
+    await notify.set_digest_hour(tmp_db, (cur_hour + 1) % 24)
+    res = await notify.run_daily_digest(tmp_db)
+    assert res == {"sent": False, "reason": "not_hour"}
+
+    # час совпал → шлёт
+    await notify.set_digest_hour(tmp_db, cur_hour)
+    res = await notify.run_daily_digest(tmp_db)
+    assert res["sent"] is True and sent == ["digest"]
+
+    # повторно в тот же день → already_sent
+    res = await notify.run_daily_digest(tmp_db)
+    assert res == {"sent": False, "reason": "already_sent"}
 
 
 @pytest.mark.asyncio
@@ -209,6 +328,57 @@ async def test_run_command_owner(tmp_db, monkeypatch):
     # неизвестный job_id
     await notify._handle_command(tmp_db, 111, "/run bogus")
     assert "Неизвестная" in sent[-1][0]
+
+
+@pytest.mark.asyncio
+async def test_find_command(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    await tmp_db.execute("INSERT INTO vacancies(id, name, company_name) VALUES (1, 'Senior Python', 'Acme')")
+    await tmp_db.commit()
+    from app.llm import rag
+
+    monkeypatch.setattr(rag, "is_available", lambda: True)
+
+    async def fake_search(db, query, limit=8):
+        return [(1, 0.9)]
+
+    monkeypatch.setattr(rag, "semantic_search", fake_search)
+    sent: list = []
+
+    async def fake_to(chat_id, text, reply_markup=None):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+
+    await notify._handle_command(tmp_db, 111, "/find python remote")
+    assert "Senior Python" in sent[-1] and "hh.ru/vacancy/1" in sent[-1]
+    # пустой запрос — подсказка
+    await notify._handle_command(tmp_db, 111, "/find")
+    assert "Укажи запрос" in sent[-1]
+
+
+@pytest.mark.asyncio
+async def test_callback_backfill_and_index(tmp_db, monkeypatch):
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "111")
+    from app import scheduler as sched
+
+    ran: list = []
+
+    async def fake_run_now(job_id):
+        ran.append(job_id)
+        return {"ok": True}
+
+    monkeypatch.setattr(sched, "run_now", fake_run_now)
+    sent: list = []
+
+    async def fake_to(chat_id, text, reply_markup=None):
+        sent.append(text)
+
+    monkeypatch.setattr(notify, "send_telegram_to", fake_to)
+
+    await notify._handle_callback(tmp_db, 111, "cmd:backfill", "cq1")
+    await notify._handle_callback(tmp_db, 111, "cmd:index", "cq2")
+    assert ran == ["backfill_descriptions", "embed_vacancies"]
 
 
 @pytest.mark.asyncio

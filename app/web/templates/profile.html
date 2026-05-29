@@ -147,6 +147,9 @@
         <label for="notifications-threshold">Порог match-score:</label>
         <input type="number" id="notifications-threshold" min="0" max="100" value="{{ match_threshold }}"
                class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-20">
+        <label for="notifications-digest-hour" class="ml-3" title="Время Europe/Moscow">Час дайджеста:</label>
+        <input type="number" id="notifications-digest-hour" min="0" max="23" value="{{ digest_hour }}"
+               class="border border-neutral-300 dark:border-neutral-600 dark:bg-neutral-800 rounded px-2 py-1 w-16">
       </div>
       <div class="mt-2">
         <div class="text-[11px] uppercase text-neutral-500 mb-1">Что слать</div>
@@ -203,6 +206,7 @@ window.setNotifications = async () => {
   const tg = document.getElementById('notifications-telegram');
   if (tg && !tg.disabled) fd.append('telegram', tg.checked ? 'true' : 'false');
   fd.append('threshold', document.getElementById('notifications-threshold').value || '75');
+  fd.append('digest_hour', document.getElementById('notifications-digest-hour').value || '9');
   fd.append('events_present', 'true');
   document.querySelectorAll('.notify-event:checked').forEach(c => fd.append('events', c.value));
   const r = await fetch('/api/settings/notifications', {method: 'POST', body: fd});

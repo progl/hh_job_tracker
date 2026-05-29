@@ -75,10 +75,8 @@ async def _maybe_notify_job(job_id: str, ok: bool, result: Any = None, error: st
                 return
             label = _JOB_LABELS.get(job_id, job_id)
             if ok:
-                summary = ""
-                if isinstance(result, dict):
-                    summary = ", ".join(f"{k}={v}" for k, v in list(result.items())[:4])
-                await notify.dispatch(db, title=f"✓ {label}", message=summary or "готово", event="job_done")
+                # завершения сливаем в одно редактируемое сообщение (анти-спам)
+                await notify.update_jobs_status(db)
             else:
                 await notify.dispatch(db, title=f"✗ {label}", message=(error or "")[:300], event="job_errors")
         finally:
@@ -446,6 +444,18 @@ async def _job_backfill_descriptions(hh_client) -> dict:
         await db.close()
 
 
+@_record("daily_digest")
+async def _job_daily_digest() -> dict:
+    """Тикает ежечасно; шлёт дайджест раз в день в настроенный час (гард внутри notify)."""
+    from app import notify
+
+    db = await get_db()
+    try:
+        return await notify.run_daily_digest(db)
+    finally:
+        await db.close()
+
+
 @_record("ml_retrain")
 async def _job_ml_retrain() -> dict:
     try:
@@ -537,6 +547,12 @@ def start(hh_client, personal_interval_hours: int = 6) -> AsyncIOScheduler:
         id="backfill_descriptions",
         replace_existing=True,
     )
+    _scheduler.add_job(
+        _job_daily_digest,
+        CronTrigger(minute=5),
+        id="daily_digest",
+        replace_existing=True,
+    )
     _scheduler.start()
     import time as _t
 
@@ -580,6 +596,7 @@ _JOB_LABELS = {
     "cover_letter_generate": "LLM: сопроводительные письма",
     "embed_vacancies": "RAG: индексация вакансий",
     "backfill_descriptions": "Дотянуть описания вакансий",
+    "daily_digest": "Ежедневный дайджест",
 }
 
 

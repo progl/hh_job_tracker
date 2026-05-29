@@ -15,7 +15,12 @@
     </div>
   {% else %}
     <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-      <span>Проиндексировано: <span class="font-mono font-semibold">{{ embedded }}</span> / {{ total }} вакансий</span>
+      <span>Проиндексировано: <span id="cov-embedded" class="font-mono font-semibold">{{ embedded }}</span> / <span id="cov-total">{{ total }}</span> вакансий
+        <span id="cov-missing-wrap" class="text-[11px] {% if not desc_missing %}hidden{% endif %}">· без описания: <span id="cov-missing">{{ desc_missing }}</span></span>
+      </span>
+      <div class="w-32 h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded overflow-hidden">
+        <div id="cov-bar" class="h-full bg-fuchsia-500" style="width: {{ ((embedded / total * 100) if total else 0) | round }}%"></div>
+      </div>
       {% if embedded < total %}
         <button onclick="window.runEmbedCorpus()"
                 class="text-xs px-2.5 py-1 rounded bg-fuchsia-700 text-white hover:bg-fuchsia-600"
@@ -53,6 +58,40 @@
     if (d.ok) window.showToast('ok', '✓ Индексация запущена');
     else window.showToast('err', `Ошибка: ${d.reason || 'unknown'}`);
   };
+
+  // Live-обновление покрытия индексации без перезагрузки (SSE + поллинг во время задач).
+  window.refreshCoverage = async () => {
+    if (!document.getElementById('cov-embedded')) return;
+    try {
+      const d = await (await fetch('/api/rag/coverage')).json();
+      document.getElementById('cov-embedded').textContent = d.embedded;
+      document.getElementById('cov-total').textContent = d.total;
+      document.getElementById('cov-missing').textContent = d.desc_missing;
+      document.getElementById('cov-missing-wrap').classList.toggle('hidden', !d.desc_missing);
+      const pct = d.total ? Math.round(d.embedded / d.total * 100) : 0;
+      document.getElementById('cov-bar').style.width = pct + '%';
+    } catch(e) {}
+  };
+  (function() {
+    if (!document.getElementById('cov-embedded') || typeof EventSource === 'undefined') return;
+    const RELEVANT = new Set(['backfill_descriptions', 'embed_vacancies', 'backfill']);
+    let poll = null, stopT = null, deb = null;
+    const startPoll = () => {
+      if (!poll) poll = setInterval(window.refreshCoverage, 4000);
+      clearTimeout(stopT);
+      stopT = setTimeout(() => { if (poll) { clearInterval(poll); poll = null; } }, 60000);
+    };
+    const es = new EventSource('/api/tasks/stream');
+    es.onmessage = (e) => {
+      let ev; try { ev = JSON.parse(e.data); } catch(_) { return; }
+      const items = ev.snapshot || (ev.id ? [ev] : []);
+      if (items.some(t => RELEVANT.has(t.kind))) {
+        startPoll();
+        clearTimeout(deb); deb = setTimeout(window.refreshCoverage, 800);
+      }
+    };
+    es.onerror = () => {};
+  })();
 
   window.runBackfillDescriptions = async () => {
     const n = prompt('Сколько вакансий дотянуть за прогон? (остановится на anti-bot паузе)', '200');

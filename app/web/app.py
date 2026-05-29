@@ -1147,6 +1147,29 @@ async def stop_job_run(run_id: int):
 # ---------- RAG (опционально, extra `rag`) ----------
 
 
+@app.get("/api/rag/coverage")
+async def rag_coverage():
+    """Покрытие индексации для live-обновления на /search."""
+    db = await get_db()
+    try:
+        embedded = total = 0
+        from app.llm import rag as rag_mod
+
+        if rag_mod.is_available():
+            from app.db import embeddings_repo
+
+            embedded, total = await embeddings_repo.coverage(db)
+        cur = await db.execute(
+            "SELECT COUNT(*) FROM vacancies "
+            "WHERE (description IS NULL OR length(description) <= 100) "
+            "AND disappeared_at IS NULL AND archived_at IS NULL"
+        )
+        desc_missing = (await cur.fetchone())[0]
+        return {"embedded": embedded, "total": total, "desc_missing": desc_missing}
+    finally:
+        await db.close()
+
+
 @app.post("/api/rag/search")
 async def rag_search(q: str = Form(...), k: int = Form(5)):
     """Семантический поиск по корпусу вакансий (retrieval)."""
@@ -2062,6 +2085,7 @@ async def profile_page(request: Request):
         notifications_telegram = await notify.is_telegram_enabled(db)
         telegram_configured = notify.telegram_configured()
         match_threshold = await notify.get_match_threshold(db)
+        digest_hour = await notify.get_digest_hour(db)
         notif_events = await notify.get_events(db)
         enabled = await get_enabled_analyzers(db)
         analyzers_list = [
@@ -2088,6 +2112,7 @@ async def profile_page(request: Request):
         notifications_telegram=notifications_telegram,
         telegram_configured=telegram_configured,
         match_threshold=match_threshold,
+        digest_hour=digest_hour,
         notif_events=notif_events,
         notif_event_labels=notify.EVENT_LABELS,
         analyzers=analyzers_list,
@@ -2124,6 +2149,7 @@ async def settings_set_notifications(
     enabled: bool | None = Form(None),
     telegram: bool | None = Form(None),
     threshold: int | None = Form(None),
+    digest_hour: int | None = Form(None),
     events: list[str] = Form(default=[]),
     events_present: bool = Form(False),
 ):
@@ -2140,6 +2166,8 @@ async def settings_set_notifications(
             await notify.set_telegram_enabled(db, telegram)
         if threshold is not None:
             await notify.set_match_threshold(db, threshold)
+        if digest_hour is not None:
+            await notify.set_digest_hour(db, digest_hour)
         if events_present:
             await notify.set_events(db, events)
         return {
@@ -2147,6 +2175,7 @@ async def settings_set_notifications(
             "enabled": await notify.is_enabled(db),
             "telegram": await notify.is_telegram_enabled(db),
             "threshold": await notify.get_match_threshold(db),
+            "digest_hour": await notify.get_digest_hour(db),
             "events": sorted(await notify.get_events(db)),
             "telegram_configured": notify.telegram_configured(),
         }
