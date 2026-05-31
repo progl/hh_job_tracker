@@ -15,10 +15,22 @@
       } catch(e) {}
     })();
   </script>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <script>tailwind = { config: { darkMode: 'class' } }</script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Глушим встроенное в бандл предупреждение про production —
+    // раздаём Tailwind локально из /static, а не с cdn.tailwindcss.com.
+    (function() {
+      const orig = console.warn;
+      console.warn = function() {
+        if (arguments.length && String(arguments[0]).indexOf('cdn.tailwindcss.com') !== -1) return;
+        return orig.apply(console, arguments);
+      };
+    })();
+  </script>
+  <script src="/static/vendor/tailwind.js"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="/static/vendor/htmx.min.js"></script>
   <style>
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator { display: inline; }
@@ -70,13 +82,19 @@
     }
     .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
+  <link rel="stylesheet" href="/static/css/mobile.css">
+  <script src="/static/js/mobile.js" defer></script>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
   <header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-    <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-6">
-        <h1 class="text-base font-semibold">HH Job Tracker</h1>
-        <nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+    <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 md:gap-6 min-w-0">
+        <button type="button" onclick="window.toggleMobileNav()" aria-label="Меню"
+                class="md:hidden w-9 h-9 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-center text-lg">
+          <span id="mnav-icon">☰</span>
+        </button>
+        <h1 class="text-base font-semibold truncate">HH Job Tracker</h1>
+        <nav class="hidden md:flex text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
           <a href="/" class="hover:text-neutral-900 dark:hover:text-white">Список</a>
           <a href="/search" class="hover:text-neutral-900 dark:hover:text-white">🧲 Поиск</a>
           <a href="/funnel" class="hover:text-neutral-900 dark:hover:text-white">Воронка</a>
@@ -88,12 +106,29 @@
           <a href="/api/health" class="hover:text-neutral-900 dark:hover:text-white" target="_blank">Статус</a>
         </nav>
       </div>
-      <div class="flex items-center gap-3">
-        {% block headerright %}{% endblock %}
+      <div class="flex items-center gap-2 md:gap-3">
+        <div class="hidden md:flex items-center gap-3">{% block headerright %}{% endblock %}</div>
         <button onclick="window.toggleTheme()" title="Переключить тему"
-                class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0">
           <span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
         </button>
+      </div>
+    </div>
+    <!-- Мобильная выпадающая панель -->
+    <div id="mobile-nav" class="md:hidden hidden border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+      <nav class="px-4 py-3 grid grid-cols-2 gap-1 text-sm">
+        <a href="/" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">Список</a>
+        <a href="/search" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">🧲 Поиск</a>
+        <a href="/funnel" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">Воронка</a>
+        <a href="/profile" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">Профиль</a>
+        <a href="/logs" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">Логи</a>
+        <a href="/jobs" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">⚙️ Джобы</a>
+        <a href="/llm-logs" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">✨ LLM</a>
+        <a href="/analytics" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">📊 Аналитика</a>
+        <a href="/api/health" class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 col-span-2" target="_blank">Статус</a>
+      </nav>
+      <div class="px-4 pb-3 text-xs text-neutral-600 dark:text-neutral-400 border-t border-neutral-100 dark:border-neutral-800 pt-2">
+        {% block headerright_mobile %}{{ self.headerright() }}{% endblock %}
       </div>
     </div>
   </header>

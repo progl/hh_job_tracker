@@ -6,10 +6,10 @@
 {% set archived = v.archived_at %}
 {% set inactive = disappeared or archived %}
 <tr id="row-{{ v.id }}" class="border-b border-neutral-100 hover:bg-neutral-50 align-top {{ 'opacity-50' if inactive }}">
-  <td class="text-center">
+  <td class="text-center" data-label="✓">
     <input type="checkbox" class="cmp-cb" value="{{ v.id }}" onchange="window.cmpToggle(this)" title="Выбрать для сравнения">
   </td>
-  <td class="text-center w-[100px]">
+  <td class="text-center w-[100px]" data-label="Match">
     <div class="flex items-center gap-1 justify-center">
       <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">{{ sc }}</div>
       <div class="text-[10px] text-neutral-400">·</div>
@@ -17,7 +17,7 @@
     </div>
     <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="{{ bar }}" style="width: {{ sc }}%"></div></div></div>
   </td>
-  <td class="whitespace-nowrap">
+  <td class="whitespace-nowrap" data-label="Статус">
     <form hx-post="/api/vacancy/{{ v.id }}/status" hx-target="#row-{{ v.id }}" hx-swap="outerHTML" class="inline">
       <select name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)"
               class="text-[11px] px-1.5 py-0.5 rounded {{ sclass }} border-0 cursor-pointer">
@@ -32,7 +32,7 @@
               title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)">🗑</button>
     {% endif %}
   </td>
-  <td class="max-w-[340px]">
+  <td class="max-w-[340px]" data-label="Должность">
     {% if disappeared %}<span class="text-[10px] text-red-600 dark:text-red-400 mr-1" title="Вакансия не найдена в последнем sync: возможно снята с публикации ({{ disappeared[:16] }})">⌫ снята</span>{% endif %}
     {% if archived %}<span class="text-[10px] text-neutral-500 dark:text-neutral-400 mr-1" title="Вакансия в архиве на HH — работодатель больше не принимает отклики ({{ archived[:16] }})">📦 архив</span>{% endif %}
     <a href="{{ v.url }}" target="_blank" rel="noopener" class="text-neutral-900 dark:text-neutral-100 hover:underline {{ 'line-through' if inactive }}" title="Открыть вакансию на hh.ru в новой вкладке">{{ v.name }}</a>
@@ -45,7 +45,7 @@
     {% endif %}
     {% if v.tags and 'favorite' in v.tags %}<span class="ml-1 text-[10px] text-pink-600" title="Эта вакансия в твоём «Избранном» на HH">★</span>{% endif %}
   </td>
-  <td class="max-w-[200px] truncate text-neutral-700">
+  <td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     {{ v.company_name or '—' }}
     {% if v.soft_score is not none %}
       {% set sc_color = 'emerald' if v.soft_score >= 70 else ('amber' if v.soft_score >= 40 else 'red') %}
@@ -55,11 +55,11 @@
       <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·{{ v.politeness.read_topic_percent }}%</span>
     {% endif %}
   </td>
-  <td class="text-neutral-600" title="Город из карточки вакансии">{{ v.area_name or '—' }}</td>
-  <td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: {% if v.salary_rub %}{{ '{:,}'.format(v.salary_rub).replace(',', ' ') }}{% else %}не указана{% endif %}">
+  <td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">{{ v.area_name or '—' }}</td>
+  <td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: {% if v.salary_rub %}{{ '{:,}'.format(v.salary_rub).replace(',', ' ') }}{% else %}не указана{% endif %}">
     {{ v.salary_rub | money }}
   </td>
-  <td>
+  <td data-label="Формат">
     {# Все основные форматы из workFormats — каждый отдельным chip'ом.
        Чтобы было видно «удалёнка ИЛИ гибрид» когда HH допускает оба. #}
     {% set wf = v.work_formats or [] %}
@@ -85,8 +85,8 @@
       {% endif %}
     </div>
   </td>
-  <td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">{{ v.level or '—' }}</td>
-  <td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+  <td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">{{ v.level or '—' }}</td>
+  <td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
     <div class="flex flex-wrap gap-1">
       {% for t in v.parsed_stack[:6] %}
         <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">{{ t }}</span>
@@ -94,11 +94,11 @@
       {% if v.parsed_stack|length > 6 %}<span class="text-[10px] text-neutral-400">+{{ v.parsed_stack|length - 6 }}</span>{% endif %}
     </div>
   </td>
-  <td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+  <td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     {% if v.responses_count is not none %}{{ v.responses_count }}{% else %}—{% endif %}
     {% if v.total_responses_count %}<span class="text-neutral-400">/{{ v.total_responses_count }}</span>{% endif %}
   </td>
-  <td class="w-[110px] max-w-[110px]">
+  <td class="w-[110px] max-w-[110px]" data-label="Источник">
     <div class="flex flex-wrap gap-1">
       {% for src in (v.source_list or [])[:2] %}
         {% if src == 'из откликов' %}
@@ -116,11 +116,11 @@
       {% if (v.source_list|length) > 2 %}<span class="text-[10px] text-neutral-400" title="Ещё источников: {{ v.source_list[2:] | join(', ') }}">+{{ v.source_list|length - 2 }}</span>{% endif %}
     </div>
   </td>
-  <td class="text-[11px]">
+  <td class="text-[11px]" data-label="Отклик">
     {% if v.neg_state is defined %}
       <span class="px-1.5 py-0.5 rounded {{ v.neg_color }}" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">{{ v.neg_label }}</span>
       {% if v.neg_viewed %}<span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>{% endif %}
     {% endif %}
   </td>
-  <td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">{{ v.updated_at | localdt }}</td>
+  <td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">{{ v.updated_at | localdt }}</td>
 </tr>

@@ -190,11 +190,11 @@
                 class="text-[11px] uppercase tracking-wide text-neutral-500 flex items-center gap-2 hover:text-neutral-700 dark:hover:text-neutral-300">
           <span id="searches-arrow">▾</span><span>Сохранённые поиски ({{ searches | length }})</span>
         </button>
-        <div class="flex items-center gap-2">
-          <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">🔄 Синхронизация</button>
-          <button onclick="window.addRecommendations()" class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨ Рекомендации</button>
-          <button onclick="window.toggleSaveForm()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800">+ Сохранить</button>
-          <a href="/searches" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Редактируемая таблица поисков: имя/текст/регион/глубина/early-stop/вкл — inline">⚙ Управление</a>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="window.syncAllSearches(event)" class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.&#10;Shift+клик — полный прогон (без early-stop, тяжелее).">🔄<span class="hidden sm:inline"> Синхронизация</span></button>
+          <button onclick="window.addRecommendations()" class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨<span class="hidden sm:inline"> Рекомендации</span></button>
+          <button onclick="window.toggleSaveForm()" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Сохранить текущий поиск">+<span class="hidden sm:inline"> Сохранить</span></button>
+          <a href="/searches" class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Редактируемая таблица поисков: имя/текст/регион/глубина/early-stop/вкл — inline">⚙<span class="hidden sm:inline"> Управление</span></a>
         </div>
       </div>
       <div id="searches-body" class="space-y-2">
@@ -264,43 +264,43 @@
       <input type="hidden" name="name_q" id="filter-name-q" value="{{ applied.name_q }}">
       <input type="hidden" name="company_q" id="filter-company-q" value="{{ applied.company_q }}">
       {% for s in statuses %}
-        <input type="checkbox" name="status" id="filter-status-{{s}}" value="{{s}}" class="hidden" {% if s in applied.status %}checked{% endif %}>
-        <input type="checkbox" name="hide_status" id="filter-hide-{{s}}" value="{{s}}" class="hidden" {% if s in applied.hide_status %}checked{% endif %}>
+        <input type="checkbox" name="status" id="filter-status-{{s}}" value="{{s}}" class="hidden" hidden {% if s in applied.status %}checked{% endif %}>
+        <input type="checkbox" name="hide_status" id="filter-hide-{{s}}" value="{{s}}" class="hidden" hidden {% if s in applied.hide_status %}checked{% endif %}>
       {% endfor %}
       {% for code, _ in neg_kinds %}
-        <input type="checkbox" name="neg" id="filter-neg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.neg %}checked{% endif %}>
-        <input type="checkbox" name="hide_neg" id="filter-hideneg-{{code}}" value="{{code}}" class="hidden" {% if code in applied.hide_neg %}checked{% endif %}>
+        <input type="checkbox" name="neg" id="filter-neg-{{code}}" value="{{code}}" class="hidden" hidden {% if code in applied.neg %}checked{% endif %}>
+        <input type="checkbox" name="hide_neg" id="filter-hideneg-{{code}}" value="{{code}}" class="hidden" hidden {% if code in applied.hide_neg %}checked{% endif %}>
       {% endfor %}
       {% for t in ['python','django','fastapi','flask','drf','postgresql','redis','kafka','rabbitmq','celery','sqlalchemy','asyncio','docker','kubernetes','aws','linux','nginx','elasticsearch','clickhouse','microservices','tests','ml'] %}
-        <input type="checkbox" name="stack" id="filter-stack-{{t}}" value="{{t}}" class="hidden" {% if t in applied.stack %}checked{% endif %}>
+        <input type="checkbox" name="stack" id="filter-stack-{{t}}" value="{{t}}" class="hidden" hidden {% if t in applied.stack %}checked{% endif %}>
       {% endfor %}
 
       {# Видимая верхняя строка — компактно #}
       <div class="flex flex-wrap gap-2 items-center">
         <input name="q" value="{{ applied.q }}" placeholder="🔍 поиск по названию/компании/описанию…"
-               class="flex-1 min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm">
+               class="flex-1 w-full sm:w-auto sm:min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm">
 
         <button type="button" onclick="window.toggleArchive()" id="archive-btn"
                 class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 title="Переключиться на просмотр только скрытых вакансий (status=skipped)">
-          📦 Только скрытые ({{ counts.by_status.get('skipped', 0) }})
+          📦<span class="hidden sm:inline"> Только скрытые ({{ counts.by_status.get('skipped', 0) }})</span><span class="sm:hidden">{{ counts.by_status.get('skipped', 0) }}</span>
         </button>
         <input type="hidden" name="disappeared" id="disappeared-mode" value="{{ applied.disappeared }}">
         <button type="button" onclick="window.cycleDisappeared()" id="disappeared-btn"
                 class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты">
-          {% if applied.disappeared == 'hide' %}⌫ Снятые HH ({{ disappeared_count }}){% elif applied.disappeared == 'only' %}⌫ Только снятые{% else %}⌫ Все, включая снятые{% endif %}
+          ⌫<span class="hidden sm:inline"> {% if applied.disappeared == 'hide' %}Снятые HH ({{ disappeared_count }}){% elif applied.disappeared == 'only' %}Только снятые{% else %}Все, включая снятые{% endif %}</span><span class="sm:hidden">{% if applied.disappeared == 'hide' %}скр{% elif applied.disappeared == 'only' %}only{% else %}all{% endif %}</span>
         </button>
         <input type="hidden" name="archived" id="archived-mode" value="{{ applied.archived }}">
         <button type="button" onclick="window.cycleArchived()" id="archived-btn"
                 class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты">
-          {% if applied.archived == 'hide' %}📦 Архив HH ({{ archived_count }}){% elif applied.archived == 'only' %}📦 Только архив{% else %}📦 Все, включая архив{% endif %}
+          📦<span class="hidden sm:inline"> {% if applied.archived == 'hide' %}Архив HH ({{ archived_count }}){% elif applied.archived == 'only' %}Только архив{% else %}Все, включая архив{% endif %}</span><span class="sm:hidden">{% if applied.archived == 'hide' %}арх{% elif applied.archived == 'only' %}only{% else %}all{% endif %}</span>
         </button>
         <button type="button" onclick="location.href = location.pathname"
                 class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 title="Очистить все фильтры и вернуть дефолт">
-          Сбросить
+          ↺<span class="hidden sm:inline"> Сбросить</span>
         </button>
       </div>
     </form>
@@ -308,24 +308,29 @@
 
   <!-- Таблица -->
   <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-    <div class="px-3 py-2 flex items-center gap-3 border-b border-neutral-100 dark:border-neutral-800 text-sm">
+    <div class="px-3 py-2 flex items-center gap-2 sm:gap-3 border-b border-neutral-100 dark:border-neutral-800 text-sm flex-wrap">
       <span class="text-neutral-600 dark:text-neutral-400">
         Результатов: <b id="results-count" class="tabular-nums">{{ rows | length }}</b>
         <span class="text-neutral-400 text-[11px] ml-1">из {{ counts.total }}</span>
       </span>
       <span id="views-bar" class="flex items-center gap-1 flex-wrap text-[11px]"></span>
-      <button onclick="window.saveView()" class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Сохранить текущие фильтры как «вид» (быстрый пресет)">💾 вид</button>
-      <div class="ml-auto flex items-center gap-2">
+      <button onclick="window.saveView()" class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" title="Сохранить текущие фильтры как «вид» (быстрый пресет)">💾<span class="hidden sm:inline"> вид</span></button>
+      <div class="ml-auto flex items-center gap-2 flex-wrap">
         <label class="flex items-center gap-1 text-[11px] text-neutral-500 cursor-pointer select-none" title="Семантический поиск по смыслу через RAG (по описаниям). Иначе — быстрый фильтр подстрокой.">
-          <input type="checkbox" id="semantic-toggle"> 🧲 смысл
+          <input type="checkbox" id="semantic-toggle"> 🧲<span class="hidden sm:inline"> смысл</span>
         </label>
-        <input id="quick-filter" placeholder="быстрый фильтр в таблице (компания, город, должность)…"
+        <input id="quick-filter" placeholder="быстрый фильтр…"
                oninput="window.quickFilter(this.value)"
                onkeydown="if(event.key==='Enter'){window.maybeSemantic();}"
-               class="w-80 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm"
+               class="w-40 sm:w-80 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm"
                title="Фильтрует строки в таблице на клиенте. С тумблером «🧲 смысл» — семантический поиск по описаниям (RAG) по Enter.">
+        <button type="button" id="view-mode-btn" onclick="window.toggleViewMode()"
+                class="text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                title="Переключить вид: таблица / карточки. На узком экране удобнее карточки.">
+          <span id="view-mode-icon">▦</span><span class="hidden sm:inline ml-1" id="view-mode-label">таблица</span>
+        </button>
         <details class="relative">
-          <summary class="cursor-pointer text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 list-none">⚙ Колонки</summary>
+          <summary class="cursor-pointer text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 list-none">⚙<span class="hidden sm:inline"> Колонки</span></summary>
           <div id="col-menu" class="absolute right-0 mt-1 w-44 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg p-2 z-30 text-sm space-y-1"></div>
         </details>
       </div>
@@ -1049,20 +1054,25 @@
   };
 
   // === Архив скрытых ===
+  // Статусы живут в hidden-чекбоксах popup-фильтров: filter-status-skipped (name=status)
+  // и filter-hide-skipped (name=hide_status). Уровень — hidden input filter-level.
   window.toggleArchive = () => {
-    const showOnlySkipped = document.getElementById('status-skipped').checked
-                          && !document.getElementById('hide-skipped').checked;
+    const stEl = document.getElementById('filter-status-skipped');
+    const hideEl = document.getElementById('filter-hide-skipped');
+    const lvlEl = document.getElementById('filter-level');
+    const btn = document.getElementById('archive-btn');
+    if (!stEl || !hideEl) return;
+    const showOnlySkipped = stEl.checked && !hideEl.checked;
     document.querySelectorAll('#filters input[type=checkbox], #filters input[type=radio]').forEach(i => i.checked = false);
+    if (lvlEl) lvlEl.value = '';
     if (showOnlySkipped) {
       // выключаем «архив» — возвращаемся в обычный режим (skipped скрыты)
-      document.getElementById('hide-skipped').checked = true;
-      document.getElementById('lvl-all').checked = true;
-      document.getElementById('archive-btn').textContent = `📦 Только скрытые ({{ counts.by_status.get('skipped', 0) }})`;
+      hideEl.checked = true;
+      if (btn) btn.textContent = `📦 Только скрытые ({{ counts.by_status.get('skipped', 0) }})`;
     } else {
       // включаем «архив» — показываем только skipped
-      document.getElementById('status-skipped').checked = true;
-      document.getElementById('lvl-all').checked = true;
-      document.getElementById('archive-btn').textContent = '← Назад к активным';
+      stEl.checked = true;
+      if (btn) btn.textContent = '← Назад к активным';
     }
     htmx.trigger('#filters', 'change');
   };
@@ -1089,7 +1099,7 @@
   window.resetFilters = () => {
     document.getElementById('filters').reset();
     document.querySelectorAll('#filters input[type=checkbox],#filters input[type=radio]').forEach(i=>i.checked=false);
-    const all = document.getElementById('lvl-all'); if(all) all.checked = true;
+    const lvlEl = document.getElementById('filter-level'); if(lvlEl) lvlEl.value = '';
     history.replaceState(null, "", location.pathname);
     htmx.trigger('#filters','change');
   };
@@ -1124,8 +1134,13 @@
   // JS просто рендерит индикатор сортировки, обновляет лейбл архив-кнопки
   // и приводит URL в соответствие с реально применёнными фильтрами (включая дефолтные).
   window.renderSortIndicators();
-  if (document.getElementById('status-skipped').checked && !document.getElementById('hide-skipped').checked) {
-    document.getElementById('archive-btn').textContent = '← Назад к активным';
+  {
+    const stEl = document.getElementById('filter-status-skipped');
+    const hideEl = document.getElementById('filter-hide-skipped');
+    const btn = document.getElementById('archive-btn');
+    if (stEl && hideEl && btn && stEl.checked && !hideEl.checked) {
+      btn.textContent = '← Назад к активным';
+    }
   }
   // Sync URL with actually-applied filters (e.g. hide_status=skipped added by server default)
   try {

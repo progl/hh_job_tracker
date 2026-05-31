@@ -1,0 +1,60 @@
+/* === Карточный вид таблицы === */
+table.view-mode-cards { display: block; }
+table.view-mode-cards thead { display: none; }
+table.view-mode-cards tbody { display: block; }
+table.view-mode-cards tr {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin: 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  background: #fff;
+  position: relative;
+}
+.dark table.view-mode-cards tr { background: #171717; border-color: #404040; }
+table.view-mode-cards td {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  max-width: none !important;
+  width: auto !important;
+  text-align: left !important;
+  padding: 2px 0;
+}
+table.view-mode-cards td::before {
+  content: attr(data-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #737373;
+  white-space: nowrap;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+.dark table.view-mode-cards td::before { color: #a3a3a3; }
+/* Match — крупно сверху, без подписи */
+table.view-mode-cards td[data-label="Match"] { flex-direction: column; align-items: stretch; }
+table.view-mode-cards td[data-label="Match"]::before { display: none; }
+table.view-mode-cards td[data-label="Match"] .flex { justify-content: flex-start; gap: 8px; }
+table.view-mode-cards td[data-label="Match"] .mx-auto { margin: 4px 0 0 0; width: 100%; }
+/* Должность — крупно, на всю ширину */
+table.view-mode-cards td[data-label="Должность"] {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid #f5f5f5;
+}
+.dark table.view-mode-cards td[data-label="Должность"] { border-top-color: #262626; }
+table.view-mode-cards td[data-label="Должность"]::before { display: none; }
+/* Чекбокс — абсолютно справа сверху */
+table.view-mode-cards td[data-label="✓"] {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  padding: 0;
+}
+table.view-mode-cards td[data-label="✓"]::before { display: none; }
