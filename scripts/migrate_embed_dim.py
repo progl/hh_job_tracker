@@ -50,6 +50,13 @@ async def main(confirm: bool) -> None:
             return
 
         print("\nВыполняю…")
+        # vec0-таблица требует загруженного расширения sqlite-vec даже для DROP
+        try:
+            from app.llm.rag import load_vec
+
+            await load_vec(db)
+        except Exception as e:
+            print(f"sqlite-vec не загрузился: {e}. Пробую DROP без него (если таблицы нет — ок).")
         await db.execute("DROP TABLE IF EXISTS vec_vacancies")
         await db.execute("DELETE FROM vacancy_embeddings")
         await db.commit()
