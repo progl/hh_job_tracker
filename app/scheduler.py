@@ -332,30 +332,28 @@ async def _job_llm_parse_requirements() -> dict:
 
 @_record("embed_vacancies")
 async def _job_embed_vacancies() -> dict:
-    """RAG-индексация: эмбедит N вакансий без эмбеддинга. No-op, если RAG не включён
-    (нет sqlite-vec). Требует Ollama с embed-моделью."""
+    """RAG-индексация: эмбедит N вакансий без эмбеддинга, одним batch-вызовом Ollama.
+    No-op, если RAG не включён (нет sqlite-vec). Требует Ollama с embed-моделью."""
+    from app.config import settings
     from app.llm import rag
 
     if not rag.is_available():
         return {"processed": 0, "skipped": "rag_disabled"}
-    batch = 25
+    batch_size = settings.EMBED_BATCH_SIZE
     db = await get_db()
     try:
         from app.db import embeddings_repo
 
         await embeddings_repo.ensure_ready(db)
-        ids = await embeddings_repo.missing_vacancy_ids(db, batch)
+        ids = await embeddings_repo.missing_vacancy_ids(db, batch_size)
         if not ids:
             return {"processed": 0, "skipped": "no_missing"}
-        ok = 0
-        for vid in ids:
-            try:
-                res = await rag.embed_vacancy(db, vid)
-                if res.get("ok"):
-                    ok += 1
-            except Exception as e:
-                log.warning("embed_vacancies: vid=%s failed: %s", vid, e)
-        return {"processed": len(ids), "ok": ok}
+        try:
+            res = await rag.embed_vacancies_batch(db, ids)
+        except Exception as e:
+            log.warning("embed_vacancies: batch failed: %s", e)
+            return {"processed": len(ids), "ok": 0, "error": str(e)}
+        return {"processed": res.get("processed", 0), "ok": res.get("ok", 0)}
     finally:
         await db.close()
 

@@ -107,6 +107,7 @@ async def generate(
         "stream": False,
         "options": {
             "temperature": settings.LLM_TEMPERATURE if temperature is None else temperature,
+            "num_ctx": settings.LLM_NUM_CTX,
         },
     }
     # шлём think только если модель его поддерживает — иначе Ollama 400

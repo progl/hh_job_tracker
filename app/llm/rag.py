@@ -133,6 +133,82 @@ async def embed_vacancy(conn: aiosqlite.Connection, vacancy_id: int, model: str 
     return {"ok": True, "dim": len(vec), "llm_run_id": run_id}
 
 
+async def embed_vacancies_batch(
+    conn: aiosqlite.Connection,
+    vacancy_ids: list[int],
+    model: str | None = None,
+) -> dict:
+    """Эмбедит пачку вакансий одним вызовом Ollama. На bge-m3 кратно быстрее, чем 1-by-1.
+
+    Один запрос /api/embed с массивом input → модель загружается в память один раз,
+    эмбеддинги считаются батчем. Один llm_run пишется на весь батч (target_id='batch:N').
+    Возвращает {processed, ok, failed_ids}.
+    """
+    from app.db import embeddings_repo, llm_repo, vacancies_repo
+    from app.llm import client as llm_client
+    from app.llm import settings as llm_settings
+
+    if not vacancy_ids:
+        return {"processed": 0, "ok": 0}
+
+    items: list[tuple[int, str]] = []
+    for vid in vacancy_ids:
+        v = await vacancies_repo.get_vacancy(conn, vid)
+        if not v:
+            continue
+        text = build_embed_text(v)
+        if len(text) < 30:
+            continue
+        items.append((vid, text))
+
+    if not items:
+        return {"processed": 0, "ok": 0, "skipped": "all_empty"}
+
+    model = model or await llm_settings.get_embed_model(conn)
+    texts = [t for _, t in items]
+    resp = await llm_client.embed(texts, model=model)
+
+    run_id = await llm_repo.insert_run(
+        conn,
+        task_kind="embed",
+        target_kind="vacancy",
+        target_id=f"batch:{len(items)}",
+        model=resp.model,
+        prompt_version="embed_v1_batch",
+        system_prompt=None,
+        user_prompt=f"batch_size={len(items)} chars_total={sum(len(t) for t in texts)}",
+        response_raw=f"vectors={len(resp.vectors)} dim={len(resp.vectors[0]) if resp.vectors else 0}",
+        parsed_json=None,
+        ok=resp.ok,
+        error=resp.error,
+        latency_ms=resp.latency_ms,
+        prompt_tokens=None,
+        response_tokens=None,
+    )
+
+    if not resp.ok or len(resp.vectors) != len(items):
+        return {
+            "processed": len(items),
+            "ok": 0,
+            "failed_ids": [vid for vid, _ in items],
+            "llm_run_id": run_id,
+            "error": resp.error or f"vectors mismatch: got {len(resp.vectors)} expected {len(items)}",
+        }
+
+    await embeddings_repo.ensure_ready(conn)
+    ok = 0
+    failed: list[int] = []
+    for (vid, text), vec in zip(items, resp.vectors, strict=False):
+        try:
+            await embeddings_repo.upsert(conn, vid, resp.model, vec, source_hash(text))
+            ok += 1
+        except Exception as e:
+            log.warning("embed_batch: upsert vid=%s failed: %s", vid, e)
+            failed.append(vid)
+
+    return {"processed": len(items), "ok": ok, "failed_ids": failed, "llm_run_id": run_id}
+
+
 # ---------- поиск ----------
 
 
