@@ -16,8 +16,20 @@
       } catch(e) {}
     })();
   </script>
+<link href="/static/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script>tailwind = { config: { darkMode: 'class' } }</script>
-<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    // Глушим встроенное в бандл предупреждение про production —
+    // раздаём Tailwind локально из /static, а не с cdn.tailwindcss.com.
+    (function() {
+      const orig = console.warn;
+      console.warn = function() {
+        if (arguments.length && String(arguments[0]).indexOf('cdn.tailwindcss.com') !== -1) return;
+        return orig.apply(console, arguments);
+      };
+    })();
+  </script>
+<script src="/static/vendor/tailwind.js"></script>
 <script>tailwind.config = { darkMode: 'class' };</script>
 
 <style>
@@ -71,13 +83,18 @@
     }
     .auto-hide-bar.cancelled { background: linear-gradient(to right, #737373, #a3a3a3); }
   </style>
+<link href="/static/css/mobile.css" rel="stylesheet"/>
+<script defer="" src="/static/js/mobile.js"></script>
 </head>
 <body class="bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"><div style="background:#fef3c7;color:#78350f;padding:8px 16px;text-align:center;font-family:system-ui;font-size:14px;border-bottom:1px solid #fbbf24">Это статический демо-снапшот UI. Интерактив (фильтры, кнопки, формы) отключён. <a href="https://github.com/progl/hh_job_tracker" style="color:#1d4ed8;text-decoration:underline">Исходники</a></div>
 <header class="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
-<div class="flex items-center gap-6">
-<h1 class="text-base font-semibold">HH Job Tracker</h1>
-<nav class="text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
+<div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-2">
+<div class="flex items-center gap-2 md:gap-6 min-w-0">
+<button aria-label="Меню" class="md:hidden w-9 h-9 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-center text-lg" onclick="window.toggleMobileNav()" type="button">
+<span id="mnav-icon">☰</span>
+</button>
+<h1 class="text-base font-semibold truncate">HH Job Tracker</h1>
+<nav class="hidden md:flex text-sm space-x-4 text-neutral-600 dark:text-neutral-400">
 <a class="hover:text-neutral-900 dark:hover:text-white" href="index.html">Список</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="search.html">🧲 Поиск</a>
 <a class="hover:text-neutral-900 dark:hover:text-white" href="funnel.html">Воронка</a>
@@ -89,16 +106,40 @@
 <a class="hover:text-neutral-900 dark:hover:text-white" href="/api/health" target="_blank">Статус</a>
 </nav>
 </div>
-<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 md:gap-3">
+<div class="hidden md:flex items-center gap-3">
 <div class="text-xs text-neutral-500 dark:text-neutral-400">
 <span title="Кол-во cookies в jar клиента (hhtoken/hhuid/_xsrf + rotating anti-bot). Чем стабильнее — тем живее сессия.">Куки: 32</span>
   · <span title="Всего вакансий в локальной БД (таблица vacancies)">Вак: 20</span>
   · <span title="Из них удалёнка (HH-флаг schedule=remote или парсер нашёл «удалённо» в тексте)">Удалёнка: 14</span>
    · <span class="text-neutral-700 dark:text-neutral-200" title="Имя из профиля HH">Иван Петров</span>
 </div>
-<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleTheme()" title="Переключить тему">
+</div>
+<button class="text-sm w-8 h-8 rounded-full border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0" onclick="window.toggleTheme()" title="Переключить тему">
 <span class="dark:hidden">☾</span><span class="hidden dark:inline">☀</span>
 </button>
+</div>
+</div>
+<!-- Мобильная выпадающая панель -->
+<div class="md:hidden hidden border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" id="mobile-nav">
+<nav class="px-4 py-3 grid grid-cols-2 gap-1 text-sm">
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="index.html">Список</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="search.html">🧲 Поиск</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="funnel.html">Воронка</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="profile.html">Профиль</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="logs.html">Логи</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="jobs.html">⚙️ Джобы</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="llm_logs.html">✨ LLM</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800" href="analytics.html">📊 Аналитика</a>
+<a class="px-2 py-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 col-span-2" href="/api/health" target="_blank">Статус</a>
+</nav>
+<div class="px-4 pb-3 text-xs text-neutral-600 dark:text-neutral-400 border-t border-neutral-100 dark:border-neutral-800 pt-2">
+<div class="text-xs text-neutral-500 dark:text-neutral-400">
+<span title="Кол-во cookies в jar клиента (hhtoken/hhuid/_xsrf + rotating anti-bot). Чем стабильнее — тем живее сессия.">Куки: 32</span>
+  · <span title="Всего вакансий в локальной БД (таблица vacancies)">Вак: 20</span>
+  · <span title="Из них удалёнка (HH-флаг schedule=remote или парсер нашёл «удалённо» в тексте)">Удалёнка: 14</span>
+   · <span class="text-neutral-700 dark:text-neutral-200" title="Имя из профиля HH">Иван Петров</span>
+</div>
 </div>
 </div>
 </header>
@@ -277,12 +318,12 @@
 <button class="text-[11px] uppercase tracking-wide text-neutral-500 flex items-center gap-2 hover:text-neutral-700 dark:hover:text-neutral-300" onclick="window.toggleSection('searches','searches-body')" type="button">
 <span id="searches-arrow">▾</span><span>Сохранённые поиски (4)</span>
 </button>
-<div class="flex items-center gap-2">
+<div class="flex items-center gap-2 flex-wrap">
 <button class="text-xs px-2.5 py-1 rounded bg-blue-700 text-white hover:bg-blue-600" onclick="window.syncAllSearches(event)" title="Запустить все активные поиски сразу (с early-stop). Также автоматически каждые 4 часа.
-Shift+клик — полный прогон (без early-stop, тяжелее).">🔄 Синхронизация</button>
-<button class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" onclick="window.addRecommendations()" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨ Рекомендации</button>
-<button class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleSaveForm()">+ Сохранить</button>
-<a class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" href="searches.html" title="Редактируемая таблица поисков: имя/текст/регион/глубина/early-stop/вкл — inline">⚙ Управление</a>
+Shift+клик — полный прогон (без early-stop, тяжелее).">🔄<span class="hidden sm:inline"> Синхронизация</span></button>
+<button class="text-xs px-2.5 py-1 rounded border border-fuchsia-400 dark:border-fuchsia-600 text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/30" onclick="window.addRecommendations()" title="Подключить рекомендации hh.ru по твоему резюме как отдельный сохранённый поиск. Синкается вместе со всеми каждые 4 часа.">✨<span class="hidden sm:inline"> Рекомендации</span></button>
+<button class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.toggleSaveForm()" title="Сохранить текущий поиск">+<span class="hidden sm:inline"> Сохранить</span></button>
+<a class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" href="searches.html" title="Редактируемая таблица поисков: имя/текст/регион/глубина/early-stop/вкл — inline">⚙<span class="hidden sm:inline"> Управление</span></a>
 </div>
 </div>
 <div class="space-y-2" id="searches-body">
@@ -290,14 +331,14 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs opacity-60" title="запрос: «python ml»
 формат: все форматы
 страниц: 5
-последний прогон: 2026-05-29 16:53:22
+последний прогон: 2026-05-31 07:34:05
 найдено вакансий: 0">
 <button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(4, 'Python ML', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Python ML
               </div>
 <div class="text-[10px] text-neutral-500 truncate">
-                «python ml» · 0 вак · 05-29 19:53
+                «python ml» · 0 вак · 05-31 10:34
               </div>
 </button>
 <button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(4, 'Python ML', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
@@ -311,14 +352,14 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs" title="запрос: «fastapi backend»
 формат: все форматы
 страниц: 5
-последний прогон: 2026-05-29 16:53:22
+последний прогон: 2026-05-31 07:34:05
 найдено вакансий: 0">
 <button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(3, 'FastAPI Backend', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>FastAPI Backend
               </div>
 <div class="text-[10px] text-neutral-500 truncate">
-                «fastapi backend» · 0 вак · 05-29 19:53
+                «fastapi backend» · 0 вак · 05-31 10:34
               </div>
 </button>
 <button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(3, 'FastAPI Backend', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
@@ -332,14 +373,14 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs" title="запрос: «lead python»
 формат: все форматы
 страниц: 5
-последний прогон: 2026-05-29 16:53:22
+последний прогон: 2026-05-31 07:34:05
 найдено вакансий: 0">
 <button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(2, 'Lead Python', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Lead Python
               </div>
 <div class="text-[10px] text-neutral-500 truncate">
-                «lead python» · 0 вак · 05-29 19:53
+                «lead python» · 0 вак · 05-31 10:34
               </div>
 </button>
 <button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(2, 'Lead Python', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
@@ -353,14 +394,14 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <div class="flex items-center gap-1 rounded-lg border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 text-xs" title="запрос: «python senior»
 формат: remote
 страниц: 5
-последний прогон: 2026-05-29 16:53:22
+последний прогон: 2026-05-31 07:34:05
 найдено вакансий: 0">
 <button class="flex-1 text-left hover:underline truncate" onclick="window.runSearch(1, 'Python Senior Remote', event)" title="Запустить сейчас (с early-stop). Shift+клик — полный прогон (без early-stop)">
 <div class="font-medium truncate flex items-center gap-1">
 <span class="text-blue-700 dark:text-blue-400">▶</span>Python Senior Remote
               </div>
 <div class="text-[10px] text-neutral-500 truncate">
-                «python senior» · 0 вак · 05-29 19:53
+                «python senior» · 0 вак · 05-31 10:34
               </div>
 </button>
 <button class="text-[10px] text-neutral-400 hover:text-blue-600 px-1" onclick="window.editSearchPages(1, 'Python Senior Remote', 5)" title="Глубина: 5 стр (~100 вак). Клик — поменять.">
@@ -391,89 +432,92 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <input id="filter-level" name="level" type="hidden" value=""/>
 <input id="filter-name-q" name="name_q" type="hidden" value=""/>
 <input id="filter-company-q" name="company_q" type="hidden" value=""/>
-<input class="hidden" id="filter-status-new" name="status" type="checkbox" value="new"/>
-<input class="hidden" id="filter-hide-new" name="hide_status" type="checkbox" value="new"/>
-<input class="hidden" id="filter-status-viewed" name="status" type="checkbox" value="viewed"/>
-<input class="hidden" id="filter-hide-viewed" name="hide_status" type="checkbox" value="viewed"/>
-<input class="hidden" id="filter-status-applied" name="status" type="checkbox" value="applied"/>
-<input class="hidden" id="filter-hide-applied" name="hide_status" type="checkbox" value="applied"/>
-<input class="hidden" id="filter-status-interview" name="status" type="checkbox" value="interview"/>
-<input class="hidden" id="filter-hide-interview" name="hide_status" type="checkbox" value="interview"/>
-<input class="hidden" id="filter-status-rejected" name="status" type="checkbox" value="rejected"/>
-<input class="hidden" id="filter-hide-rejected" name="hide_status" type="checkbox" value="rejected"/>
-<input class="hidden" id="filter-status-offer" name="status" type="checkbox" value="offer"/>
-<input class="hidden" id="filter-hide-offer" name="hide_status" type="checkbox" value="offer"/>
-<input class="hidden" id="filter-status-skipped" name="status" type="checkbox" value="skipped"/>
-<input checked="" class="hidden" id="filter-hide-skipped" name="hide_status" type="checkbox" value="skipped"/>
-<input class="hidden" id="filter-neg-RESPONSE" name="neg" type="checkbox" value="RESPONSE"/>
-<input class="hidden" id="filter-hideneg-RESPONSE" name="hide_neg" type="checkbox" value="RESPONSE"/>
-<input class="hidden" id="filter-neg-INVITATION" name="neg" type="checkbox" value="INVITATION"/>
-<input class="hidden" id="filter-hideneg-INVITATION" name="hide_neg" type="checkbox" value="INVITATION"/>
-<input class="hidden" id="filter-neg-INTERVIEW" name="neg" type="checkbox" value="INTERVIEW"/>
-<input class="hidden" id="filter-hideneg-INTERVIEW" name="hide_neg" type="checkbox" value="INTERVIEW"/>
-<input class="hidden" id="filter-neg-DISCARD" name="neg" type="checkbox" value="DISCARD"/>
-<input class="hidden" id="filter-hideneg-DISCARD" name="hide_neg" type="checkbox" value="DISCARD"/>
-<input class="hidden" id="filter-neg-HIRED" name="neg" type="checkbox" value="HIRED"/>
-<input class="hidden" id="filter-hideneg-HIRED" name="hide_neg" type="checkbox" value="HIRED"/>
-<input class="hidden" id="filter-neg-none" name="neg" type="checkbox" value="none"/>
-<input class="hidden" id="filter-hideneg-none" name="hide_neg" type="checkbox" value="none"/>
-<input class="hidden" id="filter-stack-python" name="stack" type="checkbox" value="python"/>
-<input class="hidden" id="filter-stack-django" name="stack" type="checkbox" value="django"/>
-<input class="hidden" id="filter-stack-fastapi" name="stack" type="checkbox" value="fastapi"/>
-<input class="hidden" id="filter-stack-flask" name="stack" type="checkbox" value="flask"/>
-<input class="hidden" id="filter-stack-drf" name="stack" type="checkbox" value="drf"/>
-<input class="hidden" id="filter-stack-postgresql" name="stack" type="checkbox" value="postgresql"/>
-<input class="hidden" id="filter-stack-redis" name="stack" type="checkbox" value="redis"/>
-<input class="hidden" id="filter-stack-kafka" name="stack" type="checkbox" value="kafka"/>
-<input class="hidden" id="filter-stack-rabbitmq" name="stack" type="checkbox" value="rabbitmq"/>
-<input class="hidden" id="filter-stack-celery" name="stack" type="checkbox" value="celery"/>
-<input class="hidden" id="filter-stack-sqlalchemy" name="stack" type="checkbox" value="sqlalchemy"/>
-<input class="hidden" id="filter-stack-asyncio" name="stack" type="checkbox" value="asyncio"/>
-<input class="hidden" id="filter-stack-docker" name="stack" type="checkbox" value="docker"/>
-<input class="hidden" id="filter-stack-kubernetes" name="stack" type="checkbox" value="kubernetes"/>
-<input class="hidden" id="filter-stack-aws" name="stack" type="checkbox" value="aws"/>
-<input class="hidden" id="filter-stack-linux" name="stack" type="checkbox" value="linux"/>
-<input class="hidden" id="filter-stack-nginx" name="stack" type="checkbox" value="nginx"/>
-<input class="hidden" id="filter-stack-elasticsearch" name="stack" type="checkbox" value="elasticsearch"/>
-<input class="hidden" id="filter-stack-clickhouse" name="stack" type="checkbox" value="clickhouse"/>
-<input class="hidden" id="filter-stack-microservices" name="stack" type="checkbox" value="microservices"/>
-<input class="hidden" id="filter-stack-tests" name="stack" type="checkbox" value="tests"/>
-<input class="hidden" id="filter-stack-ml" name="stack" type="checkbox" value="ml"/>
+<input class="hidden" hidden="" id="filter-status-new" name="status" type="checkbox" value="new"/>
+<input class="hidden" hidden="" id="filter-hide-new" name="hide_status" type="checkbox" value="new"/>
+<input class="hidden" hidden="" id="filter-status-viewed" name="status" type="checkbox" value="viewed"/>
+<input class="hidden" hidden="" id="filter-hide-viewed" name="hide_status" type="checkbox" value="viewed"/>
+<input class="hidden" hidden="" id="filter-status-applied" name="status" type="checkbox" value="applied"/>
+<input class="hidden" hidden="" id="filter-hide-applied" name="hide_status" type="checkbox" value="applied"/>
+<input class="hidden" hidden="" id="filter-status-interview" name="status" type="checkbox" value="interview"/>
+<input class="hidden" hidden="" id="filter-hide-interview" name="hide_status" type="checkbox" value="interview"/>
+<input class="hidden" hidden="" id="filter-status-rejected" name="status" type="checkbox" value="rejected"/>
+<input class="hidden" hidden="" id="filter-hide-rejected" name="hide_status" type="checkbox" value="rejected"/>
+<input class="hidden" hidden="" id="filter-status-offer" name="status" type="checkbox" value="offer"/>
+<input class="hidden" hidden="" id="filter-hide-offer" name="hide_status" type="checkbox" value="offer"/>
+<input class="hidden" hidden="" id="filter-status-skipped" name="status" type="checkbox" value="skipped"/>
+<input checked="" class="hidden" hidden="" id="filter-hide-skipped" name="hide_status" type="checkbox" value="skipped"/>
+<input class="hidden" hidden="" id="filter-neg-RESPONSE" name="neg" type="checkbox" value="RESPONSE"/>
+<input class="hidden" hidden="" id="filter-hideneg-RESPONSE" name="hide_neg" type="checkbox" value="RESPONSE"/>
+<input class="hidden" hidden="" id="filter-neg-INVITATION" name="neg" type="checkbox" value="INVITATION"/>
+<input class="hidden" hidden="" id="filter-hideneg-INVITATION" name="hide_neg" type="checkbox" value="INVITATION"/>
+<input class="hidden" hidden="" id="filter-neg-INTERVIEW" name="neg" type="checkbox" value="INTERVIEW"/>
+<input class="hidden" hidden="" id="filter-hideneg-INTERVIEW" name="hide_neg" type="checkbox" value="INTERVIEW"/>
+<input class="hidden" hidden="" id="filter-neg-DISCARD" name="neg" type="checkbox" value="DISCARD"/>
+<input class="hidden" hidden="" id="filter-hideneg-DISCARD" name="hide_neg" type="checkbox" value="DISCARD"/>
+<input class="hidden" hidden="" id="filter-neg-HIRED" name="neg" type="checkbox" value="HIRED"/>
+<input class="hidden" hidden="" id="filter-hideneg-HIRED" name="hide_neg" type="checkbox" value="HIRED"/>
+<input class="hidden" hidden="" id="filter-neg-none" name="neg" type="checkbox" value="none"/>
+<input class="hidden" hidden="" id="filter-hideneg-none" name="hide_neg" type="checkbox" value="none"/>
+<input class="hidden" hidden="" id="filter-stack-python" name="stack" type="checkbox" value="python"/>
+<input class="hidden" hidden="" id="filter-stack-django" name="stack" type="checkbox" value="django"/>
+<input class="hidden" hidden="" id="filter-stack-fastapi" name="stack" type="checkbox" value="fastapi"/>
+<input class="hidden" hidden="" id="filter-stack-flask" name="stack" type="checkbox" value="flask"/>
+<input class="hidden" hidden="" id="filter-stack-drf" name="stack" type="checkbox" value="drf"/>
+<input class="hidden" hidden="" id="filter-stack-postgresql" name="stack" type="checkbox" value="postgresql"/>
+<input class="hidden" hidden="" id="filter-stack-redis" name="stack" type="checkbox" value="redis"/>
+<input class="hidden" hidden="" id="filter-stack-kafka" name="stack" type="checkbox" value="kafka"/>
+<input class="hidden" hidden="" id="filter-stack-rabbitmq" name="stack" type="checkbox" value="rabbitmq"/>
+<input class="hidden" hidden="" id="filter-stack-celery" name="stack" type="checkbox" value="celery"/>
+<input class="hidden" hidden="" id="filter-stack-sqlalchemy" name="stack" type="checkbox" value="sqlalchemy"/>
+<input class="hidden" hidden="" id="filter-stack-asyncio" name="stack" type="checkbox" value="asyncio"/>
+<input class="hidden" hidden="" id="filter-stack-docker" name="stack" type="checkbox" value="docker"/>
+<input class="hidden" hidden="" id="filter-stack-kubernetes" name="stack" type="checkbox" value="kubernetes"/>
+<input class="hidden" hidden="" id="filter-stack-aws" name="stack" type="checkbox" value="aws"/>
+<input class="hidden" hidden="" id="filter-stack-linux" name="stack" type="checkbox" value="linux"/>
+<input class="hidden" hidden="" id="filter-stack-nginx" name="stack" type="checkbox" value="nginx"/>
+<input class="hidden" hidden="" id="filter-stack-elasticsearch" name="stack" type="checkbox" value="elasticsearch"/>
+<input class="hidden" hidden="" id="filter-stack-clickhouse" name="stack" type="checkbox" value="clickhouse"/>
+<input class="hidden" hidden="" id="filter-stack-microservices" name="stack" type="checkbox" value="microservices"/>
+<input class="hidden" hidden="" id="filter-stack-tests" name="stack" type="checkbox" value="tests"/>
+<input class="hidden" hidden="" id="filter-stack-ml" name="stack" type="checkbox" value="ml"/>
 <div class="flex flex-wrap gap-2 items-center">
-<input class="flex-1 min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm" name="q" placeholder="🔍 поиск по названию/компании/описанию…" value=""/>
+<input class="flex-1 w-full sm:w-auto sm:min-w-[300px] border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2.5 py-1.5 text-sm" name="q" placeholder="🔍 поиск по названию/компании/описанию…" value=""/>
 <button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archive-btn" onclick="window.toggleArchive()" title="Переключиться на просмотр только скрытых вакансий (status=skipped)" type="button">
-          📦 Только скрытые (2)
-        </button>
+          📦<span class="hidden sm:inline"> Только скрытые (2)</span><span class="sm:hidden">2</span>
+</button>
 <input id="disappeared-mode" name="disappeared" type="hidden" value="hide"/>
 <button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="disappeared-btn" onclick="window.cycleDisappeared()" title="Вакансии снятые с HH (disappeared_at). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
-          ⌫ Снятые HH (2)
-        </button>
+          ⌫<span class="hidden sm:inline"> Снятые HH (2)</span><span class="sm:hidden">скр</span>
+</button>
 <input id="archived-mode" name="archived" type="hidden" value="hide"/>
 <button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="archived-btn" onclick="window.cycleArchived()" title="Вакансии в архиве HH (работодатель больше не принимает отклики). Клик переключает: скрыты → только эти → все вместе → скрыты" type="button">
-          📦 Архив HH (2)
-        </button>
+          📦<span class="hidden sm:inline"> Архив HH (2)</span><span class="sm:hidden">арх</span>
+</button>
 <button class="text-[11px] px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="location.href = location.pathname" title="Очистить все фильтры и вернуть дефолт" type="button">
-          Сбросить
-        </button>
+          ↺<span class="hidden sm:inline"> Сбросить</span>
+</button>
 </div>
 </form>
 </div>
 <!-- Таблица -->
 <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-<div class="px-3 py-2 flex items-center gap-3 border-b border-neutral-100 dark:border-neutral-800 text-sm">
+<div class="px-3 py-2 flex items-center gap-2 sm:gap-3 border-b border-neutral-100 dark:border-neutral-800 text-sm flex-wrap">
 <span class="text-neutral-600 dark:text-neutral-400">
         Результатов: <b class="tabular-nums" id="results-count">14</b>
 <span class="text-neutral-400 text-[11px] ml-1">из 20</span>
 </span>
 <span class="flex items-center gap-1 flex-wrap text-[11px]" id="views-bar"></span>
-<button class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.saveView()" title="Сохранить текущие фильтры как «вид» (быстрый пресет)">💾 вид</button>
-<div class="ml-auto flex items-center gap-2">
+<button class="text-[11px] px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" onclick="window.saveView()" title="Сохранить текущие фильтры как «вид» (быстрый пресет)">💾<span class="hidden sm:inline"> вид</span></button>
+<div class="ml-auto flex items-center gap-2 flex-wrap">
 <label class="flex items-center gap-1 text-[11px] text-neutral-500 cursor-pointer select-none" title="Семантический поиск по смыслу через RAG (по описаниям). Иначе — быстрый фильтр подстрокой.">
-<input id="semantic-toggle" type="checkbox"/> 🧲 смысл
-        </label>
-<input class="w-80 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm" id="quick-filter" oninput="window.quickFilter(this.value)" onkeydown="if(event.key==='Enter'){window.maybeSemantic();}" placeholder="быстрый фильтр в таблице (компания, город, должность)…" title="Фильтрует строки в таблице на клиенте. С тумблером «🧲 смысл» — семантический поиск по описаниям (RAG) по Enter."/>
+<input id="semantic-toggle" type="checkbox"/> 🧲<span class="hidden sm:inline"> смысл</span>
+</label>
+<input class="w-40 sm:w-80 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-800 rounded px-2 py-1 text-sm" id="quick-filter" oninput="window.quickFilter(this.value)" onkeydown="if(event.key==='Enter'){window.maybeSemantic();}" placeholder="быстрый фильтр…" title="Фильтрует строки в таблице на клиенте. С тумблером «🧲 смысл» — семантический поиск по описаниям (RAG) по Enter."/>
+<button class="text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800" id="view-mode-btn" onclick="window.toggleViewMode()" title="Переключить вид: таблица / карточки. На узком экране удобнее карточки." type="button">
+<span id="view-mode-icon">▦</span><span class="hidden sm:inline ml-1" id="view-mode-label">таблица</span>
+</button>
 <details class="relative">
-<summary class="cursor-pointer text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 list-none">⚙ Колонки</summary>
+<summary class="cursor-pointer text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 list-none">⚙<span class="hidden sm:inline"> Колонки</span></summary>
 <div class="absolute right-0 mt-1 w-44 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg p-2 z-30 text-sm space-y-1" id="col-menu"></div>
 </details>
 </div>
@@ -528,10 +572,10 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <tbody id="table-body">
 <tr class="hidden" data-count="14" id="results-count-row"></tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000018">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000018"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">73</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -539,7 +583,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 73%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -553,29 +597,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000018" data-vname="Python Senior Developer (search/elasticsearch)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000018" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Python Senior Developer (search/elasticsearch)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000018.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000018" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Маркетплейс ШОП
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">43</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·75%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 360 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 360 000">
     360К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">elasticsearch</span>
@@ -583,26 +627,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">redis</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     28
     <span class="text-neutral-400">/68</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">собес</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000017">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000017"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">49</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -610,7 +654,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-orange-500" style="width: 49%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -624,29 +668,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000017" data-vname="Backend Engineer (Python, Linux, Nginx)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000017" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Backend Engineer (Python, Linux, Nginx)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000017.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000017" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Технополис
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·92%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Москва</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 290 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Москва</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 290 000">
     290К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">linux</span>
@@ -654,26 +698,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">docker</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     27
     <span class="text-neutral-400">/67</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000016">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000016"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">69</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -681,7 +725,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-amber-500" style="width: 69%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -695,53 +739,53 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000016" data-vname="Senior Python Developer" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000016" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Senior Python Developer</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000016.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000016" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Геймдев Студио
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">60</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·40%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 335 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 335 000">
     335К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">postgresql</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     26
     <span class="text-neutral-400">/66</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 whitespace-nowrap" title="Собрано через форму «Собрать сейчас» (текст запроса не сохранился)">разовый</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000014">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000014"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">79</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -749,7 +793,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 79%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -763,30 +807,30 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000014" data-vname="Python Developer (Microservices)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000014" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Python Developer (Microservices)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000014.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000014" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 <span class="ml-1 text-[10px] text-amber-700" title="Pro: пользователи сейчас смотрят эту вакансию">сейчас смотрит 6</span>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Облачные Решения
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·95%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 315 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 315 000">
     315К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">fastapi</span>
@@ -795,25 +839,25 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">kubernetes</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     24
     <span class="text-neutral-400">/64</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000012">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000012"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">67</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -821,7 +865,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-amber-500" style="width: 67%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -835,55 +879,55 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000012" data-vname="Senior Python Engineer (ML/Data)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000012" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Senior Python Engineer (ML/Data)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000012.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000012" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     АйТи Лаб
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">60</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·60%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 400 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 400 000">
     400К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">ml</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">postgresql</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     22
     <span class="text-neutral-400">/62</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000011">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000011"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">62</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -891,7 +935,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-amber-500" style="width: 62%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option value="new">Новое</option>
@@ -905,29 +949,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000011" data-vname="Python Team Lead" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000011" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Python Team Lead</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000011.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000011" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     ООО Ромашка
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·85%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Москва</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 500 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Москва</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 500 000">
     500К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
@@ -936,26 +980,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">kubernetes</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     21
     <span class="text-neutral-400">/61</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">приглашение</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000010">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000010"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">62</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -963,7 +1007,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-amber-500" style="width: 62%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -977,54 +1021,54 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000010" data-vname="Middle/Senior Python" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000010" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Middle/Senior Python</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000010.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000010" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Маркетплейс ШОП
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">43</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·75%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 265 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 265 000">
     265К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">tests</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     20
     <span class="text-neutral-400">/60</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000009">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000009"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">85</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1032,7 +1076,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 85%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -1046,29 +1090,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000009" data-vname="Python разработчик (highload)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000009" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Python разработчик (highload)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000009.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000009" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Технополис
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·92%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Москва</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 330 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Москва</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 330 000">
     330К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">asyncio</span>
@@ -1077,26 +1121,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">kubernetes</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     19
     <span class="text-neutral-400">/59</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">отказ</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000008">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000008"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">69</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1104,7 +1148,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-amber-500" style="width: 69%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -1118,29 +1162,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000008" data-vname="Senior Backend (Python/Go)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000008" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Senior Backend (Python/Go)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000008.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000008" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     ЕдТех Платформа
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·70%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 370 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 370 000">
     370К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">postgresql</span>
@@ -1148,26 +1192,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">microservices</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     18
     <span class="text-neutral-400">/58</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">собес</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000006">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000006"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">71</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1175,7 +1219,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 71%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -1189,30 +1233,30 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000006" data-vname="Backend Developer (Python + ClickHouse)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000006" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Backend Developer (Python + ClickHouse)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000006.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000006" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 <span class="ml-1 text-[10px] text-amber-700" title="Pro: пользователи сейчас смотрят эту вакансию">сейчас смотрит 6</span>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Облачные Решения
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·95%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 290 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 290 000">
     290К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">clickhouse</span>
@@ -1220,26 +1264,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">docker</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     16
     <span class="text-neutral-400">/56</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000004">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000004"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">73</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1247,7 +1291,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 73%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option value="new">Новое</option>
@@ -1261,29 +1305,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000004" data-vname="Lead Python / Tech Lead" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000004" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Lead Python / Tech Lead</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000004.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000004" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Маркетплейс ШОП
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">43</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·75%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Москва</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 450 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Москва</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 450 000">
     450К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">lead</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
@@ -1291,26 +1335,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">microservices</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     14
     <span class="text-neutral-400">/54</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">приглашение</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000003">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000003"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">45</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1318,7 +1362,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-orange-500" style="width: 45%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -1332,29 +1376,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000003" data-vname="Middle Python Developer" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000003" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Middle Python Developer</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000003.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000003" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     АйТи Лаб
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">60</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·60%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Санкт-Петербург</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 230 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Санкт-Петербург</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 230 000">
     230К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] text-neutral-400" title="HH не указал формат работы (или только дефолтный ON_SITE без вариативности)">—</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">middle</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
@@ -1362,26 +1406,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">rabbitmq</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     13
     <span class="text-neutral-400">/53</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">отказ</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000002">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000002"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">85</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1389,7 +1433,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 85%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option value="new">Новое</option>
@@ -1403,29 +1447,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000002" data-vname="Python Backend Engineer (FastAPI)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000002" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Python Backend Engineer (FastAPI)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000002.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000002" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     Технополис
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·92%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Удалённо</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 350 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Удалённо</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 350 000">
     350К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">fastapi</span>
@@ -1434,26 +1478,26 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">docker</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     12
     <span class="text-neutral-400">/52</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">собес</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 <tr class="border-b border-neutral-100 hover:bg-neutral-50 align-top" id="row-90000001">
-<td class="text-center">
+<td class="text-center" data-label="✓">
 <input class="cmp-cb" onchange="window.cmpToggle(this)" title="Выбрать для сравнения" type="checkbox" value="90000001"/>
 </td>
-<td class="text-center w-[100px]">
+<td class="text-center w-[100px]" data-label="Match">
 <div class="flex items-center gap-1 justify-center">
 <div class="text-sm font-medium tabular-nums" title="Match-score: насколько вакансия совпадает с твоим профилем (стек, ЗП, удалёнка, опыт, вежливость, конкуренция). 0–100.">77</div>
 <div class="text-[10px] text-neutral-400">·</div>
@@ -1461,7 +1505,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </div>
 <div class="mx-auto mt-0.5 w-16"><div class="score-bar"><div class="bg-emerald-500" style="width: 77%"></div></div></div>
 </td>
-<td class="whitespace-nowrap">
+<td class="whitespace-nowrap" data-label="Статус">
 <form class="inline" onsubmit="return false;">
 <select class="text-[11px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border-0 cursor-pointer" name="status" onchange="this.form.requestSubmit()" title="Мой локальный статус по вакансии (автосинк с HH при «Обновить мои отклики»)">
 <option selected="" value="new">Новое</option>
@@ -1475,29 +1519,29 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 </form>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-red-600 align-middle" data-vid="90000001" data-vname="Senior Python Developer (Django/DRF)" onclick="window.skipVacancy(this.dataset.vid, this.dataset.vname)" title="Быстро пометить «Скип» и убрать из таблицы (можно вернуть в «📦 Только скрытые»)" type="button">🗑</button>
 </td>
-<td class="max-w-[340px]">
+<td class="max-w-[340px]" data-label="Должность">
 <a class="text-neutral-900 dark:text-neutral-100 hover:underline" href="https://hh.ru/vacancy/90000001" rel="noopener" target="_blank" title="Открыть вакансию на hh.ru в новой вкладке">Senior Python Developer (Django/DRF)</a>
 <a class="ml-1 text-[10px] text-blue-600 hover:underline" href="vacancy/90000001.html" title="Открыть детальную карточку с разбивкой match-score">детали</a>
 <button class="ml-1 text-[12px] text-neutral-400 hover:text-fuchsia-600 align-middle" data-vid="90000001" onclick="window.llmParseVacancy(this)" title="LLM разбор требований этой вакансии" type="button">✨</button>
 </td>
-<td class="max-w-[200px] truncate text-neutral-700">
+<td class="max-w-[200px] truncate text-neutral-700" data-label="Компания">
     ООО Ромашка
     
       
       <span class="text-[10px] px-1 py-0 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Soft-skills работодателя (0–100) — агрегат тона/WLB/роста из LLM-анализа. Подробнее на /funnel.">86</span>
 <span class="text-[10px] text-neutral-500" title="Индекс вежливости работодателя (HH Pro): % откликов, которые HR читает. Подробнее на странице вакансии.">·85%</span>
 </td>
-<td class="text-neutral-600" title="Город из карточки вакансии">Москва</td>
-<td class="text-right tabular-nums whitespace-nowrap" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 315 000">
+<td class="text-neutral-600" data-label="Город" title="Город из карточки вакансии">Москва</td>
+<td class="text-right tabular-nums whitespace-nowrap" data-label="ЗП, ₽" title="Зарплата в рублях (медиана вилки, минус 13% НДФЛ если gross). Точно: 315 000">
     315К
   </td>
-<td>
+<td data-label="Формат">
 <div class="flex flex-wrap gap-0.5">
 <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="HH workFormats содержит REMOTE или workSchedule=remote">удалённо</span>
 </div>
 </td>
-<td class="text-neutral-700" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
-<td class="max-w-[260px]" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
+<td class="text-neutral-700" data-label="Уровень" title="Уровень должности — определён парсером по заголовку и описанию (junior/middle/senior/lead/intern)">senior</td>
+<td class="max-w-[260px]" data-label="Стек" title="Стек, распознанный по тексту вакансии (regex по списку технологий)">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">python</span>
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">django</span>
@@ -1506,20 +1550,20 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700">redis</span>
 </div>
 </td>
-<td class="text-right tabular-nums text-neutral-700" title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
+<td class="text-right tabular-nums text-neutral-700" data-label="Откл." title="Количество откликов на вакансию: за окно / всего за всё время (Pro). Чем выше total, тем выше конкуренция">
     11
     <span class="text-neutral-400">/51</span>
 </td>
-<td class="w-[110px] max-w-[110px]">
+<td class="w-[110px] max-w-[110px]" data-label="Источник">
 <div class="flex flex-wrap gap-1">
 <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 whitespace-nowrap" title="В БД потому что есть твой отклик (backfill из negotiations)">отклик</span>
 </div>
 </td>
-<td class="text-[11px]">
+<td class="text-[11px]" data-label="Отклик">
 <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Состояние моего отклика на HH (RESPONSE/INVITATION/INTERVIEW/DISCARD)">ждёт</span>
 <span class="ml-0.5 text-blue-700" title="HR открыл мой отклик">·смотр</span>
 </td>
-<td class="text-neutral-500 whitespace-nowrap" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-29 20:53</td>
+<td class="text-neutral-500 whitespace-nowrap" data-label="Обновлено" title="Когда вакансия последний раз обновлялась в нашей БД">2026-05-31 11:34</td>
 </tr>
 </tbody>
 </table>
@@ -2362,20 +2406,25 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
   };
 
   // === Архив скрытых ===
+  // Статусы живут в hidden-чекбоксах popup-фильтров: filter-status-skipped (name=status)
+  // и filter-hide-skipped (name=hide_status). Уровень — hidden input filter-level.
   window.toggleArchive = () => {
-    const showOnlySkipped = document.getElementById('status-skipped').checked
-                          && !document.getElementById('hide-skipped').checked;
+    const stEl = document.getElementById('filter-status-skipped');
+    const hideEl = document.getElementById('filter-hide-skipped');
+    const lvlEl = document.getElementById('filter-level');
+    const btn = document.getElementById('archive-btn');
+    if (!stEl || !hideEl) return;
+    const showOnlySkipped = stEl.checked && !hideEl.checked;
     document.querySelectorAll('#filters input[type=checkbox], #filters input[type=radio]').forEach(i => i.checked = false);
+    if (lvlEl) lvlEl.value = '';
     if (showOnlySkipped) {
       // выключаем «архив» — возвращаемся в обычный режим (skipped скрыты)
-      document.getElementById('hide-skipped').checked = true;
-      document.getElementById('lvl-all').checked = true;
-      document.getElementById('archive-btn').textContent = `📦 Только скрытые (2)`;
+      hideEl.checked = true;
+      if (btn) btn.textContent = `📦 Только скрытые (2)`;
     } else {
       // включаем «архив» — показываем только skipped
-      document.getElementById('status-skipped').checked = true;
-      document.getElementById('lvl-all').checked = true;
-      document.getElementById('archive-btn').textContent = '← Назад к активным';
+      stEl.checked = true;
+      if (btn) btn.textContent = '← Назад к активным';
     }
     htmx.trigger('#filters', 'change');
   };
@@ -2402,7 +2451,7 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
   window.resetFilters = () => {
     document.getElementById('filters').reset();
     document.querySelectorAll('#filters input[type=checkbox],#filters input[type=radio]').forEach(i=>i.checked=false);
-    const all = document.getElementById('lvl-all'); if(all) all.checked = true;
+    const lvlEl = document.getElementById('filter-level'); if(lvlEl) lvlEl.value = '';
     history.replaceState(null, "", location.pathname);
     htmx.trigger('#filters','change');
   };
@@ -2437,8 +2486,13 @@ Shift+клик — полный прогон (без early-stop, тяжелее)
   // JS просто рендерит индикатор сортировки, обновляет лейбл архив-кнопки
   // и приводит URL в соответствие с реально применёнными фильтрами (включая дефолтные).
   window.renderSortIndicators();
-  if (document.getElementById('status-skipped').checked && !document.getElementById('hide-skipped').checked) {
-    document.getElementById('archive-btn').textContent = '← Назад к активным';
+  {
+    const stEl = document.getElementById('filter-status-skipped');
+    const hideEl = document.getElementById('filter-hide-skipped');
+    const btn = document.getElementById('archive-btn');
+    if (stEl && hideEl && btn && stEl.checked && !hideEl.checked) {
+      btn.textContent = '← Назад к активным';
+    }
   }
   // Sync URL with actually-applied filters (e.g. hide_status=skipped added by server default)
   try {
