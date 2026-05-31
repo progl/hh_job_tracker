@@ -19,6 +19,22 @@ from app.config import settings
 log = logging.getLogger(__name__)
 
 
+def _strip_code_fence(s: str) -> str:
+    """Снимает markdown-обёртку ```json ... ``` / ``` ... ``` если она оборачивает ответ.
+    Нужно для моделей вроде gemma4-*, которые при format=json всё равно отдают fenced код."""
+    t = s.strip()
+    if not t.startswith("```"):
+        return s
+    # ```json\n...\n``` или ```\n...\n```
+    nl = t.find("\n")
+    if nl < 0:
+        return s
+    body = t[nl + 1 :]
+    if body.rstrip().endswith("```"):
+        body = body.rstrip()[:-3].rstrip()
+    return body
+
+
 @dataclass
 class LLMResponse:
     ok: bool
@@ -172,8 +188,17 @@ async def generate(
     if format_json:
         try:
             parsed = json.loads(text) if text else None
-        except json.JSONDecodeError as e:
-            parse_err = f"json parse: {e}"
+        except json.JSONDecodeError:
+            # Некоторые модели (например gemma4-*) при format=json всё равно оборачивают
+            # ответ в ```json ... ``` markdown-fence. Снимаем обёртку и пробуем ещё раз.
+            stripped = _strip_code_fence(text)
+            if stripped != text:
+                try:
+                    parsed = json.loads(stripped)
+                except json.JSONDecodeError as e2:
+                    parse_err = f"json parse (after fence strip): {e2}"
+            else:
+                parse_err = "json parse failed"
 
     return LLMResponse(
         ok=parsed is not None if format_json else True,
