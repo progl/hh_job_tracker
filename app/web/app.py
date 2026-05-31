@@ -126,6 +126,39 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def basic_auth_middleware(request: Request, call_next):
+    # auth выключен если оба пустые — для локалки
+    user = settings.WEB_AUTH_USER
+    password = settings.WEB_AUTH_PASSWORD
+    if not user or not password:
+        return await call_next(request)
+
+    import base64
+    import hmac
+
+    header = request.headers.get("authorization", "")
+    if header.startswith("Basic "):
+        try:
+            decoded = base64.b64decode(header[6:]).decode("utf-8", errors="ignore")
+            sent_user, _, sent_password = decoded.partition(":")
+        except Exception:
+            sent_user, sent_password = "", ""
+        # compare_digest — защита от timing-attack
+        ok_user = hmac.compare_digest(sent_user, user)
+        ok_password = hmac.compare_digest(sent_password, password)
+        if ok_user and ok_password:
+            return await call_next(request)
+
+    return Response(
+        status_code=401,
+        headers={"WWW-Authenticate": 'Basic realm="HH Job Tracker"'},
+        content="Unauthorized",
+    )
+
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 

@@ -49,5 +49,11 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
 
+    # --- Веб-доступ (HTTP Basic) ---
+    # Если оба пустые — auth выключен (локальная разработка).
+    # Иначе любой роут требует Basic-credentials, включая статику и /api/health.
+    WEB_AUTH_USER: str = ""
+    WEB_AUTH_PASSWORD: str = ""
+
 
 settings = Settings()
